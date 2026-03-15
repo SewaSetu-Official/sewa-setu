@@ -1,19 +1,23 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f7f4ef;
+  --background: #f5f2ed;
   --foreground: #0f1e38;
   --navy:        #0f1e38;
   --navy-mid:    #1a3059;
+  --navy-light:  #243d6b;
   --gold:        #c8a96e;
   --gold-dim:    #a88b50;
-  --cream:       #f7f4ef;
+  --gold-light:  #e8d5b0;
+  --cream:       #f5f2ed;
+  --cream-dark:  #ede9e2;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
 }
+
 
 @layer base {
   html {
@@ -33,29 +37,50 @@
     @apply tracking-tight;
   }
 }
+@keyframes float-up {
+  from { opacity: 0; transform: translateY(32px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes shimmer {
+  0%   { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
 
 @keyframes blob {
-  0%, 100% {
-    transform: translate(0, 0) scale(1);
-  }
-  33% {
-    transform: translate(30px, -50px) scale(1.1);
-  }
-  66% {
-    transform: translate(-20px, 20px) scale(0.9);
-  }
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33%       { transform: translate(30px, -50px) scale(1.1); }
+  66%       { transform: translate(-20px, 20px) scale(0.9); }
 }
 
-.animate-blob {
-  animation: blob 7s infinite;
+@keyframes count-up {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
-.animation-delay-2000 {
-  animation-delay: 2s;
+.animate-blob { animation: blob 7s infinite; }
+.animation-delay-2000 { animation-delay: 2s; }
+.animation-delay-4000 { animation-delay: 4s; }
+
+.reveal {
+  opacity: 0;
+  transform: translateY(24px);
+  transition: opacity 0.7s ease, transform 0.7s ease;
+}
+.reveal.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.gold-shimmer {
+  background: linear-gradient(90deg, var(--gold-dim) 0%, var(--gold) 40%, #f0d898 60%, var(--gold-dim) 100%);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: shimmer 4s linear infinite;
 }
 
 @media print {
-  @page {
-    margin: 1cm;
-  }
+  @page { margin: 1cm; }
 }

@@ -1,18 +1,33 @@
 import Link from "next/link";
 import Image from "next/image";
 import { Facebook, Twitter, Instagram, Linkedin, Mail, Phone, MapPin } from "lucide-react";
+import { a } from "framer-motion/client";
 
 export function Footer() {
   return (
-    <footer id="contact" className="bg-[#0a1628] text-slate-300 border-t border-[rgba(200,169,110,0.15)]">
+    <footer id="contact" className="bg-[#07111e] text-slate-400 relative overflow-hidden">
 
-      {/* Main footer body */}
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-14">
+      {/* ── Ambient top glow ── */}
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[1px] opacity-60"
+        style={{ background: "linear-gradient(90deg, transparent, #c8a96e, transparent)" }} />
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[400px] h-[80px] opacity-[0.06] blur-3xl rounded-full"
+        style={{ background: "#c8a96e" }} />
+
+      {/* ── Dot grid texture ── */}
+      <div className="absolute inset-0 opacity-[0.025]" style={{
+        backgroundImage: "radial-gradient(circle, rgba(200,169,110,0.8) 1px, transparent 1px)",
+        backgroundSize: "36px 36px",
+      }} />
+
+      {/* ── MAIN BODY ── */}
+      <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-14">
         <div className="flex flex-col lg:flex-row gap-12">
 
-          {/* ── LEFT: Logo + description ── */}
+          {/* ── LEFT: Logo + description (same width as original) ── */}
           <div className="flex flex-row items-start gap-6 lg:w-[42%] shrink-0">
-            <div className="shrink-0 transition-transform duration-300 hover:scale-110 hover:drop-shadow-[0_0_16px_rgba(200,169,110,0.5)]">
+
+            {/* Logo */}
+            <div className="shrink-0 transition-all duration-300 hover:scale-105 hover:drop-shadow-[0_0_20px_rgba(200,169,110,0.45)]">
               <Image
                 src="/SewaSetu-Logo.png"
                 alt="Sewa-Setu"
@@ -21,6 +36,8 @@ export function Footer() {
                 className="w-[260px] h-auto object-contain"
               />
             </div>
+
+            {/* Brand info */}
             <div className="pt-1">
               <div className="text-2xl font-bold text-white mb-1">
                 Sewa<span className="text-[#c8a96e]">-Setu</span>
@@ -29,59 +46,111 @@ export function Footer() {
                 Bridging the distance between you and your family&apos;s health.
                 Book prepaid health checkups for your loved ones in Nepal — from anywhere in the world.
               </p>
-              <div className="flex gap-4">
-                <a href="#" className="text-slate-500 hover:text-[#c8a96e] transition-colors"><Facebook className="h-5 w-5" /></a>
-                <a href="#" className="text-slate-500 hover:text-[#c8a96e] transition-colors"><Twitter className="h-5 w-5" /></a>
-                <a href="#" className="text-slate-500 hover:text-[#c8a96e] transition-colors"><Instagram className="h-5 w-5" /></a>
-                <a href="#" className="text-slate-500 hover:text-[#c8a96e] transition-colors"><Linkedin className="h-5 w-5" /></a>
+
+              {/* Social icons */}
+              <div className="flex gap-2 mb-5">
+                {[
+                  { icon: Facebook,  label: "Facebook"  },
+                  { icon: Twitter,   label: "Twitter"   },
+                  { icon: Instagram, label: "Instagram" },
+                  { icon: Linkedin,  label: "LinkedIn"  },
+                ].map(({ icon: Icon, label }) => (
+                  <a
+                    key={label}
+                    href="#"
+                    aria-label={label}
+                    className="w-8 h-8 rounded-lg flex items-center justify-center text-[#c8a96e] hover:-translate-y-0.5 transition-all duration-300"
+                    style={{ background: "rgba(200,169,110,0.08)", border: "1px solid rgba(200,169,110,0.15)" }}
+                  >
+                    <Icon className="h-3.5 w-3.5" />
+                  </a>
+                ))}
               </div>
             </div>
           </div>
 
           {/* ── Divider ── */}
-          <div className="hidden lg:block w-px bg-[rgba(200,169,110,0.12)] self-stretch" />
+          <div
+            className="hidden lg:block w-px self-stretch"
+            style={{ background: "linear-gradient(to bottom, transparent, rgba(200,169,110,0.2), transparent)" }}
+          />
 
           {/* ── RIGHT: 3 columns ── */}
           <div className="flex-1 grid grid-cols-1 sm:grid-cols-3 gap-10">
 
             {/* Quick Links */}
             <div>
-              <h3 className="text-[#c8a96e] text-xs font-semibold uppercase tracking-widest mb-5">Quick Links</h3>
+              <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#c8a96e] mb-5">Quick Links</h3>
               <ul className="space-y-3 text-sm">
-                <li><Link href="/search" className="hover:text-white transition-colors">Find a Hospital</Link></li>
-                <li><Link href="/#how-it-works" className="hover:text-white transition-colors">How it Works</Link></li>
-                <li><Link href="/sign-in" className="hover:text-white transition-colors">Sign In</Link></li>
-                <li><Link href="/sign-up" className="hover:text-white transition-colors">Create Account</Link></li>
+                {[
+                  { label: "Find a Hospital", href: "/search" },
+                  { label: "How it Works",    href: "/#how-it-works" },
+                  { label: "Sign In",         href: "/sign-in" },
+                  { label: "Create Account",  href: "/sign-up" },
+                ].map(({ label, href }) => (
+                  <li key={label}>
+                    <Link href={href} className="group flex items-center gap-1.5 text-slate-400 hover:text-white transition-colors duration-200">
+                      <span className="w-0 group-hover:w-3 h-px bg-[#c8a96e] transition-all duration-300 overflow-hidden" />
+                      {label}
+                    </Link>
+                  </li>
+                ))}
               </ul>
             </div>
 
             {/* Company */}
             <div>
-              <h3 className="text-[#c8a96e] text-xs font-semibold uppercase tracking-widest mb-5">Company</h3>
+              <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#c8a96e] mb-5">Company</h3>
               <ul className="space-y-3 text-sm">
-                <li><Link href="#" className="hover:text-white transition-colors">About Us</Link></li>
-                <li><Link href="#" className="hover:text-white transition-colors">Contact Support</Link></li>
-                <li><Link href="#" className="hover:text-white transition-colors">Privacy Policy</Link></li>
-                <li><Link href="#" className="hover:text-white transition-colors">Terms of Service</Link></li>
+                {[
+                  { label: "About Us",         href: "#" },
+                  { label: "Contact Support",  href: "#" },
+                  { label: "Privacy Policy",   href: "#" },
+                  { label: "Terms of Service", href: "#" },
+                ].map(({ label, href }) => (
+                  <li key={label}>
+                    <Link href={href} className="group flex items-center gap-1.5 text-slate-400 hover:text-white transition-colors duration-200">
+                      <span className="w-0 group-hover:w-3 h-px bg-[#c8a96e] transition-all duration-300 overflow-hidden" />
+                      {label}
+                    </Link>
+                  </li>
+                ))}
               </ul>
             </div>
 
             {/* Contact */}
             <div>
-              <h3 className="text-[#c8a96e] text-xs font-semibold uppercase tracking-widest mb-5">Contact</h3>
+              <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#c8a96e] mb-5">Contact</h3>
               <ul className="space-y-4 text-sm text-slate-400">
-                <li className="flex items-start gap-2.5">
-                  <MapPin className="h-4 w-4 text-[#c8a96e] mt-0.5 shrink-0" />
-                  Kathmandu, Nepal
-                </li>
-                <li className="flex items-center gap-2.5">
-                  <Mail className="h-4 w-4 text-[#c8a96e] shrink-0" />
-                  support@sewa-setu.com
-                </li>
-                <li className="flex items-center gap-2.5">
-                  <Phone className="h-4 w-4 text-[#c8a96e] shrink-0" />
-                  +977 9800000000
-                </li>
+                {[
+                  { icon: MapPin, text: "Kathmandu, Nepal",       href: null },
+                  { icon: Mail,   text: "support@sewa-setu.com",  href: "mailto:support@sewa-setu.com" },
+                  { icon: Phone,  text: "+977 9800000000",        href: "tel:+9779800000000" },
+                ].map(({ icon: Icon, text, href }) => (
+                  <li key={text}>
+                    {href ? (
+                      <a href={href} className="group flex items-center gap-2.5 hover:text-white transition-colors duration-200">
+                        <div
+                          className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 transition-all duration-300 group-hover:bg-[rgba(200,169,110,0.2)]"
+                          style={{ background: "rgba(200,169,110,0.08)", border: "1px solid rgba(200,169,110,0.15)" }}
+                        >
+                          <Icon className="h-3.5 w-3.5 text-[#c8a96e]" />
+                        </div>
+                        {text}
+                      </a>
+                    ) : (
+                      <div className="flex items-center gap-2.5">
+                        <div
+                          className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
+                          style={{ background: "rgba(200,169,110,0.08)", border: "1px solid rgba(200,169,110,0.15)" }}
+                        >
+                          <Icon className="h-3.5 w-3.5 text-[#c8a96e]" />
+                        </div>
+                        {text}
+                      </div>
+                    )}
+                  </li>
+                ))}
               </ul>
             </div>
 
@@ -89,11 +158,24 @@ export function Footer() {
         </div>
       </div>
 
-      {/* Bottom bar */}
-      <div className="border-t border-[rgba(200,169,110,0.1)] bg-[#07111e]">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-4 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-slate-500">
-          <span>© {new Date().getFullYear()} Sewa-Setu Health Pvt Ltd. All rights reserved.</span>
-          <span className="text-[#c8a96e]/50">Made with ❤️ for Nepal</span>
+      {/* ── BOTTOM BAR ── */}
+      <div className="relative border-t" style={{ borderColor: "rgba(200,169,110,0.1)", background: "rgba(0,0,0,0.3)" }}>
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-4 flex flex-col sm:flex-row items-center justify-between gap-2">
+          <span className="text-xs text-slate-500">
+            © {new Date().getFullYear()} Sewa-Setu Health Pvt Ltd. All rights reserved.
+          </span>
+          <div className="flex items-center gap-4 text-xs text-slate-500">
+            <Link href="#" className="hover:text-slate-300 transition-colors">Privacy</Link>
+            <span className="text-slate-700">·</span>
+            <Link href="#" className="hover:text-slate-300 transition-colors">Terms</Link>
+            <span className="text-slate-700">·</span>
+            <span
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[#c8a96e]"
+              style={{ background: "rgba(200,169,110,0.08)", border: "1px solid rgba(200,169,110,0.15)" }}
+            >
+              Made with ❤️ for Nepal
+            </span>
+          </div>
         </div>
       </div>
 
