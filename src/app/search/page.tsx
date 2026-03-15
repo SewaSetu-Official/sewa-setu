@@ -229,7 +229,7 @@ export default function SearchPage() {
               className="mt-1 p-5 rounded-2xl border border-[rgba(200,169,110,0.2)]"
               style={{ background: "rgba(255,255,255,0.07)" }}
             >
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+              <div className="grid grid-cols-1 sm:grid-cols-[1fr_2fr_1fr] gap-5">
                 {/* Type */}
                 <div>
                   <label className="block text-xs font-bold uppercase tracking-widest text-[#c8a96e] mb-2">Type</label>
@@ -283,7 +283,7 @@ export default function SearchPage() {
                     }`}
                   >
                     <Siren className="h-3.5 w-3.5" />
-                    Emergency Available
+                    Emergency
                   </button>
                 </div>
               </div>

@@ -1,27 +1,27 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronLeft, ChevronRight, Star } from "lucide-react";
+import { ChevronLeft, ChevronRight, Star, Quote } from "lucide-react";
 
 const testimonials = [
   {
     name: "Rajesh Sharma",
-    location: "USA",
-    image: "👨‍💼",
+    location: "United States",
+    initials: "RS",
     text: "I was worried about my parents' health while working abroad. Sewa-Setu made it so easy to book their checkups. They got priority service and I received the report within hours!",
     rating: 5,
   },
   {
     name: "Priya Poudel",
-    location: "UK",
-    image: "👩‍💼",
-    text: "The entire process was so smooth. From searching hospitals to payment and receiving reports - everything was transparent and secure. Highly recommended!",
+    location: "United Kingdom",
+    initials: "PP",
+    text: "The entire process was so smooth. From searching hospitals to payment and receiving reports — everything was transparent and secure. Highly recommended!",
     rating: 5,
   },
   {
     name: "Amit Yadav",
     location: "Australia",
-    image: "👨‍⚕️",
+    initials: "AY",
     text: "Best service for healthcare needs back home. The hospital staff was professional and the digital reports were comprehensive. My family is very satisfied.",
     rating: 5,
   },
@@ -29,82 +29,105 @@ const testimonials = [
 
 export function TestimonialsSection() {
   const [current, setCurrent] = useState(0);
-
-  const next = () => setCurrent((current + 1) % testimonials.length);
-  const prev = () => setCurrent((current - 1 + testimonials.length) % testimonials.length);
-
-  const testimonial = testimonials[current];
+  const t = testimonials[current];
 
   return (
-    <section className="py-24 bg-[#f7f4ef]">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+    <section className="py-28 bg-[#f7f4ef] relative overflow-hidden">
+
+      {/* Decorative top line */}
+      <div className="absolute top-0 left-0 right-0 h-px"
+        style={{ background: "linear-gradient(90deg, transparent, rgba(200,169,110,0.3), transparent)" }} />
+
+      <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
+
+        {/* Header */}
         <div className="text-center mb-16">
-          <h2 className="text-3xl font-bold text-[#0f1e38] mb-4">
-            What Families Say
-          </h2>
-          <p className="text-lg text-[#0f1e38]/70">
-            Real stories from people who trust Sewa-Setu for their family&apos;s{" "}
-            <span className="text-[#c8a96e]">health</span>
+          <p className="text-xs font-semibold tracking-[0.2em] uppercase text-[#a88b50] mb-4">Testimonials</p>
+          <h2 className="text-4xl md:text-5xl font-bold text-[#0f1e38] mb-4">What families say</h2>
+          <p className="text-[#6b7a96] text-lg">
+            Real stories from people who trust Sewa-Setu for their family's{" "}
+            <span className="text-[#c8a96e] font-medium">health</span>
           </p>
         </div>
 
-        <div className="max-w-2xl mx-auto">
-          <div className="bg-gradient-to-br from-[#0f1e38] to-[#1a3059] rounded-2xl p-8 md:p-12 mb-8 shadow-lg">
+        {/* Card */}
+        <div
+          className="relative rounded-2xl p-8 md:p-12 mb-8 overflow-hidden"
+          style={{
+            background: "#0f1e38",
+            boxShadow: "0 24px 64px rgba(15,30,56,0.18)",
+          }}
+        >
+          {/* Subtle grid */}
+          <div className="absolute inset-0 opacity-[0.04]" style={{
+            backgroundImage: "linear-gradient(rgba(255,255,255,.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.1) 1px, transparent 1px)",
+            backgroundSize: "32px 32px"
+          }} />
+
+          {/* Quote icon */}
+          <div className="absolute top-8 right-8 opacity-10">
+            <Quote className="w-16 h-16 text-[#c8a96e]" />
+          </div>
+
+          <div className="relative z-10">
+            {/* Stars */}
             <div className="flex gap-1 mb-6">
-              {[...Array(testimonial.rating)].map((_, i) => (
-                <Star
-                  key={i}
-                  className="h-5 w-5 fill-[#c8a96e] text-[#c8a96e]"
-                />
+              {[...Array(t.rating)].map((_, i) => (
+                <Star key={i} className="h-4 w-4 fill-[#c8a96e] text-[#c8a96e]" />
               ))}
             </div>
 
-            <p className="text-lg md:text-xl text-white/90 mb-8 leading-relaxed italic">
-              &ldquo;{testimonial.text}&rdquo;
+            {/* Quote */}
+            <p className="text-lg md:text-xl text-white/90 mb-10 leading-relaxed">
+              &ldquo;{t.text}&rdquo;
             </p>
 
+            {/* Author */}
             <div className="flex items-center gap-4">
-              <div className="text-4xl">{testimonial.image}</div>
+              <div
+                className="w-12 h-12 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0"
+                style={{ background: "rgba(200,169,110,0.15)", color: "#c8a96e", border: "1px solid rgba(200,169,110,0.3)" }}
+              >
+                {t.initials}
+              </div>
               <div>
-                <p className="font-semibold text-white text-lg">
-                  {testimonial.name}
-                </p>
-                <p className="text-[#c8a96e]">{testimonial.location}</p>
+                <p className="font-semibold text-white">{t.name}</p>
+                <p className="text-[#c8a96e] text-sm">{t.location}</p>
               </div>
             </div>
           </div>
+        </div>
 
-          {/* Navigation */}
-          <div className="flex items-center justify-center gap-4">
-            <button
-              onClick={prev}
-              className="p-2 rounded-full bg-white border border-[#0f1e38]/10 hover:bg-[#c8a96e] hover:text-white hover:border-[#c8a96e] transition-all text-[#0f1e38]"
-              aria-label="Previous testimonial"
-            >
-              <ChevronLeft className="h-6 w-6" />
-            </button>
+        {/* Navigation */}
+        <div className="flex items-center justify-center gap-5">
+          <button
+            onClick={() => setCurrent((current - 1 + testimonials.length) % testimonials.length)}
+            className="w-10 h-10 rounded-full flex items-center justify-center bg-white border border-[rgba(15,30,56,0.12)] text-[#0f1e38] hover:bg-[#0f1e38] hover:text-[#c8a96e] hover:border-[#0f1e38] transition-all duration-300"
+          >
+            <ChevronLeft className="h-5 w-5" />
+          </button>
 
-            <div className="flex gap-2">
-              {testimonials.map((_, i) => (
-                <button
-                  key={i}
-                  onClick={() => setCurrent(i)}
-                  className={`h-2 rounded-full transition-all ${
-                    i === current ? "bg-[#c8a96e] w-8" : "bg-[#0f1e38]/20 w-2"
-                  }`}
-                  aria-label={`Go to testimonial ${i + 1}`}
-                />
-              ))}
-            </div>
-
-            <button
-              onClick={next}
-              className="p-2 rounded-full bg-white border border-[#0f1e38]/10 hover:bg-[#c8a96e] hover:text-white hover:border-[#c8a96e] transition-all text-[#0f1e38]"
-              aria-label="Next testimonial"
-            >
-              <ChevronRight className="h-6 w-6" />
-            </button>
+          <div className="flex gap-2 items-center">
+            {testimonials.map((_, i) => (
+              <button
+                key={i}
+                onClick={() => setCurrent(i)}
+                className="rounded-full transition-all duration-300"
+                style={{
+                  width: i === current ? "28px" : "8px",
+                  height: "8px",
+                  background: i === current ? "#c8a96e" : "rgba(15,30,56,0.2)",
+                }}
+              />
+            ))}
           </div>
+
+          <button
+            onClick={() => setCurrent((current + 1) % testimonials.length)}
+            className="w-10 h-10 rounded-full flex items-center justify-center bg-white border border-[rgba(15,30,56,0.12)] text-[#0f1e38] hover:bg-[#0f1e38] hover:text-[#c8a96e] hover:border-[#0f1e38] transition-all duration-300"
+          >
+            <ChevronRight className="h-5 w-5" />
+          </button>
         </div>
       </div>
     </section>

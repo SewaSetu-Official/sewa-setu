@@ -70,7 +70,7 @@ export function HeroSection() {
         {/* ─── Content pushed to right side ─── */}
         <div
           className="relative z-10 flex min-h-[92vh] w-full items-center pt-28 pb-40 md:pt-32"
-          style={{ paddingLeft: "9%", paddingRight: "3%" }}
+          style={{ paddingLeft: "7.5%", paddingRight: "3%" }}
         >
           <motion.div
             initial={{ opacity: 0, y: 28 }}

@@ -3,43 +3,85 @@ import { Search, CalendarCheck, FileHeart } from "lucide-react";
 const steps = [
   {
     icon: Search,
-    title: "1. Find a Hospital",
+    step: "01",
+    title: "Find a Hospital",
     desc: "Browse top-rated hospitals in Kathmandu, Pokhara, or Lalitpur.",
   },
   {
     icon: CalendarCheck,
-    title: "2. Book & Pay",
+    step: "02",
+    title: "Book & Pay",
     desc: "Choose a checkup package and pay securely online from miles away.",
   },
   {
     icon: FileHeart,
-    title: "3. Receive Report",
-    desc: "Loves one visit the hospital. You get the digital report instantly.",
+    step: "03",
+    title: "Receive Report",
+    desc: "Loved ones visit the hospital. You get the digital report instantly.",
   },
 ];
 
 export function HowItWorks() {
   return (
-    <section id="how-it-works" className="py-24 bg-[#0f1e38] scroll-mt-20">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-16">
-          <h2 className="text-3xl font-bold text-white">How Sewa-Setu Works</h2>
-          <p className="mt-4 text-lg text-slate-300">
-            Three simple steps to ensure your parents' health.
+    <section id="how-it-works" className="py-28 bg-[#0f1e38] scroll-mt-20 relative overflow-hidden">
+
+      {/* Subtle background texture */}
+      <div className="absolute inset-0 opacity-[0.04]" style={{
+        backgroundImage: "radial-gradient(circle, rgba(200,169,110,0.8) 1px, transparent 1px)",
+        backgroundSize: "40px 40px"
+      }} />
+
+      {/* Ambient glow */}
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] opacity-10 blur-3xl rounded-full"
+        style={{ background: "radial-gradient(ellipse, #c8a96e, transparent)" }} />
+
+      <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+
+        {/* Header */}
+        <div className="text-center mb-20">
+          <p className="text-xs font-semibold tracking-[0.2em] uppercase text-[#c8a96e] mb-4 opacity-80">Simple Process</p>
+          <h2 className="text-4xl md:text-5xl font-bold text-white mb-5">How Sewa-Setu Works</h2>
+          <p className="text-lg text-slate-400 max-w-md mx-auto">
+            Three simple steps to ensure your family's health from anywhere.
           </p>
         </div>
 
-        <div className="grid gap-12 md:grid-cols-3 relative">
-          {/* Connector Line */}
-          <div className="hidden md:block absolute top-12 left-[16%] right-[16%] h-px bg-gradient-to-r from-transparent via-[rgba(200,169,110,0.4)] to-transparent -z-10" />
+        <div className="grid gap-8 md:grid-cols-3 relative">
 
-          {steps.map((step, index) => (
-            <div key={index} className="relative flex flex-col items-center text-center group">
-              <div className="mb-6 flex h-24 w-24 items-center justify-center rounded-full bg-[rgba(200,169,110,0.1)] border-2 border-[rgba(200,169,110,0.25)] shadow-sm group-hover:border-[#c8a96e] group-hover:bg-[rgba(200,169,110,0.18)] group-hover:scale-110 transition-all duration-300">
-                <step.icon className="h-10 w-10 text-[#c8a96e]" />
+          {/* Connector line */}
+          <div className="hidden md:block absolute top-[52px] left-[22%] right-[22%] h-px"
+            style={{ background: "linear-gradient(90deg, transparent, rgba(200,169,110,0.35), rgba(200,169,110,0.35), transparent)" }} />
+
+          {steps.map((step, i) => (
+            <div key={i} className="group relative flex flex-col items-center text-center">
+
+              {/* Step number badge */}
+              <div className="absolute -top-3 left-1/2 -translate-x-1/2 z-10">
+                <span className="text-[10px] font-bold tracking-widest text-[#c8a96e] opacity-60">{step.step}</span>
               </div>
-              <h3 className="text-xl font-bold text-white">{step.title}</h3>
-              <p className="mt-2 text-slate-300 max-w-xs">{step.desc}</p>
+
+              {/* Icon circle */}
+              <div className="relative mb-8 mt-4">
+                <div
+                  className="w-24 h-24 rounded-full flex items-center justify-center transition-all duration-500 group-hover:scale-110"
+                  style={{
+                    background: "rgba(200,169,110,0.08)",
+                    border: "1.5px solid rgba(200,169,110,0.2)",
+                    boxShadow: "0 0 0 8px rgba(200,169,110,0.04)",
+                  }}
+                >
+                  {/* Inner glow on hover */}
+                  <div className="absolute inset-0 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-500"
+                    style={{ background: "radial-gradient(circle, rgba(200,169,110,0.15), transparent)" }} />
+                  <step.icon className="h-9 w-9 text-[#c8a96e] relative z-10 transition-transform duration-500 group-hover:scale-110" />
+                </div>
+              </div>
+
+              {/* Text */}
+              <h3 className="text-xl font-bold text-white mb-3 group-hover:text-[#c8a96e] transition-colors duration-300">
+                {step.title}
+              </h3>
+              <p className="text-slate-400 max-w-[220px] leading-relaxed text-[15px]">{step.desc}</p>
             </div>
           ))}
         </div>
