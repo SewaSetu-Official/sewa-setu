@@ -43,7 +43,24 @@ export default async function Home({
       <FloatingAI autoOpen={shouldOpenAI} conversationId={conversationId} />
 
       <HeroSection />
-      
+
+      {/* Nepal flag wave — visual transition from dark hero into light trust section */}
+      <div className="relative w-full overflow-hidden bg-[#f7f4ef]" style={{ height: '160px' }}>
+        {/* Gradient overlay: fade hero dark blue into the flag */}
+        <div
+          className="absolute inset-x-0 top-0 z-10 h-24 pointer-events-none"
+          style={{ background: 'linear-gradient(to bottom, #0a1628 0%, transparent 100%)' }}
+        />
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/flagwave.svg"
+          alt=""
+          aria-hidden="true"
+          className="w-full h-full object-cover object-center"
+          style={{ mixBlendMode: 'multiply', opacity: 0.85 }}
+        />
+      </div>
+
       {/* Trust Section with Stats */}
       <TrustSection />
       
