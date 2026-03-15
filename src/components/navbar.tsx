@@ -16,11 +16,11 @@ export function Navbar() {
       <div className="container max-w-6xl mx-auto px-4 h-20 flex items-center justify-between">
         <Link href="/" className="flex items-center gap-2.5 group">
           <Image
-            src="/logo-icon.png"
+            src="/SewaSetu-Logo.png"
             alt="Sewa-Setu icon"
-            width={72}
-            height={72}
-            className="h-[72px] w-[72px] object-contain transition-transform group-hover:scale-105"
+            width={150}
+            height={105}
+            className="h-[72px] w-auto object-contain transition-transform group-hover:scale-105"
             priority
           />
           <span className="text-xl font-bold text-white">

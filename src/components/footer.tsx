@@ -14,11 +14,11 @@ export function Footer() {
           <div className="flex flex-row items-start gap-6 lg:w-[42%] shrink-0">
             <div className="shrink-0 transition-transform duration-300 hover:scale-110 hover:drop-shadow-[0_0_16px_rgba(200,169,110,0.5)]">
               <Image
-                src="/logo-icon.png"
+                src="/SewaSetu-Logo.png"
                 alt="Sewa-Setu"
-                width={140}
-                height={140}
-                className="w-[140px] h-[140px] object-contain"
+                width={500}
+                height={350}
+                className="w-[260px] h-auto object-contain"
               />
             </div>
             <div className="pt-1">
