@@ -118,6 +118,7 @@ export async function PUT(req: Request) {
       if (!user) {
         user = await tx.user.create({
           data: {
+            clerkId: `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
             email: buyerEmail,
             fullName: patientName,
             phone: patientPhone,

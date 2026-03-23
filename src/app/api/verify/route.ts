@@ -146,14 +146,22 @@ export async function POST(req: Request) {
 
 function formatBookingResponse(booking: any, session: any) {
   const meta = session?.metadata ?? {};
+  const doctorConsultationTitle =
+    booking.doctor?.fullName
+      ? `Consultation 
+      
+      ${booking.doctor.fullName}`
+      : undefined;
   return {
     id: booking.id.slice(-10).toUpperCase(),
     patientName: booking.patient?.fullName ?? meta.patientName ?? "",
     patientAge: meta.patientAge ?? "",
     patientPhone: booking.patient?.phone ?? meta.patientPhone ?? "",
-    packageName: booking.package?.title
-      ?? (booking.doctor?.fullName ? `Consultation — ${booking.doctor.fullName}` : "")
-      ?? meta.packageName ?? "",
+    packageName:
+      booking.package?.title ??
+      doctorConsultationTitle ??
+      meta.packageName ??
+      "",
     hospitalName: booking.hospital?.name ?? "",
     bookingDate: booking.scheduledAt?.toISOString() ?? meta.bookingDate ?? "",
     slotTime: booking.slotTime ?? meta.slotTime ?? "",
