@@ -18,12 +18,32 @@ export default async function Home({
   searchParams?: Promise<{ openAI?: string; conversationId?: string }>;
 }) {
   const baseUrl =
-    process.env.NEXT_PUBLIC_BASE_URL ||
-    (process.env.VERCEL_URL
+    process.env.VERCEL_URL
       ? `https://${process.env.VERCEL_URL}`
-      : "http://localhost:3000");
+      : process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
 
   const res = await fetch(`${baseUrl}/api/hospitals`, { cache: "no-store" });
+
+  if (!res.ok) {
+    // In production, avoid crashing the whole page if the API fails.
+    console.error("Failed to fetch hospitals:", res.status, await res.text());
+    return (
+      <main className="min-h-screen bg-[#f7f4ef]">
+        <Navbar />
+        <HeroSection />
+        <TrustSection />
+        <HowItWorks />
+        <WhyChooseUsSection />
+        <section className="py-28 bg-white">
+          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+            <p className="text-red-600">Unable to load hospitals right now. Please try again shortly.</p>
+          </div>
+        </section>
+        <Footer />
+      </main>
+    );
+  }
+
   const data = await res.json();
   const hospitals: ApiHospital[] = data?.hospitals ?? [];
   const featuredHospitals = hospitals.slice(0, 3);

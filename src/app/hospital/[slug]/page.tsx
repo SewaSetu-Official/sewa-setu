@@ -14,8 +14,9 @@ export default async function HospitalDetails({ params }: PageProps) {
   const { slug } = await params;
 
   const baseUrl =
-    process.env.NEXT_PUBLIC_BASE_URL ||
-    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
+    process.env.VERCEL_URL
+      ? `https://${process.env.VERCEL_URL}`
+      : process.env.NEXT_PUBLIC_BASE_URL ?? "http://localhost:3000";
 
   const res = await fetch(`${baseUrl}/api/hospitals/${slug}`, { cache: "no-store" });
 
