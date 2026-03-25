@@ -10,43 +10,44 @@ import { FAQSection } from "@/components/faq-section";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { FloatingAI } from "@/components/floating-ai";
-import type { ApiHospital } from "@/types/hospital";
+import { db } from "@/lib/db";
 
 export default async function Home({
   searchParams,
 }: {
   searchParams?: Promise<{ openAI?: string; conversationId?: string }>;
 }) {
-  const baseUrl =
-    process.env.VERCEL_URL
-      ? `https://${process.env.VERCEL_URL}`
-      : process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+  const rawHospitals = await db.hospital.findMany({
+    include: {
+      location: true,
+      media: { where: { isPrimary: true }, take: 1 },
+      packages: {
+        where: { isActive: true },
+        orderBy: [{ price: "asc" }],
+        take: 1,
+      },
+    },
+    orderBy: { createdAt: "desc" },
+    take: 3,
+  });
 
-  const res = await fetch(`${baseUrl}/api/hospitals`, { cache: "no-store" });
-
-  if (!res.ok) {
-    // In production, avoid crashing the whole page if the API fails.
-    console.error("Failed to fetch hospitals:", res.status, await res.text());
-    return (
-      <main className="min-h-screen bg-[#f7f4ef]">
-        <Navbar />
-        <HeroSection />
-        <TrustSection />
-        <HowItWorks />
-        <WhyChooseUsSection />
-        <section className="py-28 bg-white">
-          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-            <p className="text-red-600">Unable to load hospitals right now. Please try again shortly.</p>
-          </div>
-        </section>
-        <Footer />
-      </main>
-    );
-  }
-
-  const data = await res.json();
-  const hospitals: ApiHospital[] = data?.hospitals ?? [];
-  const featuredHospitals = hospitals.slice(0, 3);
+  const featuredHospitals = rawHospitals.map((h) => ({
+    id: h.id,
+    slug: h.slug,
+    name: h.name,
+    type: h.type,
+    // TODO: replace with real ratings once a review system is built
+    rating: 4.8,
+    reviewCount: 120,
+    specialty: h.servicesSummary || "General",
+    city: h.location.city,
+    district: h.location.district,
+    area: h.location.area,
+    image: h.media[0]?.url || null,
+    fromPrice: h.packages[0]?.price ?? null,
+    currency: h.packages[0]?.currency ?? "NPR",
+    emergencyAvailable: h.emergencyAvailable,
+  }));
 
   const params = await searchParams;
   const shouldOpenAI = params?.openAI === "true";

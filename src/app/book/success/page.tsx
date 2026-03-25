@@ -2,23 +2,38 @@
 
 import { useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import { useUser } from "@clerk/nextjs";
 import { Navbar } from "@/components/navbar";
-import { CheckCircle, Loader2, AlertCircle, Printer, Download } from "lucide-react";
+import { CheckCircle, Loader2, AlertCircle, Printer } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+
+type BookingData = {
+  id: string;
+  patientName: string;
+  patientAge: string;
+  patientPhone: string;
+  packageName: string;
+  hospitalName: string;
+  bookingDate: string;
+  slotTime: string;
+  consultationMode: string;
+  amountPaid: string;
+  type: string;
+};
 
 function SuccessContent() {
   const searchParams = useSearchParams();
   const sessionId = searchParams.get("session_id");
-  const { user } = useUser();
-  const [status, setStatus] = useState("loading"); 
-  const [bookingData, setBookingData] = useState<any>(null);
-  const [pendingBooking, setPendingBooking] = useState<any>(null);
+  const [status, setStatus] = useState<"loading" | "success" | "error">("loading");
+  const [bookingData, setBookingData] = useState<BookingData | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string>("");
 
-  // Step 1: fetch booking data when sessionId is ready
   useEffect(() => {
-    if (!sessionId) return;
+    if (!sessionId) {
+      setStatus("error");
+      setErrorMessage("No session ID found. Please check your email for booking confirmation.");
+      return;
+    }
 
     fetch("/api/verify", {
       method: "POST",
@@ -26,46 +41,52 @@ function SuccessContent() {
       body: JSON.stringify({ sessionId }),
     })
       .then(async (res) => {
+        const data = await res.json();
         if (res.ok) {
-          const data = await res.json();
           setStatus("success");
           setBookingData(data.booking);
-          // Stage the booking — save to localStorage once user.id is ready
-          setPendingBooking({
-            id: data.booking.id,
-            hospital: data.booking.hospitalName,
-            package: data.booking.packageName,
-            date: data.booking.bookingDate,
-            patient: data.booking.patientName,
-          });
         } else {
           setStatus("error");
+          setErrorMessage(data.error ?? "Unable to verify payment. Please contact support.");
         }
       })
-      .catch(() => setStatus("error"));
+      .catch(() => {
+        setStatus("error");
+        setErrorMessage("Network error. Please check your connection and try again.");
+      });
   }, [sessionId]);
 
-  // Step 2: as soon as we have BOTH booking data AND user.id, persist to localStorage
-  useEffect(() => {
-    if (!pendingBooking || !user?.id) return;
-    localStorage.setItem(`sewa_last_booking_${user.id}`, JSON.stringify(pendingBooking));
-    setPendingBooking(null); // clear so we don't re-save
-  }, [pendingBooking, user?.id]);
-
-  const handlePrint = () => {
-    window.print();
-  };
+  const handlePrint = () => window.print();
 
   if (status === "loading") {
     return (
       <div className="flex flex-col items-center pt-20">
         <Loader2 className="h-16 w-16 text-[#c8a96e] animate-spin mb-4" />
         <h2 className="text-2xl font-bold text-slate-900">Verifying Payment...</h2>
+        <p className="text-slate-500 mt-2">This usually takes a few seconds.</p>
       </div>
     );
   }
 
-  if (status === "error") return <div>Error loading booking.</div>;
+  if (status === "error") {
+    return (
+      <div className="flex flex-col items-center pt-20 text-center px-4">
+        <div className="h-20 w-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
+          <AlertCircle className="h-10 w-10 text-red-600" />
+        </div>
+        <h2 className="text-2xl font-bold text-slate-900">Something went wrong</h2>
+        <p className="text-slate-500 mt-2 max-w-sm">{errorMessage}</p>
+        <div className="flex gap-3 mt-6">
+          <Link href="/profile">
+            <Button variant="outline">View My Bookings</Button>
+          </Link>
+          <Link href="/">
+            <Button>Back to Home</Button>
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col items-center animate-in fade-in duration-500 pb-20">
