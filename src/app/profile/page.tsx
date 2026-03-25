@@ -19,9 +19,10 @@ export default async function ProfilePage() {
   // Fetch real DB data
   const dbUser = await db.user.findUnique({ where: { clerkId: user.id } });
 
-  const [bookingCount, rawBookings] = dbUser
+  const [bookingCount, upcomingCount, rawBookings] = dbUser
     ? await Promise.all([
         db.booking.count({ where: { userId: dbUser.id } }),
+        db.booking.count({ where: { userId: dbUser.id, scheduledAt: { gte: (() => { const d = new Date(); d.setHours(0,0,0,0); return d; })() } } }),
         db.booking.findMany({
           where: { userId: dbUser.id },
           include: {
@@ -36,10 +37,10 @@ export default async function ProfilePage() {
             patient: { select: { fullName: true } },
           },
           orderBy: { createdAt: "desc" },
-          take: 10,
+          take: 5,
         }),
       ])
-    : [0, []];
+    : [0, 0, []];
 
   // Serialize for client component (Dates → strings)
   const serializedBookings: SerializedBooking[] = rawBookings.map((b) => ({
@@ -101,9 +102,7 @@ export default async function ProfilePage() {
               <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mt-1">Total Bookings</p>
             </div>
             <div className="bg-white rounded-2xl p-5 shadow-lg border border-gold/15 text-center">
-              <p className="text-3xl font-extrabold text-navy">
-                {serializedBookings.filter(b => b.status === "CONFIRMED" || b.status === "REQUESTED").length}
-              </p>
+              <p className="text-3xl font-extrabold text-navy">{upcomingCount}</p>
               <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mt-1">Upcoming</p>
             </div>
             <div className="hidden sm:block bg-white rounded-2xl p-5 shadow-lg border border-gold/15 text-center">
@@ -124,9 +123,16 @@ export default async function ProfilePage() {
               <CalendarDays size={20} className="text-gold" />
               Recent Bookings
             </h2>
-            <Link href="/search" className="text-xs font-semibold text-gold-dim hover:text-navy transition-colors">
-              Book again →
-            </Link>
+            <div className="flex items-center gap-4">
+              <Link href="/search" className="text-xs font-semibold text-gold-dim hover:text-navy transition-colors">
+                Book again →
+              </Link>
+              {bookingCount > 5 && (
+                <Link href="/profile/bookings" className="text-xs font-semibold text-navy hover:text-gold transition-colors">
+                  View all {bookingCount} →
+                </Link>
+              )}
+            </div>
           </div>
 
           <BookingList bookings={serializedBookings} />

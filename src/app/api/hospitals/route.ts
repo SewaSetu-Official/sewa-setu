@@ -95,7 +95,7 @@ export async function GET(req: Request) {
     payload = payload.sort((a, b) => (a.fromPrice ?? 1e18) - (b.fromPrice ?? 1e18));
     payload = payload.slice((page - 1) * pageSize, page * pageSize);
   } else if (sortBy === "price-high") {
-    payload = payload.sort((a, b) => (b.fromPrice ?? -1) - (a.fromPrice ?? -1));
+    payload = payload.sort((a, b) => (b.fromPrice ?? 1e18) - (a.fromPrice ?? 1e18));
     payload = payload.slice((page - 1) * pageSize, page * pageSize);
   }
 

@@ -30,12 +30,23 @@ export type SerializedBooking = {
 };
 
 const STATUS_STYLES: Record<string, { bg: string; text: string; label: string; dot: string }> = {
-  CONFIRMED:  { bg: "bg-emerald-100", text: "text-emerald-700", label: "Confirmed",  dot: "bg-emerald-500" },
-  COMPLETED:  { bg: "bg-blue-100",    text: "text-blue-700",    label: "Completed",  dot: "bg-blue-500" },
+  UPCOMING:   { bg: "bg-blue-100",    text: "text-blue-700",    label: "Upcoming",   dot: "bg-blue-500" },
+  COMPLETED:  { bg: "bg-emerald-100", text: "text-emerald-700", label: "Completed",  dot: "bg-emerald-500" },
   REQUESTED:  { bg: "bg-amber-100",   text: "text-amber-700",   label: "Requested",  dot: "bg-amber-500" },
   CANCELLED:  { bg: "bg-red-100",     text: "text-red-700",     label: "Cancelled",  dot: "bg-red-500" },
   DRAFT:      { bg: "bg-gray-100",    text: "text-gray-500",    label: "Draft",      dot: "bg-gray-400" },
 };
+
+// Derive a display status from the DB status + scheduled date
+function resolveDisplayStatus(status: string, scheduledAt: string): string {
+  if (status === "CANCELLED") return "CANCELLED";
+  if (status === "DRAFT") return "DRAFT";
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const apptDay = new Date(scheduledAt);
+  apptDay.setHours(0, 0, 0, 0);
+  return apptDay < today ? "COMPLETED" : "UPCOMING";
+}
 
 const DAYS = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
 const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
@@ -46,10 +57,12 @@ function formatDate(iso: string) {
 }
 
 function formatSlotTime(t: string) {
-  const [h] = t.split(":").map(Number);
+  // slotTime may be "09:30" or "09:30-10:00" — take only the start
+  const start = t.split("-")[0].trim();
+  const [h, m = 0] = start.split(":").map(Number);
   const ampm = h < 12 ? "AM" : "PM";
   const h12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
-  return `${h12}:00 ${ampm}`;
+  return `${h12}:${String(m).padStart(2, "0")} ${ampm}`;
 }
 
 function Row({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
@@ -67,7 +80,7 @@ function Row({ icon, label, value }: { icon: React.ReactNode; label: string; val
 }
 
 function BookingDetailPopup({ booking, onClose }: { booking: SerializedBooking; onClose: () => void }) {
-  const st = STATUS_STYLES[booking.status] ?? STATUS_STYLES.DRAFT;
+  const st = STATUS_STYLES[resolveDisplayStatus(booking.status, booking.scheduledAt)] ?? STATUS_STYLES.DRAFT;
   const isPackageBooking = !!booking.package;
   const location = booking.hospital?.location;
   const locationStr = [location?.addressLine, location?.area, location?.city, location?.district]
@@ -239,7 +252,7 @@ export function BookingList({ bookings }: { bookings: SerializedBooking[] }) {
     <>
       <div className="divide-y divide-gray-50">
         {bookings.map((b) => {
-          const st = STATUS_STYLES[b.status] ?? STATUS_STYLES.DRAFT;
+          const st = STATUS_STYLES[resolveDisplayStatus(b.status, b.scheduledAt)] ?? STATUS_STYLES.DRAFT;
           const d = new Date(b.scheduledAt);
           const date = `${d.getDate()} ${MONTHS_SHORT[d.getMonth()]} ${d.getFullYear()}`;
           const subtitle = b.package
