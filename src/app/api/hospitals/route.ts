@@ -15,6 +15,8 @@ export async function GET(req: Request) {
   const minPrice = searchParams.get("minPrice");
   const maxPrice = searchParams.get("maxPrice");
   const sortBy = searchParams.get("sortBy") || "recent";
+  const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10));
+  const pageSize = Math.min(24, Math.max(6, parseInt(searchParams.get("pageSize") || "12", 10)));
 
   const whereConditions: any[] = [];
 
@@ -47,27 +49,36 @@ export async function GET(req: Request) {
   let orderBy: any = { createdAt: "desc" };
   if (sortBy === "name") orderBy = { name: "asc" };
 
-  const hospitals = await db.hospital.findMany({
-    where: {
-      AND: whereConditions.length > 0 ? whereConditions : undefined,
-    },
-    include: {
-      location: true,
-      media: { where: { isPrimary: true }, take: 1 },
-      packages: {
-        where: { AND: packageFilters },
-        orderBy: [{ price: "asc" }],
-        take: 1,
-      },
-    },
-    orderBy,
-  });
+  const where = whereConditions.length > 0 ? { AND: whereConditions } : undefined;
 
-  let payload = hospitals.map((h) => ({
+  const isPriceSort = sortBy === "price-low" || sortBy === "price-high";
+
+  // For price-based sorts we must fetch all matching rows first (sort is post-DB)
+  const [total, raw] = await Promise.all([
+    db.hospital.count({ where }),
+    db.hospital.findMany({
+      where,
+      include: {
+        location: true,
+        media: { where: { isPrimary: true }, take: 1 },
+        packages: {
+          where: { AND: packageFilters },
+          orderBy: [{ price: "asc" }],
+          take: 1,
+        },
+      },
+      orderBy: isPriceSort ? undefined : orderBy,
+      skip: isPriceSort ? 0 : (page - 1) * pageSize,
+      take: isPriceSort ? undefined : pageSize,
+    }),
+  ]);
+
+  let payload = raw.map((h) => ({
     id: h.id,
     slug: h.slug,
     name: h.name,
     type: h.type,
+    // TODO: replace with real ratings once a review system is built
     rating: 4.8,
     reviewCount: 120,
     specialty: h.servicesSummary || "General",
@@ -82,9 +93,17 @@ export async function GET(req: Request) {
 
   if (sortBy === "price-low") {
     payload = payload.sort((a, b) => (a.fromPrice ?? 1e18) - (b.fromPrice ?? 1e18));
+    payload = payload.slice((page - 1) * pageSize, page * pageSize);
   } else if (sortBy === "price-high") {
     payload = payload.sort((a, b) => (b.fromPrice ?? -1) - (a.fromPrice ?? -1));
+    payload = payload.slice((page - 1) * pageSize, page * pageSize);
   }
 
-  return NextResponse.json({ hospitals: payload });
+  return NextResponse.json({
+    hospitals: payload,
+    total,
+    page,
+    pageSize,
+    hasMore: page * pageSize < total,
+  });
 }
