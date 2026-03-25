@@ -65,7 +65,7 @@ export async function provisionBooking(
         fullName: patientFullName,
         phone: meta.patientPhone ?? null,
         dateOfBirth: meta.patientAge
-          ? new Date(new Date().getFullYear() - parseInt(meta.patientAge), 0, 1)
+          ? new Date(new Date().getFullYear() - parseInt(meta.patientAge, 10), new Date().getMonth(), new Date().getDate())
           : null,
       },
     });
