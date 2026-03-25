@@ -26,14 +26,14 @@ export function PackageCard({ pkg, hospitalName, hospitalId, featured = false }:
       <div
         className={`group relative bg-white rounded-2xl border transition-all duration-300 hover:shadow-xl hover:-translate-y-1 overflow-hidden flex flex-col ${
           featured
-            ? "border-[#c8a96e] shadow-lg shadow-[#c8a96e]/20"
-            : "border-[#0f1e38]/10 hover:border-[#c8a96e]"
+            ? "border-gold shadow-lg shadow-gold/20"
+            : "border-navy/10 hover:border-gold"
         }`}
       >
         {/* Featured Badge */}
         {featured && (
           <div className="absolute top-0 right-0 z-10">
-            <div className="bg-gradient-to-br from-[#c8a96e] to-[#a88b50] text-[#0f1e38] px-4 py-1.5 rounded-bl-2xl flex items-center gap-1 shadow-lg">
+            <div className="bg-gradient-to-br from-gold to-gold-dim text-navy px-4 py-1.5 rounded-bl-2xl flex items-center gap-1 shadow-lg">
               <Sparkles className="h-4 w-4" />
               <span className="text-xs font-bold">POPULAR</span>
             </div>
@@ -44,8 +44,8 @@ export function PackageCard({ pkg, hospitalName, hospitalId, featured = false }:
         <div
           className={`absolute top-0 left-0 right-0 h-32 bg-gradient-to-br opacity-5 ${
             featured
-              ? "from-[#c8a96e] via-[#a88b50] to-[#c8a96e]/40"
-              : "from-[#0f1e38] to-[#c8a96e]/30"
+              ? "from-gold via-gold-dim to-gold/40"
+              : "from-navy to-gold/30"
           }`}
         />
 
@@ -54,13 +54,13 @@ export function PackageCard({ pkg, hospitalName, hospitalId, featured = false }:
           {/* Package Name */}
           <div className="mb-4">
             <h3 className="text-xl font-bold text-slate-900 mb-1">{pkg.name}</h3>
-            <div className="h-1 w-12 rounded-full bg-gradient-to-r from-[#c8a96e] to-[#a88b50]" />
+            <div className="h-1 w-12 rounded-full bg-gradient-to-r from-gold to-gold-dim" />
           </div>
 
           {/* Price Section */}
           <div className="mb-6">
             <div className="flex items-baseline gap-2">
-              <span className="text-4xl font-bold text-[#c8a96e]">
+              <span className="text-4xl font-bold text-gold">
                 {priceText}
               </span>
               {pkg.discount && (
@@ -81,19 +81,19 @@ export function PackageCard({ pkg, hospitalName, hospitalId, featured = false }:
                 line.startsWith("- ") ? (
                   <div key={i} className="flex items-start gap-2.5 py-1">
                     <div className="flex-shrink-0 mt-1">
-                      <div className="h-4 w-4 rounded-full bg-[#c8a96e]/15 flex items-center justify-center">
-                        <Check className="h-2.5 w-2.5 text-[#a88b50]" />
+                      <div className="h-4 w-4 rounded-full bg-gold/15 flex items-center justify-center">
+                        <Check className="h-2.5 w-2.5 text-gold-dim" />
                       </div>
                     </div>
                     <span className="text-sm text-slate-700 leading-relaxed">{line.slice(2)}</span>
                   </div>
                 ) : (
                   <div key={i} className="flex items-center gap-2 pt-4 pb-1 first:pt-1">
-                    <div className="h-px flex-1 bg-[#0f1e38]/10" />
-                    <span className="text-[0.68rem] font-bold tracking-widest uppercase text-[#a88b50] whitespace-nowrap">
+                    <div className="h-px flex-1 bg-navy/10" />
+                    <span className="text-[0.68rem] font-bold tracking-widest uppercase text-gold-dim whitespace-nowrap">
                       {line}
                     </span>
-                    <div className="h-px flex-1 bg-[#0f1e38]/10" />
+                    <div className="h-px flex-1 bg-navy/10" />
                   </div>
                 )
               )}
@@ -104,8 +104,8 @@ export function PackageCard({ pkg, hospitalName, hospitalId, featured = false }:
             onClick={() => setShowModal(true)}
             className={`mt-auto w-full rounded-xl py-3.5 text-sm font-semibold transition-all duration-300 shadow-md text-center ${
               featured
-                ? "bg-[#c8a96e] text-[#0f1e38] hover:bg-[#a88b50] hover:shadow-lg hover:shadow-[#c8a96e]/30 hover:scale-105"
-                : "bg-[#0f1e38] text-[#c8a96e] hover:bg-[#1a3059] hover:shadow-lg"
+                ? "bg-gold text-navy hover:bg-gold-dim hover:shadow-lg hover:shadow-gold/30 hover:scale-105"
+                : "bg-navy text-gold hover:bg-navy-mid hover:shadow-lg"
             }`}
           >
             Book Now — {priceText}
@@ -113,7 +113,7 @@ export function PackageCard({ pkg, hospitalName, hospitalId, featured = false }:
         </div>
 
         {/* Hover Effect Border */}
-        <div className="absolute inset-0 rounded-2xl border-2 border-[#c8a96e] opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
+        <div className="absolute inset-0 rounded-2xl border-2 border-gold opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
       </div>
 
       <BookingModal

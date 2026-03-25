@@ -50,8 +50,8 @@ export async function GET(req: Request) {
     }));
 
     return NextResponse.json({ booked });
-  } catch (error: any) {
-    console.error("Booked slots error:", error.message);
+  } catch (error) {
+    console.error("Booked slots error:", error instanceof Error ? error.message : error);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }

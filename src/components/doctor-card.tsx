@@ -106,9 +106,9 @@ export function DoctorCard({ doctor, slots = [], departmentName, onSelectSlotAct
   const feeText = formatFeeWholeEUR(doctor.feeMin ?? null, doctor.currency ?? "eur");
 
   return (
-    <div className="group bg-white rounded-2xl border border-[#0f1e38]/10 shadow-sm hover:shadow-xl hover:border-[#c8a96e] transition-all duration-300 hover:-translate-y-1 overflow-hidden flex flex-col">
+    <div className="group bg-white rounded-2xl border border-navy/10 shadow-sm hover:shadow-xl hover:border-gold transition-all duration-300 hover:-translate-y-1 overflow-hidden flex flex-col">
       {/* Subtle gradient decoration */}
-      <div className="absolute top-0 left-0 right-0 h-24 bg-gradient-to-br from-[#c8a96e]/10 via-[#c8a96e]/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"></div>
+      <div className="absolute top-0 left-0 right-0 h-24 bg-gradient-to-br from-gold/10 via-gold/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"></div>
       
       <div className="relative p-5 flex gap-4 flex-1 items-stretch min-h-[220px]">
         {/* Photo */}
@@ -116,7 +116,7 @@ export function DoctorCard({ doctor, slots = [], departmentName, onSelectSlotAct
           <img
             src={doctor.image ?? "https://picsum.photos/seed/doctor/200/200"}
             alt={doctor.fullName}
-            className="h-20 w-20 rounded-xl object-cover border-2 border-[#0f1e38]/10 group-hover:border-[#c8a96e] transition-colors"
+            className="h-20 w-20 rounded-xl object-cover border-2 border-navy/10 group-hover:border-gold transition-colors"
           />
           {doctor.verified && (
             <div className="absolute -bottom-1 -right-1 h-6 w-6 rounded-full bg-gradient-to-br from-green-400 to-green-600 flex items-center justify-center border-2 border-white shadow-lg">
@@ -131,21 +131,21 @@ export function DoctorCard({ doctor, slots = [], departmentName, onSelectSlotAct
             <div className="min-w-0">
               {/* Name */}
               <div className="flex items-center gap-2">
-                <h3 className="font-bold text-[#0f1e38] truncate group-hover:text-[#a88b50] transition-colors">
+                <h3 className="font-bold text-navy truncate group-hover:text-gold-dim transition-colors">
                   {withDrPrefix(doctor.fullName)}
                 </h3>
               </div>
 
               {/* Specialty */}
               <div className="flex items-center gap-2 mt-1">
-                <p className="text-sm text-[#0f1e38]/70">{primarySpecialty}</p>
+                <p className="text-sm text-navy/70">{primarySpecialty}</p>
               </div>
             </div>
 
             {/* Fee */}
             <div className="text-right shrink-0">
               <p className="text-xs text-slate-500 font-medium">Fee</p>
-              <p className="text-lg font-bold text-[#a88b50]">{feeText}</p>
+              <p className="text-lg font-bold text-gold-dim">{feeText}</p>
             </div>
           </div>
 
@@ -156,7 +156,7 @@ export function DoctorCard({ doctor, slots = [], departmentName, onSelectSlotAct
                 <button
                   type="button"
                   onClick={() => setShowDetails((prev) => !prev)}
-                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#a88b50] hover:text-[#0f1e38] transition-colors"
+                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-gold-dim hover:text-navy transition-colors"
                   aria-expanded={showDetails}
                 >
                   {showDetails ? "View less" : "View more"}
@@ -193,7 +193,7 @@ export function DoctorCard({ doctor, slots = [], departmentName, onSelectSlotAct
             <Button
               onClick={() => setShowAvailability(true)}
               size="sm"
-              className="rounded-full bg-[#0f1e38] hover:bg-[#1a3059] text-[#c8a96e] shadow-md hover:shadow-lg"
+              className="rounded-full bg-navy hover:bg-navy-mid text-gold shadow-md hover:shadow-lg"
               disabled={doctorSlots.length === 0}
               title={doctorSlots.length === 0 ? "No availability available" : "Check Availability"}
             >

@@ -6,16 +6,30 @@
   --navy:        #0f1e38;
   --navy-mid:    #1a3059;
   --navy-light:  #243d6b;
+  --navy-dark:   #07111e;
   --gold:        #c8a96e;
   --gold-dim:    #a88b50;
   --gold-light:  #e8d5b0;
   --cream:       #f5f2ed;
   --cream-dark:  #ede9e2;
+  --cream-warm:  #f7f4ef;
+  --slate:       #6b7a96;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-navy: var(--navy);
+  --color-navy-mid: var(--navy-mid);
+  --color-navy-light: var(--navy-light);
+  --color-navy-dark: var(--navy-dark);
+  --color-gold: var(--gold);
+  --color-gold-dim: var(--gold-dim);
+  --color-gold-light: var(--gold-light);
+  --color-cream: var(--cream);
+  --color-cream-dark: var(--cream-dark);
+  --color-cream-warm: var(--cream-warm);
+  --color-slate: var(--slate);
 }
 
 

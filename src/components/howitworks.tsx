@@ -23,7 +23,7 @@ const steps = [
 
 export function HowItWorks() {
   return (
-    <section id="how-it-works" className="py-28 bg-[#0f1e38] scroll-mt-20 relative overflow-hidden">
+    <section id="how-it-works" className="py-28 bg-navy scroll-mt-20 relative overflow-hidden">
 
       {/* Subtle background texture */}
       <div className="absolute inset-0 opacity-[0.04]" style={{
@@ -39,7 +39,7 @@ export function HowItWorks() {
 
         {/* Header */}
         <div className="text-center mb-20">
-          <p className="text-xs font-semibold tracking-[0.2em] uppercase text-[#c8a96e] mb-4 opacity-80">Simple Process</p>
+          <p className="text-xs font-semibold tracking-[0.2em] uppercase text-gold mb-4 opacity-80">Simple Process</p>
           <h2 className="text-4xl md:text-5xl font-bold text-white mb-5">How Sewa-Setu Works</h2>
           <p className="text-lg text-slate-400 max-w-md mx-auto">
             Three simple steps to ensure your family's health from anywhere.
@@ -57,7 +57,7 @@ export function HowItWorks() {
 
               {/* Step number badge */}
               <div className="absolute -top-3 left-1/2 -translate-x-1/2 z-10">
-                <span className="text-[10px] font-bold tracking-widest text-[#c8a96e] opacity-60">{step.step}</span>
+                <span className="text-[10px] font-bold tracking-widest text-gold opacity-60">{step.step}</span>
               </div>
 
               {/* Icon circle */}
@@ -73,12 +73,12 @@ export function HowItWorks() {
                   {/* Inner glow on hover */}
                   <div className="absolute inset-0 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-500"
                     style={{ background: "radial-gradient(circle, rgba(200,169,110,0.15), transparent)" }} />
-                  <step.icon className="h-9 w-9 text-[#c8a96e] relative z-10 transition-transform duration-500 group-hover:scale-110" />
+                  <step.icon className="h-9 w-9 text-gold relative z-10 transition-transform duration-500 group-hover:scale-110" />
                 </div>
               </div>
 
               {/* Text */}
-              <h3 className="text-xl font-bold text-white mb-3 group-hover:text-[#c8a96e] transition-colors duration-300">
+              <h3 className="text-xl font-bold text-white mb-3 group-hover:text-gold transition-colors duration-300">
                 {step.title}
               </h3>
               <p className="text-slate-400 max-w-[220px] leading-relaxed text-[15px]">{step.desc}</p>

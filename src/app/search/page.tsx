@@ -22,6 +22,11 @@ export default function SearchPage() {
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [showAISearch, setShowAISearch] = useState(false);
 
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+
   const [loading, setLoading] = useState(true);
   const [hospitals, setHospitals] = useState<ApiHospital[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -50,10 +55,19 @@ export default function SearchPage() {
     return count;
   }, [selectedCity, selectedType, emergencyOnly, minPrice, maxPrice]);
 
-  // ✅ Fetch when filters change
+  // Reset to page 1 when any filter changes
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedQuery, selectedCity, selectedType, emergencyOnly, minPrice, maxPrice, sortBy]);
+
+  // ✅ Fetch when filters or page changes
   useEffect(() => {
     const load = async () => {
-      setLoading(true);
+      if (page === 1) {
+        setLoading(true);
+      } else {
+        setLoadingMore(true);
+      }
       setError(null);
 
       try {
@@ -65,6 +79,7 @@ export default function SearchPage() {
         if (minPrice) params.set("minPrice", minPrice);
         if (maxPrice) params.set("maxPrice", maxPrice);
         if (sortBy) params.set("sortBy", sortBy);
+        params.set("page", String(page));
 
         const res = await fetch(`/api/hospitals?${params.toString()}`, {
           cache: "no-store",
@@ -75,17 +90,22 @@ export default function SearchPage() {
         }
 
         const data = await res.json();
-        setHospitals(data?.hospitals ?? []);
-      } catch (e: any) {
-        setError(e?.message ?? "Something went wrong while loading hospitals.");
-        setHospitals([]);
+        const incoming: ApiHospital[] = data?.hospitals ?? [];
+        setTotal(data?.total ?? 0);
+        setHasMore(data?.hasMore ?? false);
+        setHospitals((prev) => (page === 1 ? incoming : [...prev, ...incoming]));
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Something went wrong while loading hospitals.");
+        if (page === 1) setHospitals([]);
       } finally {
         setLoading(false);
+        setLoadingMore(false);
       }
     };
 
     load();
-  }, [debouncedQuery, selectedCity, selectedType, emergencyOnly, minPrice, maxPrice, sortBy]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, debouncedQuery, selectedCity, selectedType, emergencyOnly, minPrice, maxPrice, sortBy]);
 
   const clearAllFilters = () => {
     setSearchQuery("");
@@ -95,10 +115,11 @@ export default function SearchPage() {
     setMinPrice("");
     setMaxPrice("");
     setSortBy("recent");
+    setPage(1);
   };
 
   return (
-    <main className="min-h-screen bg-[#f7f4ef]">
+    <main className="min-h-screen bg-cream-warm">
       <Navbar />
 
       {/* Header & Search Section */}
@@ -116,7 +137,7 @@ export default function SearchPage() {
               <h1 className="text-2xl font-extrabold text-white tracking-tight leading-tight">
                 Find the<br />Best Care
               </h1>
-              <p className="text-[#c8a96e]/70 text-xs mt-1.5 leading-snug">Hospitals, clinics &amp; labs<br className="hidden sm:block" /> across Nepal</p>
+              <p className="text-gold/70 text-xs mt-1.5 leading-snug">Hospitals, clinics &amp; labs<br className="hidden sm:block" /> across Nepal</p>
             </div>
 
             {/* Right: search pill + filters + sort */}
@@ -130,11 +151,11 @@ export default function SearchPage() {
             >
               {/* Search input */}
               <div className="relative flex-1 flex items-center min-w-0">
-                <Search className="absolute left-4 h-4 w-4 text-[#a88b50] flex-shrink-0 pointer-events-none" />
+                <Search className="absolute left-4 h-4 w-4 text-gold-dim flex-shrink-0 pointer-events-none" />
                 <input
                   type="text"
                   placeholder="Search by hospital name..."
-                  className="w-full pl-11 pr-4 py-3.5 text-sm font-medium text-[#0f1e38] placeholder:text-gray-400 bg-transparent outline-none"
+                  className="w-full pl-11 pr-4 py-3.5 text-sm font-medium text-navy placeholder:text-gray-400 bg-transparent outline-none"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
@@ -149,13 +170,13 @@ export default function SearchPage() {
               </div>
 
               {/* Divider */}
-              <div className="w-px bg-[rgba(200,169,110,0.25)] my-3 flex-shrink-0" />
+              <div className="w-px bg-gold/25 my-3 flex-shrink-0" />
 
               {/* City dropdown */}
               <div className="relative flex items-center sm:w-40 flex-shrink-0">
-                <MapPin className="absolute left-3 h-4 w-4 text-[#c8a96e] pointer-events-none flex-shrink-0" />
+                <MapPin className="absolute left-3 h-4 w-4 text-gold pointer-events-none flex-shrink-0" />
                 <select
-                  className="h-full w-full appearance-none pl-9 pr-8 text-sm font-medium text-[#0f1e38] bg-transparent outline-none cursor-pointer"
+                  className="h-full w-full appearance-none pl-9 pr-8 text-sm font-medium text-navy bg-transparent outline-none cursor-pointer"
                   value={selectedCity}
                   onChange={(e) => setSelectedCity(e.target.value)}
                   aria-label="Filter by city"
@@ -165,14 +186,14 @@ export default function SearchPage() {
                     <option key={city} value={city}>{city}</option>
                   ))}
                 </select>
-                <ChevronDown className="absolute right-3 h-4 w-4 text-[#c8a96e] pointer-events-none" />
+                <ChevronDown className="absolute right-3 h-4 w-4 text-gold pointer-events-none" />
               </div>
             </div>
 
             {/* Smart Search button */}
             <button
               onClick={() => setShowAISearch(true)}
-              className="flex-shrink-0 flex items-center gap-2 px-4 py-3.5 rounded-2xl border border-[#c8a96e] bg-gradient-to-r from-[#0f9580]/20 to-[#0f9580]/10 text-[#c8a96e] text-sm font-semibold transition-all whitespace-nowrap hover:bg-gradient-to-r hover:from-[#0f9580]/30 hover:to-[#0f9580]/20"
+              className="flex-shrink-0 flex items-center gap-2 px-4 py-3.5 rounded-2xl border border-gold bg-gradient-to-r from-[#0f9580]/20 to-[#0f9580]/10 text-gold text-sm font-semibold transition-all whitespace-nowrap hover:bg-gradient-to-r hover:from-[#0f9580]/30 hover:to-[#0f9580]/20"
             >
               <Brain className="h-4 w-4" />
               <span className="hidden sm:inline">Smart Search</span>
@@ -183,14 +204,14 @@ export default function SearchPage() {
               onClick={() => setShowAdvanced(!showAdvanced)}
               className={`flex-shrink-0 flex items-center gap-2 px-4 py-3.5 rounded-2xl border text-sm font-semibold transition-all whitespace-nowrap ${
                 showAdvanced || activeFilterCount > 0
-                  ? "border-[#c8a96e] bg-[rgba(200,169,110,0.18)] text-[#c8a96e]"
+                  ? "border-gold bg-gold/18 text-gold"
                   : "border-white/20 bg-white/10 text-white/80 hover:bg-white/15 hover:border-white/30"
               }`}
             >
               <Filter className="h-4 w-4" />
               <span className="hidden sm:inline">Filters</span>
               {activeFilterCount > 0 && (
-                <span className="bg-[#c8a96e] text-[#0f1e38] text-[10px] px-1.5 py-0.5 rounded-full font-bold leading-none">
+                <span className="bg-gold text-navy text-[10px] px-1.5 py-0.5 rounded-full font-bold leading-none">
                   {activeFilterCount}
                 </span>
               )}
@@ -199,14 +220,14 @@ export default function SearchPage() {
             {/* Sort dropdown */}
             <div className="relative flex-shrink-0">
               <select
-                className="h-[50px] appearance-none rounded-2xl border border-white/20 bg-white/10 text-white/80 pl-3 pr-8 text-sm font-semibold outline-none focus:border-[#c8a96e] transition-all cursor-pointer whitespace-nowrap"
+                className="h-[50px] appearance-none rounded-2xl border border-white/20 bg-white/10 text-white/80 pl-3 pr-8 text-sm font-semibold outline-none focus:border-gold transition-all cursor-pointer whitespace-nowrap"
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value as SortOption)}
               >
-                <option value="recent" className="bg-[#0f1e38] text-white">Most Recent</option>
-                <option value="name" className="bg-[#0f1e38] text-white">A – Z</option>
-                <option value="price-low" className="bg-[#0f1e38] text-white">Price ↑</option>
-                <option value="price-high" className="bg-[#0f1e38] text-white">Price ↓</option>
+                <option value="recent" className="bg-navy text-white">Most Recent</option>
+                <option value="name" className="bg-navy text-white">A – Z</option>
+                <option value="price-low" className="bg-navy text-white">Price ↑</option>
+                <option value="price-high" className="bg-navy text-white">Price ↓</option>
               </select>
               <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-white/50 pointer-events-none" />
             </div>
@@ -226,13 +247,13 @@ export default function SearchPage() {
           {/* ── Advanced Filters Panel ── */}
           {showAdvanced && (
             <div
-              className="mt-1 p-5 rounded-2xl border border-[rgba(200,169,110,0.2)]"
+              className="mt-1 p-5 rounded-2xl border border-gold/20"
               style={{ background: "rgba(255,255,255,0.07)" }}
             >
               <div className="grid grid-cols-1 sm:grid-cols-[1fr_2fr_1fr] gap-5">
                 {/* Type */}
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-widest text-[#c8a96e] mb-2">Type</label>
+                  <label className="block text-xs font-bold uppercase tracking-widest text-gold mb-2">Type</label>
                   <div className="flex gap-1.5">
                     {(["ALL", "HOSPITAL", "CLINIC", "LAB"] as HospitalType[]).map((type) => (
                       <button
@@ -240,8 +261,8 @@ export default function SearchPage() {
                         onClick={() => setSelectedType(type)}
                         className={`flex-1 px-2 py-2 rounded-lg text-xs font-semibold transition-all ${
                           selectedType === type
-                            ? "bg-[#c8a96e] text-[#0f1e38]"
-                            : "bg-white/10 text-white/70 border border-white/15 hover:border-[rgba(200,169,110,0.4)]"
+                            ? "bg-gold text-navy"
+                            : "bg-white/10 text-white/70 border border-white/15 hover:border-gold/40"
                         }`}
                       >
                         {type === "ALL" ? "All" : type.charAt(0) + type.slice(1).toLowerCase()}
@@ -252,19 +273,19 @@ export default function SearchPage() {
 
                 {/* Price Range */}
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-widest text-[#c8a96e] mb-2">Price Range (NPR)</label>
+                  <label className="block text-xs font-bold uppercase tracking-widest text-gold mb-2">Price Range (NPR)</label>
                   <div className="flex gap-2">
                     <input
                       type="number"
                       placeholder="Min"
-                      className="flex-1 h-9 rounded-lg border border-[rgba(200,169,110,0.3)] bg-white text-[#0f1e38] placeholder:text-gray-400 px-3 text-xs font-medium outline-none focus:border-[#c8a96e] transition-all"
+                      className="flex-1 h-9 rounded-lg border border-gold/30 bg-white text-navy placeholder:text-gray-400 px-3 text-xs font-medium outline-none focus:border-gold transition-all"
                       value={minPrice}
                       onChange={(e) => setMinPrice(e.target.value)}
                     />
                     <input
                       type="number"
                       placeholder="Max"
-                      className="flex-1 h-9 rounded-lg border border-[rgba(200,169,110,0.3)] bg-white text-[#0f1e38] placeholder:text-gray-400 px-3 text-xs font-medium outline-none focus:border-[#c8a96e] transition-all"
+                      className="flex-1 h-9 rounded-lg border border-gold/30 bg-white text-navy placeholder:text-gray-400 px-3 text-xs font-medium outline-none focus:border-gold transition-all"
                       value={maxPrice}
                       onChange={(e) => setMaxPrice(e.target.value)}
                     />
@@ -273,13 +294,13 @@ export default function SearchPage() {
 
                 {/* Emergency */}
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-widest text-[#c8a96e] mb-2">Services</label>
+                  <label className="block text-xs font-bold uppercase tracking-widest text-gold mb-2">Services</label>
                   <button
                     onClick={() => setEmergencyOnly(!emergencyOnly)}
                     className={`w-full flex items-center justify-center gap-2 h-9 px-4 rounded-lg text-xs font-semibold transition-all border ${
                       emergencyOnly
                         ? "bg-red-500 border-red-400 text-white"
-                        : "bg-white border-[rgba(200,169,110,0.3)] text-[#0f1e38] hover:border-[#c8a96e]"
+                        : "bg-white border-gold/30 text-navy hover:border-gold"
                     }`}
                   >
                     <Siren className="h-3.5 w-3.5" />
@@ -299,8 +320,8 @@ export default function SearchPage() {
         {loading ? (
           <div className="flex items-center justify-center py-20">
             <div className="text-center">
-              <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-[#c8a96e] border-r-transparent"></div>
-              <p className="mt-4 text-[#6b7a96] font-medium">Loading hospitals...</p>
+              <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-gold border-r-transparent"></div>
+              <p className="mt-4 text-slate font-medium">Loading hospitals...</p>
             </div>
           </div>
         ) : error ? (
@@ -319,26 +340,49 @@ export default function SearchPage() {
         ) : (
           <>
             <div className="flex items-center justify-between mb-6">
-              <p className="text-[#6b7a96] font-medium">
-                Showing <span className="text-[#0f1e38] font-bold">{hospitals.length}</span> {hospitals.length === 1 ? 'hospital' : 'hospitals'}
+              <p className="text-slate font-medium">
+                Showing <span className="text-navy font-bold">{hospitals.length}</span>
+                {total > hospitals.length && <> of <span className="text-navy font-bold">{total}</span></>}
+                {" "}{hospitals.length === 1 ? "hospital" : "hospitals"}
                 {selectedCity !== "All Cities" && ` in ${selectedCity}`}
                 {selectedType !== "ALL" && ` (${selectedType.charAt(0) + selectedType.slice(1).toLowerCase()})`}
               </p>
             </div>
 
             {hospitals.length > 0 ? (
-              <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
-                {hospitals.map((hospital, index) => (
-                  <HospitalCard key={hospital.id} hospital={hospital} index={index} />
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-20 bg-white rounded-3xl border border-dashed border-[rgba(200,169,110,0.3)]">
-                <div className="bg-[rgba(200,169,110,0.08)] w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Search className="h-8 w-8 text-[#a88b50]" />
+              <>
+                <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
+                  {hospitals.map((hospital, index) => (
+                    <HospitalCard key={hospital.id} hospital={hospital} index={index} />
+                  ))}
                 </div>
-                <h3 className="text-lg font-medium text-[#0f1e38]">No hospitals found</h3>
-                <p className="text-[#6b7a96] mt-2">
+
+                {hasMore && (
+                  <div className="flex justify-center mt-10">
+                    <button
+                      onClick={() => setPage((p) => p + 1)}
+                      disabled={loadingMore}
+                      className="flex items-center gap-2 px-8 py-3.5 rounded-2xl bg-navy text-gold font-semibold text-sm border border-navy/20 hover:bg-navy-mid transition-all disabled:opacity-60"
+                    >
+                      {loadingMore ? (
+                        <>
+                          <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-solid border-gold border-r-transparent" />
+                          Loading...
+                        </>
+                      ) : (
+                        `Load More (${total - hospitals.length} remaining)`
+                      )}
+                    </button>
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className="text-center py-20 bg-white rounded-3xl border border-dashed border-gold/30">
+                <div className="bg-gold/8 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Search className="h-8 w-8 text-gold-dim" />
+                </div>
+                <h3 className="text-lg font-medium text-navy">No hospitals found</h3>
+                <p className="text-slate mt-2">
                   {searchQuery || activeFilterCount > 0 
                     ? "Try adjusting your search or filters."
                     : "Start searching to find hospitals near you."}
@@ -346,7 +390,7 @@ export default function SearchPage() {
                 {(searchQuery || activeFilterCount > 0) && (
                   <button
                     onClick={clearAllFilters}
-                    className="mt-4 px-4 py-2 bg-[#0f1e38] text-[#c8a96e] rounded-lg font-medium hover:bg-[#1a3059] transition-colors"
+                    className="mt-4 px-4 py-2 bg-navy text-gold rounded-lg font-medium hover:bg-navy-mid transition-colors"
                   >
                     Clear all filters
                   </button>

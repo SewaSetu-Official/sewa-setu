@@ -1,10 +1,10 @@
-// src/app/hospital/[slug]/page.tsx
-
 import { ArrowLeft, MapPin, Star, Building2, Stethoscope, Beaker } from "lucide-react";
 import Link from "next/link";
-import { ApiHospitalDetails } from "@/types/hospital-details";
+import Image from "next/image";
+import { notFound } from "next/navigation";
 import { HospitalDetailClient } from "./HospitalDetailClient";
 import { Navbar } from "@/components/navbar";
+import { getHospitalBySlug } from "@/lib/get-hospital";
 
 interface PageProps {
   params: Promise<{ slug: string }>;
@@ -12,19 +12,9 @@ interface PageProps {
 
 export default async function HospitalDetails({ params }: PageProps) {
   const { slug } = await params;
+  const hospital = await getHospitalBySlug(slug);
 
-  const baseUrl =
-    process.env.VERCEL_URL
-      ? `https://${process.env.VERCEL_URL}`
-      : process.env.NEXT_PUBLIC_BASE_URL ?? "http://localhost:3000";
-
-  const res = await fetch(`${baseUrl}/api/hospitals/${slug}`, { cache: "no-store" });
-
-  if (!res.ok) {
-    return <div className="p-6">Hospital not found</div>;
-  }
-
-  const hospital = (await res.json()) as ApiHospitalDetails;
+  if (!hospital) notFound();
 
   const packages = hospital.services.map((s) => ({
     id: s.id,
@@ -43,10 +33,12 @@ export default async function HospitalDetails({ params }: PageProps) {
           <div className="bg-white rounded-[2rem] overflow-hidden shadow-xl shadow-slate-200/50 border border-slate-100" style={{ marginBottom: "2rem" }}>
             {/* Hero */}
             <div className="relative h-80 sm:h-96 lg:h-[450px] w-full">
-              <img
-                src={hospital.image ?? "https://picsum.photos/seed/hospital-fallback/1200/800"}
+              <Image
+                src={hospital.image ?? "/SewaSetu-Logo.webp"}
                 alt={hospital.name}
-                className="h-full w-full object-cover"
+                fill
+                className="object-cover"
+                priority
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent" />
 
@@ -54,7 +46,7 @@ export default async function HospitalDetails({ params }: PageProps) {
               <div className="absolute top-4 left-6">
                 <Link
                   href="/search"
-                  className="inline-flex items-center gap-2 text-sm font-medium px-4 py-2 rounded-lg transition-all bg-black/25 backdrop-blur-md text-white border border-white/30 hover:border-[#c8a96e] hover:text-white"
+                  className="inline-flex items-center gap-2 text-sm font-medium px-4 py-2 rounded-lg transition-all bg-black/25 backdrop-blur-md text-white border border-white/30 hover:border-gold hover:text-white"
                 >
                   <ArrowLeft className="h-3.5 w-3.5" />
                   Back To Hospitals
@@ -77,8 +69,8 @@ export default async function HospitalDetails({ params }: PageProps) {
                   {hospital.tags?.slice(0, 4).map((tag, i) => (
                     <span
                       key={tag}
-                      className={`px-3 py-1 rounded-full text-xs font-semibold text-[#0f1e38] ${
-                        i === 0 ? "bg-[#c8a96e]" : "bg-[#c8a96e]/70"
+                      className={`px-3 py-1 rounded-full text-xs font-semibold text-navy ${
+                        i === 0 ? "bg-gold" : "bg-gold/70"
                       }`}
                     >
                       {tag}

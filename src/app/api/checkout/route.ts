@@ -58,11 +58,11 @@ export async function POST(req: Request) {
     if (!patientPhone || typeof patientPhone !== "string") {
       return NextResponse.json({ error: "Phone number is required" }, { status: 400 });
     }
-    const cleanPhone = patientPhone.replace(/[\s\-()]/g, "");
-    const normalizedPhone = cleanPhone.replace(/^(\+977|977)/, "");
-    if (!/^\d{10}$/.test(normalizedPhone)) {
-      return NextResponse.json({ error: "Phone number must be 10 digits" }, { status: 400 });
+    const cleanPhone = patientPhone.replace(/[\s\-().+]/g, "");
+    if (!/^\d{7,15}$/.test(cleanPhone)) {
+      return NextResponse.json({ error: "Phone number must be between 7 and 15 digits" }, { status: 400 });
     }
+    const normalizedPhone = cleanPhone;
     if (patientAge === undefined || patientAge === null) {
       return NextResponse.json({ error: "Patient age is required" }, { status: 400 });
     }
@@ -155,9 +155,11 @@ export async function POST(req: Request) {
     console.log(`✅ Checkout: ${session.id} | ${clerkUserId} | ${itemName} | €${(priceCents / 100).toFixed(2)}`);
     return NextResponse.json({ url: session.url });
 
-  } catch (error: any) {
-    console.error("❌ Checkout error:", error.message);
-    const clientMessage = error.type === "StripeInvalidRequestError"
+  } catch (error) {
+    const isStripeError = typeof error === "object" && error !== null && "type" in error;
+    const message = error instanceof Error ? error.message : "Unknown error";
+    console.error("❌ Checkout error:", message);
+    const clientMessage = isStripeError && (error as { type: string }).type === "StripeInvalidRequestError"
       ? "Invalid payment request"
       : "Payment processing error. Please try again.";
     return NextResponse.json({ error: clientMessage }, { status: 500 });

@@ -44,15 +44,15 @@ function StatCard({ icon: Icon, value, suffix, label, delay }: typeof stats[0] &
   return (
     <div ref={ref} className="group text-center" style={{ animationDelay: `${delay}ms` }}>
       <div className="relative mb-5 mx-auto w-16 h-16 flex items-center justify-center">
-        <div className="absolute inset-0 rounded-2xl bg-[#0f1e38] opacity-0 group-hover:opacity-100 transition-all duration-500 scale-90 group-hover:scale-100" />
-        <div className="relative z-10 w-full h-full flex items-center justify-center rounded-2xl border border-[rgba(200,169,110,0.25)] bg-white shadow-sm group-hover:border-transparent transition-all duration-500">
-          <Icon className="h-7 w-7 text-[#a88b50] group-hover:text-[#c8a96e] transition-colors duration-500" />
+        <div className="absolute inset-0 rounded-2xl bg-navy opacity-0 group-hover:opacity-100 transition-all duration-500 scale-90 group-hover:scale-100" />
+        <div className="relative z-10 w-full h-full flex items-center justify-center rounded-2xl border border-gold/25 bg-white shadow-sm group-hover:border-transparent transition-all duration-500">
+          <Icon className="h-7 w-7 text-gold-dim group-hover:text-gold transition-colors duration-500" />
         </div>
       </div>
-      <p className="text-4xl md:text-5xl font-bold text-[#0f1e38] mb-1 tabular-nums">
+      <p className="text-4xl md:text-5xl font-bold text-navy mb-1 tabular-nums">
         {count.toLocaleString()}{suffix}
       </p>
-      <p className="text-[#6b7a96] font-medium text-sm tracking-wide uppercase">{label}</p>
+      <p className="text-slate font-medium text-sm tracking-wide uppercase">{label}</p>
     </div>
   );
 }

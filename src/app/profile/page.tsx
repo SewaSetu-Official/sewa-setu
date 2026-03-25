@@ -75,7 +75,7 @@ export default async function ProfilePage() {
     : "—";
 
   return (
-    <div className="min-h-screen bg-[#f5f3ef]">
+    <div className="min-h-screen bg-cream-warm">
 
       {/* ── HERO BANNER ── */}
       <div style={{ background: "linear-gradient(135deg,#0f1e38 0%,#1a3059 60%,#0f1e38 100%)" }} className="pt-20 pb-0">
@@ -96,18 +96,18 @@ export default async function ProfilePage() {
         {/* Stats strip — sits on the banner bottom edge */}
         <div className="max-w-5xl mx-auto px-6">
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 translate-y-6">
-            <div className="bg-white rounded-2xl p-5 shadow-lg border border-[#c8a96e]/15 text-center">
-              <p className="text-3xl font-extrabold text-[#0f1e38]">{bookingCount}</p>
+            <div className="bg-white rounded-2xl p-5 shadow-lg border border-gold/15 text-center">
+              <p className="text-3xl font-extrabold text-navy">{bookingCount}</p>
               <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mt-1">Total Bookings</p>
             </div>
-            <div className="bg-white rounded-2xl p-5 shadow-lg border border-[#c8a96e]/15 text-center">
-              <p className="text-3xl font-extrabold text-[#0f1e38]">
+            <div className="bg-white rounded-2xl p-5 shadow-lg border border-gold/15 text-center">
+              <p className="text-3xl font-extrabold text-navy">
                 {serializedBookings.filter(b => b.status === "CONFIRMED" || b.status === "REQUESTED").length}
               </p>
               <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mt-1">Upcoming</p>
             </div>
-            <div className="hidden sm:block bg-white rounded-2xl p-5 shadow-lg border border-[#c8a96e]/15 text-center">
-              <p className="text-lg font-extrabold text-[#0f1e38] leading-tight">{memberSince}</p>
+            <div className="hidden sm:block bg-white rounded-2xl p-5 shadow-lg border border-gold/15 text-center">
+              <p className="text-lg font-extrabold text-navy leading-tight">{memberSince}</p>
               <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mt-1">Member Since</p>
             </div>
           </div>
@@ -120,11 +120,11 @@ export default async function ProfilePage() {
         {/* ── RECENT BOOKINGS ── */}
         <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
           <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between">
-            <h2 className="text-lg font-bold text-[#0f1e38] flex items-center gap-2">
-              <CalendarDays size={20} className="text-[#c8a96e]" />
+            <h2 className="text-lg font-bold text-navy flex items-center gap-2">
+              <CalendarDays size={20} className="text-gold" />
               Recent Bookings
             </h2>
-            <Link href="/search" className="text-xs font-semibold text-[#a88b50] hover:text-[#0f1e38] transition-colors">
+            <Link href="/search" className="text-xs font-semibold text-gold-dim hover:text-navy transition-colors">
               Book again →
             </Link>
           </div>
@@ -135,12 +135,12 @@ export default async function ProfilePage() {
         {/* ── ACCOUNT INFO ── */}
         <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
           <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between">
-            <h2 className="text-lg font-bold text-[#0f1e38] flex items-center gap-2">
-              <Shield size={20} className="text-[#c8a96e]" />
+            <h2 className="text-lg font-bold text-navy flex items-center gap-2">
+              <Shield size={20} className="text-gold" />
               Account Information
             </h2>
             <Link href="/profile/manage">
-              <button className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#a88b50] hover:text-[#0f1e38] transition-colors">
+              <button className="inline-flex items-center gap-1.5 text-xs font-semibold text-gold-dim hover:text-navy transition-colors">
                 <Settings size={14} /> Manage
               </button>
             </Link>
@@ -148,12 +148,12 @@ export default async function ProfilePage() {
           <div className="px-6 py-5 grid sm:grid-cols-2 gap-5">
             {/* Email */}
             <div className="flex items-start gap-3">
-              <div className="h-9 w-9 rounded-xl bg-[#c8a96e]/10 flex items-center justify-center flex-shrink-0 mt-0.5">
-                <CheckCircle2 size={16} className="text-[#c8a96e]" />
+              <div className="h-9 w-9 rounded-xl bg-gold/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                <CheckCircle2 size={16} className="text-gold" />
               </div>
               <div>
                 <p className="text-xs font-bold uppercase tracking-wide text-gray-400 mb-0.5">Email</p>
-                <p className="text-sm font-semibold text-[#0f1e38] break-all">
+                <p className="text-sm font-semibold text-navy break-all">
                   {userDataForClient.primaryEmailAddress?.emailAddress ?? "—"}
                 </p>
                 {userDataForClient.primaryEmailAddressVerificationStatus === "verified" && (
@@ -164,12 +164,12 @@ export default async function ProfilePage() {
 
             {/* Phone */}
             <div className="flex items-start gap-3">
-              <div className="h-9 w-9 rounded-xl bg-[#c8a96e]/10 flex items-center justify-center flex-shrink-0 mt-0.5">
-                <Phone size={16} className="text-[#c8a96e]" />
+              <div className="h-9 w-9 rounded-xl bg-gold/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                <Phone size={16} className="text-gold" />
               </div>
               <div>
                 <p className="text-xs font-bold uppercase tracking-wide text-gray-400 mb-0.5">Phone</p>
-                <p className="text-sm font-semibold text-[#0f1e38]">
+                <p className="text-sm font-semibold text-navy">
                   {userDataForClient.phoneNumbers[0]?.phoneNumber ?? "Not added"}
                 </p>
               </div>

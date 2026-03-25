@@ -32,7 +32,7 @@ export function TestimonialsSection() {
   const t = testimonials[current];
 
   return (
-    <section className="py-28 bg-[#f7f4ef] relative overflow-hidden">
+    <section className="py-28 bg-cream-warm relative overflow-hidden">
 
       {/* Decorative top line */}
       <div className="absolute top-0 left-0 right-0 h-px"
@@ -42,11 +42,11 @@ export function TestimonialsSection() {
 
         {/* Header */}
         <div className="text-center mb-16">
-          <p className="text-xs font-semibold tracking-[0.2em] uppercase text-[#a88b50] mb-4">Testimonials</p>
-          <h2 className="text-4xl md:text-5xl font-bold text-[#0f1e38] mb-4">What families say</h2>
-          <p className="text-[#6b7a96] text-lg">
+          <p className="text-xs font-semibold tracking-[0.2em] uppercase text-gold-dim mb-4">Testimonials</p>
+          <h2 className="text-4xl md:text-5xl font-bold text-navy mb-4">What families say</h2>
+          <p className="text-slate text-lg">
             Real stories from people who trust Sewa-Setu for their family's{" "}
-            <span className="text-[#c8a96e] font-medium">health</span>
+            <span className="text-gold font-medium">health</span>
           </p>
         </div>
 
@@ -66,14 +66,14 @@ export function TestimonialsSection() {
 
           {/* Quote icon */}
           <div className="absolute top-8 right-8 opacity-10">
-            <Quote className="w-16 h-16 text-[#c8a96e]" />
+            <Quote className="w-16 h-16 text-gold" />
           </div>
 
           <div className="relative z-10">
             {/* Stars */}
             <div className="flex gap-1 mb-6">
               {[...Array(t.rating)].map((_, i) => (
-                <Star key={i} className="h-4 w-4 fill-[#c8a96e] text-[#c8a96e]" />
+                <Star key={i} className="h-4 w-4 fill-gold text-gold" />
               ))}
             </div>
 
@@ -92,7 +92,7 @@ export function TestimonialsSection() {
               </div>
               <div>
                 <p className="font-semibold text-white">{t.name}</p>
-                <p className="text-[#c8a96e] text-sm">{t.location}</p>
+                <p className="text-gold text-sm">{t.location}</p>
               </div>
             </div>
           </div>
@@ -102,7 +102,7 @@ export function TestimonialsSection() {
         <div className="flex items-center justify-center gap-5">
           <button
             onClick={() => setCurrent((current - 1 + testimonials.length) % testimonials.length)}
-            className="w-10 h-10 rounded-full flex items-center justify-center bg-white border border-[rgba(15,30,56,0.12)] text-[#0f1e38] hover:bg-[#0f1e38] hover:text-[#c8a96e] hover:border-[#0f1e38] transition-all duration-300"
+            className="w-10 h-10 rounded-full flex items-center justify-center bg-white border border-navy/12 text-navy hover:bg-navy hover:text-gold hover:border-navy transition-all duration-300"
           >
             <ChevronLeft className="h-5 w-5" />
           </button>
@@ -124,7 +124,7 @@ export function TestimonialsSection() {
 
           <button
             onClick={() => setCurrent((current + 1) % testimonials.length)}
-            className="w-10 h-10 rounded-full flex items-center justify-center bg-white border border-[rgba(15,30,56,0.12)] text-[#0f1e38] hover:bg-[#0f1e38] hover:text-[#c8a96e] hover:border-[#0f1e38] transition-all duration-300"
+            className="w-10 h-10 rounded-full flex items-center justify-center bg-white border border-navy/12 text-navy hover:bg-navy hover:text-gold hover:border-navy transition-all duration-300"
           >
             <ChevronRight className="h-5 w-5" />
           </button>

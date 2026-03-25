@@ -594,9 +594,9 @@ Rules:
       conversationId,
     });
 
-  } catch (error: any) {
-    console.error("[AI API ERROR]", error);
-    
+  } catch (error) {
+    console.error("[AI API ERROR]", error instanceof Error ? error.message : error);
+
     return NextResponse.json({
       text: "I'm having trouble right now. Please try again in a moment.",
       type: "error",
@@ -606,6 +606,13 @@ Rules:
 
 export async function PUT(req: Request) {
   try {
+    // ── AUTH CHECK ───────────────────────────────────────────────────
+    const { auth } = await import("@clerk/nextjs/server");
+    const { userId: clerkUserId } = await auth();
+    if (!clerkUserId) {
+      return NextResponse.json({ error: "You must be signed in to book" }, { status: 401 });
+    }
+
     const body = await req.json();
     const {
       hospitalId,
@@ -626,30 +633,27 @@ export async function PUT(req: Request) {
       );
     }
 
+    // Find or create the DB user from the authenticated Clerk user
+    let dbUser = await db.user.findUnique({ where: { clerkId: clerkUserId } });
+    if (!dbUser) {
+      dbUser = await db.user.create({
+        data: {
+          clerkId: clerkUserId,
+          email: buyerEmail,
+          fullName: patientName,
+          country: "NP",
+        },
+      });
+    }
+
     let patient = await db.patient.findFirst({
-      where: { user: { email: buyerEmail } },
+      where: { userId: dbUser.id, fullName: patientName },
     });
 
     if (!patient) {
-      let user = await db.user.findUnique({
-        where: { email: buyerEmail },
-      });
-
-      if (!user) {
-        user = await db.user.create({
-          data: {
-            email: buyerEmail,
-            fullName: patientName,
-            phone: patientPhone,
-            country: "Nepal",
-            clerkId: `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-          },
-        });
-      }
-
       patient = await db.patient.create({
         data: {
-          userId: user.id,
+          userId: dbUser.id,
           fullName: patientName,
           phone: patientPhone,
         },
@@ -678,7 +682,7 @@ export async function PUT(req: Request) {
 
     const booking = await db.booking.create({
       data: {
-        userId: patient.userId,
+        userId: dbUser.id,
         patientId: patient.id,
         hospitalId: hospital.id,
         mode: "PHYSICAL",
@@ -705,11 +709,9 @@ export async function PUT(req: Request) {
       },
       conversationId,
     });
-  } catch (error: any) {
-    console.error("Booking error:", error);
-    return NextResponse.json(
-      { error: error.message || "Booking failed" },
-      { status: 500 }
-    );
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Booking failed";
+    console.error("Booking error:", message);
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

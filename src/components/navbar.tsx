@@ -64,7 +64,7 @@ export function Navbar() {
             </div>
             <div>
               <span className="text-lg font-bold text-white leading-none">
-                Sewa<span className="text-[#c8a96e]">-Setu</span>
+                Sewa<span className="text-gold">-Setu</span>
               </span>
               <div className="text-[9px] text-slate-500 tracking-[0.15em] uppercase leading-none mt-0.5">
                 For the people
@@ -104,7 +104,7 @@ export function Navbar() {
             {/* Sign In */}
             <SignedOut>
               <Link href="/sign-in" className="hidden md:block">
-                <button className="text-sm font-medium text-slate-300 hover:text-[#c8a96e] transition-colors duration-200 px-3 py-1.5">
+                <button className="text-sm font-medium text-slate-300 hover:text-gold transition-colors duration-200 px-3 py-1.5">
                   Sign In
                 </button>
               </Link>
@@ -113,7 +113,7 @@ export function Navbar() {
             {/* Profile */}
             <SignedIn>
               <Link href="/profile" className="hidden md:block">
-                <button className="text-sm font-medium text-slate-300 hover:text-[#c8a96e] transition-colors duration-200 px-3 py-1.5">
+                <button className="text-sm font-medium text-slate-300 hover:text-gold transition-colors duration-200 px-3 py-1.5">
                   Profile
                 </button>
               </Link>
@@ -124,7 +124,7 @@ export function Navbar() {
             <SignedOut>
               <Link href="/sign-up">
                 <button
-                  className="relative text-sm font-bold text-[#0f1e38] px-5 py-2.5 rounded-xl overflow-hidden transition-all duration-300 hover:shadow-lg hover:shadow-[rgba(200,169,110,0.35)] hover:-translate-y-0.5 hover:scale-[1.02]"
+                  className="relative text-sm font-bold text-navy px-5 py-2.5 rounded-xl overflow-hidden transition-all duration-300 hover:shadow-lg hover:shadow-[rgba(200,169,110,0.35)] hover:-translate-y-0.5 hover:scale-[1.02]"
                   style={{ background: "linear-gradient(135deg, #e8d5b0, #c8a96e, #a88b50)" }}
                 >
                   Get Started
@@ -135,7 +135,7 @@ export function Navbar() {
             <SignedIn>
               <Link href="/search" className="hidden md:block">
                 <button
-                  className="relative text-sm font-bold text-[#0f1e38] px-5 py-2.5 rounded-xl overflow-hidden transition-all duration-300 hover:shadow-lg hover:shadow-[rgba(200,169,110,0.35)] hover:-translate-y-0.5 hover:scale-[1.02]"
+                  className="relative text-sm font-bold text-navy px-5 py-2.5 rounded-xl overflow-hidden transition-all duration-300 hover:shadow-lg hover:shadow-[rgba(200,169,110,0.35)] hover:-translate-y-0.5 hover:scale-[1.02]"
                   style={{ background: "linear-gradient(135deg, #e8d5b0, #c8a96e, #a88b50)" }}
                 >
                   Book Now
@@ -151,8 +151,8 @@ export function Navbar() {
               aria-label="Toggle menu"
             >
               {mobileOpen
-                ? <X className="w-4 h-4 text-[#c8a96e]" />
-                : <Menu className="w-4 h-4 text-[#c8a96e]" />
+                ? <X className="w-4 h-4 text-gold" />
+                : <Menu className="w-4 h-4 text-gold" />
               }
             </button>
           </div>
@@ -172,7 +172,7 @@ export function Navbar() {
                 key={label}
                 href={href}
                 onClick={() => setMobileOpen(false)}
-                className="px-4 py-3 text-sm font-medium text-slate-300 hover:text-white hover:bg-[rgba(200,169,110,0.07)] rounded-lg transition-all duration-200"
+                className="px-4 py-3 text-sm font-medium text-slate-300 hover:text-white hover:bg-gold/7 rounded-lg transition-all duration-200"
               >
                 {label}
               </Link>
@@ -182,13 +182,13 @@ export function Navbar() {
 
             <SignedOut>
               <Link href="/sign-in" onClick={() => setMobileOpen(false)}>
-                <button className="w-full text-left px-4 py-3 text-sm font-medium text-slate-300 hover:text-white hover:bg-[rgba(200,169,110,0.07)] rounded-lg transition-all duration-200">
+                <button className="w-full text-left px-4 py-3 text-sm font-medium text-slate-300 hover:text-white hover:bg-gold/7 rounded-lg transition-all duration-200">
                   Sign In
                 </button>
               </Link>
               <Link href="/sign-up" onClick={() => setMobileOpen(false)}>
                 <button
-                  className="w-full mt-1 py-3 rounded-xl text-sm font-bold text-[#0f1e38] transition-all duration-200"
+                  className="w-full mt-1 py-3 rounded-xl text-sm font-bold text-navy transition-all duration-200"
                   style={{ background: "linear-gradient(135deg, #e8d5b0, #c8a96e, #a88b50)" }}
                 >
                   Get Started
@@ -198,13 +198,13 @@ export function Navbar() {
 
             <SignedIn>
               <Link href="/profile" onClick={() => setMobileOpen(false)}>
-                <button className="w-full text-left px-4 py-3 text-sm font-medium text-slate-300 hover:text-white hover:bg-[rgba(200,169,110,0.07)] rounded-lg transition-all duration-200">
+                <button className="w-full text-left px-4 py-3 text-sm font-medium text-slate-300 hover:text-white hover:bg-gold/7 rounded-lg transition-all duration-200">
                   Profile
                 </button>
               </Link>
               <Link href="/search" onClick={() => setMobileOpen(false)}>
                 <button
-                  className="w-full mt-1 py-3 rounded-xl text-sm font-bold text-[#0f1e38] transition-all duration-200"
+                  className="w-full mt-1 py-3 rounded-xl text-sm font-bold text-navy transition-all duration-200"
                   style={{ background: "linear-gradient(135deg, #e8d5b0, #c8a96e, #a88b50)" }}
                 >
                   Book Now

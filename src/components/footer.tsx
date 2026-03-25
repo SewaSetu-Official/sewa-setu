@@ -5,7 +5,7 @@ import { a } from "framer-motion/client";
 
 export function Footer() {
   return (
-    <footer id="contact" className="bg-[#07111e] text-slate-400 relative overflow-hidden">
+    <footer id="contact" className="bg-navy-dark text-slate-400 relative overflow-hidden">
 
       {/* ── Ambient top glow ── */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[1px] opacity-60"
@@ -40,7 +40,7 @@ export function Footer() {
             {/* Brand info */}
             <div className="pt-1">
               <div className="text-2xl font-bold text-white mb-1">
-                Sewa<span className="text-[#c8a96e]">-Setu</span>
+                Sewa<span className="text-gold">-Setu</span>
               </div>
               <p className="text-sm text-slate-400 leading-relaxed mb-5">
                 Bridging the distance between you and your family&apos;s health.
@@ -59,7 +59,7 @@ export function Footer() {
                     key={label}
                     href="#"
                     aria-label={label}
-                    className="w-8 h-8 rounded-lg flex items-center justify-center text-[#c8a96e] hover:-translate-y-0.5 transition-all duration-300"
+                    className="w-8 h-8 rounded-lg flex items-center justify-center text-gold hover:-translate-y-0.5 transition-all duration-300"
                     style={{ background: "rgba(200,169,110,0.08)", border: "1px solid rgba(200,169,110,0.15)" }}
                   >
                     <Icon className="h-3.5 w-3.5" />
@@ -80,7 +80,7 @@ export function Footer() {
 
             {/* Quick Links */}
             <div>
-              <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#c8a96e] mb-5">Quick Links</h3>
+              <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-gold mb-5">Quick Links</h3>
               <ul className="space-y-3 text-sm">
                 {[
                   { label: "Find a Hospital", href: "/search" },
@@ -90,7 +90,7 @@ export function Footer() {
                 ].map(({ label, href }) => (
                   <li key={label}>
                     <Link href={href} className="group flex items-center gap-1.5 text-slate-400 hover:text-white transition-colors duration-200">
-                      <span className="w-0 group-hover:w-3 h-px bg-[#c8a96e] transition-all duration-300 overflow-hidden" />
+                      <span className="w-0 group-hover:w-3 h-px bg-gold transition-all duration-300 overflow-hidden" />
                       {label}
                     </Link>
                   </li>
@@ -100,7 +100,7 @@ export function Footer() {
 
             {/* Company */}
             <div>
-              <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#c8a96e] mb-5">Company</h3>
+              <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-gold mb-5">Company</h3>
               <ul className="space-y-3 text-sm">
                 {[
                   { label: "About Us",         href: "#" },
@@ -110,7 +110,7 @@ export function Footer() {
                 ].map(({ label, href }) => (
                   <li key={label}>
                     <Link href={href} className="group flex items-center gap-1.5 text-slate-400 hover:text-white transition-colors duration-200">
-                      <span className="w-0 group-hover:w-3 h-px bg-[#c8a96e] transition-all duration-300 overflow-hidden" />
+                      <span className="w-0 group-hover:w-3 h-px bg-gold transition-all duration-300 overflow-hidden" />
                       {label}
                     </Link>
                   </li>
@@ -120,7 +120,7 @@ export function Footer() {
 
             {/* Contact */}
             <div>
-              <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#c8a96e] mb-5">Contact</h3>
+              <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-gold mb-5">Contact</h3>
               <ul className="space-y-4 text-sm text-slate-400">
                 {[
                   { icon: MapPin, text: "Kathmandu, Nepal",       href: null },
@@ -131,10 +131,10 @@ export function Footer() {
                     {href ? (
                       <a href={href} className="group flex items-center gap-2.5 hover:text-white transition-colors duration-200">
                         <div
-                          className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 transition-all duration-300 group-hover:bg-[rgba(200,169,110,0.2)]"
+                          className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 transition-all duration-300 group-hover:bg-gold/20"
                           style={{ background: "rgba(200,169,110,0.08)", border: "1px solid rgba(200,169,110,0.15)" }}
                         >
-                          <Icon className="h-3.5 w-3.5 text-[#c8a96e]" />
+                          <Icon className="h-3.5 w-3.5 text-gold" />
                         </div>
                         {text}
                       </a>
@@ -144,7 +144,7 @@ export function Footer() {
                           className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
                           style={{ background: "rgba(200,169,110,0.08)", border: "1px solid rgba(200,169,110,0.15)" }}
                         >
-                          <Icon className="h-3.5 w-3.5 text-[#c8a96e]" />
+                          <Icon className="h-3.5 w-3.5 text-gold" />
                         </div>
                         {text}
                       </div>
@@ -170,7 +170,7 @@ export function Footer() {
             <Link href="#" className="hover:text-slate-300 transition-colors">Terms</Link>
             <span className="text-slate-700">·</span>
             <span
-              className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[#c8a96e]"
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-gold"
               style={{ background: "rgba(200,169,110,0.08)", border: "1px solid rgba(200,169,110,0.15)" }}
             >
               Made with ❤️ for Nepal

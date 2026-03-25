@@ -22,7 +22,7 @@ export function HospitalCard({ hospital, index }: HospitalCardProps) {
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true }}
       transition={{ duration: 0.4, delay: index * 0.1 }}
-      className="group bg-white rounded-2xl overflow-hidden border border-[rgba(15,30,56,0.07)] hover:border-[rgba(200,169,110,0.35)] transition-all duration-500"
+      className="group bg-white rounded-2xl overflow-hidden border border-navy/7 hover:border-gold/35 transition-all duration-500"
       style={{ boxShadow: "0 2px 12px rgba(15,30,56,0.06)" }}
       onMouseEnter={e => (e.currentTarget.style.boxShadow = "0 16px 48px rgba(15,30,56,0.13)")}
       onMouseLeave={e => (e.currentTarget.style.boxShadow = "0 2px 12px rgba(15,30,56,0.06)")}
@@ -36,14 +36,14 @@ export function HospitalCard({ hospital, index }: HospitalCardProps) {
         />
 
         {/* Gradient overlay */}
-        <div className="absolute inset-0 bg-gradient-to-t from-[#0f1e38]/75 via-[#0f1e38]/20 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-navy/75 via-navy/20 to-transparent" />
 
         {/* Rating pill — top right */}
         <div
           className="absolute top-3 right-3 flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold backdrop-blur-sm"
           style={{ background: "rgba(15,30,56,0.65)", color: "#c8a96e", border: "1px solid rgba(200,169,110,0.3)" }}
         >
-          <Star className="w-3 h-3 fill-[#c8a96e]" />
+          <Star className="w-3 h-3 fill-gold" />
           {hospital.rating}
         </div>
 
@@ -51,7 +51,7 @@ export function HospitalCard({ hospital, index }: HospitalCardProps) {
         <div className="absolute bottom-3 left-3">
           <Badge
             variant="secondary"
-            className="bg-white/90 backdrop-blur-sm text-xs font-medium text-[#0f1e38] border-0"
+            className="bg-white/90 backdrop-blur-sm text-xs font-medium text-navy border-0"
           >
             {hospital.type}
           </Badge>
@@ -62,27 +62,27 @@ export function HospitalCard({ hospital, index }: HospitalCardProps) {
       <div className="p-5">
 
         {/* Name */}
-        <h3 className="font-bold text-lg text-[#0f1e38] line-clamp-1 mb-2 group-hover:text-[#1a3059] transition-colors duration-300">
+        <h3 className="font-bold text-lg text-navy line-clamp-1 mb-2 group-hover:text-navy-mid transition-colors duration-300">
           {hospital.name}
         </h3>
 
         {/* Location */}
-        <div className="flex items-center gap-1.5 text-[#6b7a96] mb-1.5">
+        <div className="flex items-center gap-1.5 text-slate mb-1.5">
           <MapPin className="w-3.5 h-3.5 flex-shrink-0" />
           <span className="text-sm">{location}</span>
         </div>
 
         {/* Specialty */}
-        <p className="text-sm text-[#6b7a96] line-clamp-1 mb-5">{hospital.specialty}</p>
+        <p className="text-sm text-slate line-clamp-1 mb-5">{hospital.specialty}</p>
 
         {/* Divider */}
-        <div className="h-px bg-gradient-to-r from-transparent via-[rgba(15,30,56,0.08)] to-transparent mb-4" />
+        <div className="h-px bg-gradient-to-r from-transparent via-navy/8 to-transparent mb-4" />
 
         {/* Footer */}
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-[10px] font-semibold tracking-widest uppercase text-[#6b7a96] mb-0.5">Starting from</p>
-            <p className="text-xl font-bold text-[#a88b50]">{formattedPrice}</p>
+            <p className="text-[10px] font-semibold tracking-widest uppercase text-slate mb-0.5">Starting from</p>
+            <p className="text-xl font-bold text-gold-dim">{formattedPrice}</p>
           </div>
 
           <Link href={`/hospital/${hospital.slug}`}>

@@ -21,9 +21,9 @@ export function FAQSection() {
 
         {/* Header */}
         <div className="text-center mb-16">
-          <p className="text-xs font-semibold tracking-[0.2em] uppercase text-[#a88b50] mb-4">FAQ</p>
-          <h2 className="text-4xl md:text-5xl font-bold text-[#0f1e38] mb-4">Frequently asked</h2>
-          <p className="text-[#6b7a96]">Find answers to common questions about Sewa-Setu</p>
+          <p className="text-xs font-semibold tracking-[0.2em] uppercase text-gold-dim mb-4">FAQ</p>
+          <h2 className="text-4xl md:text-5xl font-bold text-navy mb-4">Frequently asked</h2>
+          <p className="text-slate">Find answers to common questions about Sewa-Setu</p>
         </div>
 
         {/* Accordion */}
@@ -76,7 +76,7 @@ export function FAQSection() {
 
         {/* Bottom CTA */}
         <div className="mt-14 text-center">
-          <p className="text-[#6b7a96] mb-5 text-[15px]">Still have questions?</p>
+          <p className="text-slate mb-5 text-[15px]">Still have questions?</p>
           <a
             href="mailto:support@sewasetu.com"
             className="inline-flex items-center gap-2 px-7 py-3.5 rounded-xl text-[15px] font-semibold transition-all duration-300 hover:shadow-lg hover:shadow-[rgba(15,30,56,0.15)] hover:-translate-y-0.5"

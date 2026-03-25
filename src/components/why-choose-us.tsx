@@ -25,7 +25,7 @@ export function WhyChooseUsSection() {
   }, []);
 
   return (
-    <section ref={ref} className="py-28 bg-[#f7f4ef] relative overflow-hidden">
+    <section ref={ref} className="py-28 bg-cream-warm relative overflow-hidden">
       <div className="absolute inset-0 opacity-[0.03]" style={{
         backgroundImage: "radial-gradient(circle, #0f1e38 1px, transparent 1px)",
         backgroundSize: "32px 32px"
@@ -33,11 +33,11 @@ export function WhyChooseUsSection() {
 
       <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-20 reveal">
-          <p className="text-xs font-semibold tracking-[0.2em] uppercase text-[#a88b50] mb-4">Why Sewa-Setu</p>
-          <h2 className="text-4xl md:text-5xl font-bold text-[#0f1e38] mb-5">
+          <p className="text-xs font-semibold tracking-[0.2em] uppercase text-gold-dim mb-4">Why Sewa-Setu</p>
+          <h2 className="text-4xl md:text-5xl font-bold text-navy mb-5">
             Built for families far from home
           </h2>
-          <p className="text-lg text-[#6b7a96] max-w-xl mx-auto leading-relaxed">
+          <p className="text-lg text-slate max-w-xl mx-auto leading-relaxed">
             Every feature designed around one mission — making distance disappear when your family's health is on the line.
           </p>
         </div>
@@ -46,7 +46,7 @@ export function WhyChooseUsSection() {
           {benefits.map((b, i) => (
             <div
               key={i}
-              className="reveal group relative p-8 rounded-2xl bg-white border border-[rgba(15,30,56,0.07)] hover:border-transparent hover:shadow-2xl hover:shadow-[rgba(15,30,56,0.08)] transition-all duration-500 cursor-default overflow-hidden"
+              className="reveal group relative p-8 rounded-2xl bg-white border border-navy/7 hover:border-transparent hover:shadow-2xl hover:shadow-navy/8 transition-all duration-500 cursor-default overflow-hidden"
               style={{ transitionDelay: `${i * 80}ms` }}
             >
               <div
@@ -59,8 +59,8 @@ export function WhyChooseUsSection() {
               >
                 <b.icon className="h-5 w-5 transition-all duration-500" style={{ color: b.accent }} />
               </div>
-              <h3 className="text-xl font-bold text-[#0f1e38] mb-3">{b.title}</h3>
-              <p className="text-[#6b7a96] leading-relaxed text-[15px]">{b.description}</p>
+              <h3 className="text-xl font-bold text-navy mb-3">{b.title}</h3>
+              <p className="text-slate leading-relaxed text-[15px]">{b.description}</p>
             </div>
           ))}
         </div>

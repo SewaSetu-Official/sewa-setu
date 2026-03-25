@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
 import Stripe from "stripe";
 import { headers } from "next/headers";
+import { provisionBooking } from "@/lib/booking";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(req: Request) {
   try {
-    // 1. Get the raw body as text for signature verification
     const body = await req.text();
     const signature = (await headers()).get("Stripe-Signature") as string;
 
@@ -17,38 +17,36 @@ export async function POST(req: Request) {
     let event: Stripe.Event;
 
     try {
-      // 2. VERIFY THE REQUEST (Security Check)
       event = stripe.webhooks.constructEvent(
         body,
         signature,
         process.env.STRIPE_WEBHOOK_SECRET!
       );
-    } catch (err: any) {
-      console.error(`Webhook Signature Verification Failed: ${err.message}`);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Unknown error";
+      console.error(`Webhook Signature Verification Failed: ${message}`);
       return NextResponse.json({ error: "Invalid Signature" }, { status: 400 });
     }
 
-    // 3. Handle the "checkout.session.completed" event
     if (event.type === "checkout.session.completed") {
       const session = event.data.object as Stripe.Checkout.Session;
-      const data = session.metadata;
 
-      console.log(`✅ Payment received via Webhook:`, {
-        sessionId: session.id,
-        amount: session.amount_total,
-        customer: session.customer_email,
-        metadata: data,
-      });
+      console.log(`✅ Payment received via Webhook: ${session.id} | €${((session.amount_total ?? 0) / 100).toFixed(2)} | ${session.customer_email}`);
 
-      // Note: New booking flow creates bookings through /api/ai, 
-      // not through Stripe webhooks. This just logs the payment.
+      try {
+        await provisionBooking(session);
+      } catch (err) {
+        // Log but don't throw — /api/verify is the fallback if the user reaches the success page.
+        // Non-transient errors (e.g. bad metadata) shouldn't cause Stripe to retry endlessly.
+        console.error("❌ Webhook booking provision failed:", err instanceof Error ? err.message : err);
+      }
     }
 
-    // Always return a 200 to Stripe to acknowledge receipt
+    // Always acknowledge receipt so Stripe doesn't retry unnecessarily.
     return NextResponse.json({ received: true }, { status: 200 });
-      
-  } catch (error: any) {
-    console.error("Webhook Error:", error.message);
+
+  } catch (error) {
+    console.error("Webhook Error:", error instanceof Error ? error.message : error);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }
