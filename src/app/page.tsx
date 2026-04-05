@@ -26,19 +26,28 @@ export default async function Home({
         orderBy: [{ price: "asc" }],
         take: 1,
       },
+      _count: { select: { reviews: true } },
     },
     orderBy: { createdAt: "desc" },
     take: 3,
   });
+
+  const hospitalIds = rawHospitals.map((h) => h.id);
+  const reviewAggs = await db.review.groupBy({
+    by: ["hospitalId"],
+    where: { hospitalId: { in: hospitalIds } },
+    _avg: { rating: true },
+    _count: { rating: true },
+  });
+  const aggMap = Object.fromEntries(reviewAggs.map((a) => [a.hospitalId, a]));
 
   const featuredHospitals = rawHospitals.map((h) => ({
     id: h.id,
     slug: h.slug,
     name: h.name,
     type: h.type,
-    // TODO: replace with real ratings once a review system is built
-    rating: 4.8,
-    reviewCount: 120,
+    rating: aggMap[h.id]?._avg.rating ? Math.round(aggMap[h.id]._avg.rating! * 10) / 10 : 0,
+    reviewCount: aggMap[h.id]?._count.rating ?? 0,
     specialty: h.servicesSummary || "General",
     city: h.location.city,
     district: h.location.district,

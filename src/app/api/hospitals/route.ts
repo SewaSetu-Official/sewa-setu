@@ -73,14 +73,22 @@ export async function GET(req: Request) {
     }),
   ]);
 
+  const ids = raw.map((h) => h.id);
+  const aggs = await db.review.groupBy({
+    by: ["hospitalId"],
+    where: { hospitalId: { in: ids } },
+    _avg: { rating: true },
+    _count: { rating: true },
+  });
+  const aggMap = Object.fromEntries(aggs.map((a) => [a.hospitalId, a]));
+
   let payload = raw.map((h) => ({
     id: h.id,
     slug: h.slug,
     name: h.name,
     type: h.type,
-    // TODO: replace with real ratings once a review system is built
-    rating: 4.8,
-    reviewCount: 120,
+    rating: aggMap[h.id]?._avg.rating ? Math.round(aggMap[h.id]._avg.rating! * 10) / 10 : 0,
+    reviewCount: aggMap[h.id]?._count.rating ?? 0,
     specialty: h.servicesSummary || "General",
     city: h.location.city,
     district: h.location.district,
