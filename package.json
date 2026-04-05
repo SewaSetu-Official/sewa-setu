@@ -16,6 +16,8 @@
     "@clerk/nextjs": "^6.38.0",
     "@google/genai": "^1.42.0",
     "@google/generative-ai": "^0.24.1",
+    "@react-three/drei": "^10.7.7",
+    "@react-three/fiber": "^9.5.0",
     "@stripe/stripe-js": "^8.6.1",
     "@vercel/functions": "^3.3.5",
     "class-variance-authority": "^0.7.1",
@@ -26,7 +28,8 @@
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "stripe": "^20.1.2",
-    "tailwind-merge": "^3.4.0"
+    "tailwind-merge": "^3.4.0",
+    "three": "^0.183.2"
   },
   "devDependencies": {
     "@prisma/client": "^6.0.0",
@@ -34,6 +37,7 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@types/three": "^0.183.1",
     "eslint": "^9",
     "eslint-config-next": "16.1.1",
     "prisma": "^6.0.0",
