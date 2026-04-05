@@ -63,7 +63,7 @@ export function FAQSection() {
 
               <div
                 className="overflow-hidden transition-all duration-300 ease-in-out"
-                style={{ maxHeight: open === i ? "200px" : "0px" }}
+                style={{ maxHeight: open === i ? "600px" : "0px" }}
               >
                 <p className="px-6 pb-5 text-[15px] leading-relaxed"
                   style={{ color: "rgba(255,255,255,0.7)" }}>

@@ -29,7 +29,7 @@ export default async function HospitalDetails({ params }: PageProps) {
     <>
       <Navbar />
       <main style={{ minHeight: "100vh", background: "#f7f4ef", padding: "calc(80px + 1.25rem) 0 3rem" }}>
-        <div style={{ padding: "0 10%" }}>
+        <div className="px-4 sm:px-8 lg:px-[10%]">
           <div className="bg-white rounded-[2rem] overflow-hidden shadow-xl shadow-slate-200/50 border border-slate-100" style={{ marginBottom: "2rem" }}>
             {/* Hero */}
             <div className="relative h-80 sm:h-96 lg:h-[450px] w-full">

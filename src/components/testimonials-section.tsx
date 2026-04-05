@@ -102,7 +102,8 @@ export function TestimonialsSection() {
         <div className="flex items-center justify-center gap-5">
           <button
             onClick={() => setCurrent((current - 1 + testimonials.length) % testimonials.length)}
-            className="w-10 h-10 rounded-full flex items-center justify-center bg-white border border-navy/12 text-navy hover:bg-navy hover:text-gold hover:border-navy transition-all duration-300"
+            aria-label="Previous testimonial"
+            className="w-10 h-10 rounded-full flex items-center justify-center bg-white border border-navy/20 text-navy hover:bg-navy hover:text-gold hover:border-navy transition-all duration-300"
           >
             <ChevronLeft className="h-5 w-5" />
           </button>
@@ -112,6 +113,8 @@ export function TestimonialsSection() {
               <button
                 key={i}
                 onClick={() => setCurrent(i)}
+                aria-label={`Go to testimonial ${i + 1}`}
+                aria-current={i === current ? "true" : undefined}
                 className="rounded-full transition-all duration-300"
                 style={{
                   width: i === current ? "28px" : "8px",
@@ -124,7 +127,8 @@ export function TestimonialsSection() {
 
           <button
             onClick={() => setCurrent((current + 1) % testimonials.length)}
-            className="w-10 h-10 rounded-full flex items-center justify-center bg-white border border-navy/12 text-navy hover:bg-navy hover:text-gold hover:border-navy transition-all duration-300"
+            aria-label="Next testimonial"
+            className="w-10 h-10 rounded-full flex items-center justify-center bg-white border border-navy/20 text-navy hover:bg-navy hover:text-gold hover:border-navy transition-all duration-300"
           >
             <ChevronRight className="h-5 w-5" />
           </button>
