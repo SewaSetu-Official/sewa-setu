@@ -329,6 +329,7 @@ export function HospitalDetailClient({ hospital, packages }: Props) {
                   onBookDoctorAction={() => {}}
                   initialDepartmentId={selectedDepartmentId}
                   showAIBadge={showAIBadge}
+                  hospitalId={hospital.id}
                 />
               </div>
             </div>

@@ -9,6 +9,7 @@ import { DoctorCard } from "@/components/doctor-card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { ReviewsSection } from "@/components/reviews-section";
 import * as lucideReact from "lucide-react";
 type TabKey = "overview" | "services" | "doctors" | "departments" | "contact";
 
@@ -26,14 +27,16 @@ type Props = {
   onBookDoctorAction: (doctorId: string) => void;
   initialDepartmentId?: string | null;
   showAIBadge?: boolean;
+  hospitalId?: string;
 };
 
-export function HospitalTabs({ 
-  hospital, 
-  packages, 
-  onBookDoctorAction, 
+export function HospitalTabs({
+  hospital,
+  packages,
+  onBookDoctorAction,
   initialDepartmentId,
-  showAIBadge = false 
+  showAIBadge = false,
+  hospitalId,
 }: Props) {
   const [tab, setTab] = useState<TabKey>("overview");
   const [selectedDeptId, setSelectedDeptId] = useState<string | null>(initialDepartmentId || null);
@@ -521,6 +524,13 @@ export function HospitalTabs({
                 ))}
               </div>
             </div>
+
+            {/* Reviews */}
+            <ReviewsSection
+              hospitalId={hospitalId ?? hospital.id}
+              initialAverage={hospital.rating}
+              initialCount={hospital.reviewCount}
+            />
           </div>
         )}
 
