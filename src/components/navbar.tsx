@@ -4,7 +4,7 @@ import Image from "next/image";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { useState, useEffect } from "react";
-import { SignedIn, SignedOut, UserButton } from "@clerk/nextjs";
+import { SignedIn, SignedOut, useUser } from "@clerk/nextjs";
 import { Menu, X } from "lucide-react";
 
 const navLinks = [
@@ -12,6 +12,23 @@ const navLinks = [
   { label: "How It Works",   href: "/#how-it-works" },
   { label: "Contact",        href: "/#contact" },
 ];
+
+function NavAvatar() {
+  const { user } = useUser();
+  const initials = user?.fullName?.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2) ?? "U";
+  return (
+    <Link href="/profile">
+      <div className="h-8 w-8 rounded-full overflow-hidden flex items-center justify-center cursor-pointer ring-2 ring-[#c8a96e]/40 hover:ring-[#c8a96e] transition-all"
+        style={{ background: "rgba(200,169,110,.15)" }}>
+        {user?.imageUrl ? (
+          <img src={user.imageUrl} alt={user.fullName ?? ""} className="h-full w-full object-cover" />
+        ) : (
+          <span className="text-[11px] font-black text-[#c8a96e]">{initials}</span>
+        )}
+      </div>
+    </Link>
+  );
+}
 
 export function Navbar() {
   const [scrolled, setScrolled]   = useState(false);
@@ -91,15 +108,18 @@ export function Navbar() {
           </nav>
 
           {/* ── Right side ── */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
 
             {/* Globe */}
             <span
-              className="hidden sm:block text-base grayscale opacity-50 hover:grayscale-0 hover:opacity-100 transition-all duration-300 cursor-help"
+              className="hidden sm:block text-base grayscale opacity-40 hover:grayscale-0 hover:opacity-100 transition-all duration-300 cursor-help mr-1"
               title="Serving Global Nepalese"
             >
               🌍
             </span>
+
+            {/* Divider */}
+            <div className="hidden sm:block h-5 w-px mx-1" style={{ background: "rgba(255,255,255,.1)" }} />
 
             {/* Sign In */}
             <SignedOut>
@@ -110,14 +130,9 @@ export function Navbar() {
               </Link>
             </SignedOut>
 
-            {/* Profile */}
+            {/* Profile avatar */}
             <SignedIn>
-              <Link href="/profile" className="hidden md:block">
-                <button className="text-sm font-medium text-slate-300 hover:text-gold transition-colors duration-200 px-3 py-1.5">
-                  Profile
-                </button>
-              </Link>
-              <UserButton afterSignOutUrl="/" />
+              <NavAvatar />
             </SignedIn>
 
             {/* CTA button */}
@@ -133,7 +148,7 @@ export function Navbar() {
             </SignedOut>
 
             <SignedIn>
-              <Link href="/search" className="hidden md:block">
+              <Link href="/search" className="hidden md:block ml-1">
                 <button
                   className="relative text-sm font-bold text-navy px-5 py-2.5 rounded-xl overflow-hidden transition-all duration-300 hover:shadow-lg hover:shadow-[rgba(200,169,110,0.35)] hover:-translate-y-0.5 hover:scale-[1.02]"
                   style={{ background: "linear-gradient(135deg, #e8d5b0, #c8a96e, #a88b50)" }}
