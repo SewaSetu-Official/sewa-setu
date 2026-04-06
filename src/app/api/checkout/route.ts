@@ -27,6 +27,8 @@ export async function POST(req: Request) {
       patientName,
       patientAge,
       patientPhone,
+      patientGender,
+      patientDisability,
       bookingDate,
       consultationMode,
       slotId,
@@ -93,12 +95,14 @@ export async function POST(req: Request) {
     let itemHospitalId: string;
 
     const metadata: Record<string, string> = {
-      clerkUserId,                                          // ← key addition
+      clerkUserId,
       patientName: sanitizedName,
       patientAge: String(age),
       patientPhone: sanitizedPhone,
       buyerEmail: sanitizedEmail,
       bookingDate: String(bookingDate || new Date().toISOString()),
+      ...(patientGender     && { patientGender:     String(patientGender) }),
+      ...(patientDisability && patientDisability !== "none" && { patientDisability: String(patientDisability) }),
     };
 
     if (packageId) {

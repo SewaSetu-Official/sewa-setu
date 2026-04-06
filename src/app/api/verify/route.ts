@@ -49,9 +49,12 @@ function formatBookingResponse(booking: any, session: any) {
     : undefined;
 
   return {
+    fullId: booking.id,
     id: booking.id.slice(-10).toUpperCase(),
     patientName: booking.patient?.fullName ?? meta.patientName ?? "",
     patientAge: meta.patientAge ?? "",
+    patientGender: meta.patientGender ?? "",
+    patientDisability: meta.patientDisability ?? "",
     patientPhone: booking.patient?.phone ?? meta.patientPhone ?? "",
     packageName:
       booking.package?.title ?? doctorConsultationTitle ?? meta.packageName ?? "",

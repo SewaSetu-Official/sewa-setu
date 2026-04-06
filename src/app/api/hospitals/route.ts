@@ -14,6 +14,7 @@ export async function GET(req: Request) {
   const emergency = searchParams.get("emergency");
   const minPrice = searchParams.get("minPrice");
   const maxPrice = searchParams.get("maxPrice");
+  const specialty = (searchParams.get("specialty") || "").trim();
   const sortBy = searchParams.get("sortBy") || "recent";
   const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10));
   const pageSize = Math.min(24, Math.max(6, parseInt(searchParams.get("pageSize") || "12", 10)));
@@ -39,6 +40,17 @@ export async function GET(req: Request) {
 
   if (emergency === "true") {
     whereConditions.push({ emergencyAvailable: true });
+  }
+
+  if (specialty) {
+    whereConditions.push({
+      OR: [
+        // Hospital has a department linked to this specialty slug
+        { departments: { some: { specialty: { slug: specialty } } } },
+        // Hospital has a doctor with this specialty
+        { doctors: { some: { doctor: { specialties: { some: { specialty: { slug: specialty } } } } } } },
+      ],
+    });
   }
 
   // Price filters apply to PACKAGES now

@@ -64,11 +64,24 @@ export async function provisionBooking(
         userId: dbUser.id,
         fullName: patientFullName,
         phone: meta.patientPhone ?? null,
+        gender: meta.patientGender ?? null,
+        disability: meta.patientDisability ?? null,
         dateOfBirth: meta.patientAge
           ? new Date(new Date().getFullYear() - parseInt(meta.patientAge, 10), new Date().getMonth(), new Date().getDate())
           : null,
       },
     });
+  } else {
+    // Update gender/disability if provided and not yet set
+    if (meta.patientGender || meta.patientDisability) {
+      patient = await db.patient.update({
+        where: { id: patient.id },
+        data: {
+          ...(meta.patientGender    && !patient.gender     && { gender:     meta.patientGender }),
+          ...(meta.patientDisability && !patient.disability && { disability: meta.patientDisability }),
+        },
+      });
+    }
   }
 
   // ── 5. RESOLVE HOSPITAL ──────────────────────────────────────────

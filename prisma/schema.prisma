@@ -71,6 +71,7 @@ model Patient {
   gender      String?
   dateOfBirth DateTime?
   phone       String?
+  disability  String?
   notes       String?
 
   locationId String?

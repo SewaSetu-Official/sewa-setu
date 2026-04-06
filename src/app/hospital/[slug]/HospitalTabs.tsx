@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import type { ApiDoctor } from "@/types/hospital";
 import type { ApiHospitalDetails } from "@/types/hospital-details";
 import { PackageAccordion } from "@/components/package-accordion";
@@ -38,14 +39,29 @@ export function HospitalTabs({
   showAIBadge = false,
   hospitalId,
 }: Props) {
-  const [tab, setTab] = useState<TabKey>("overview");
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  const urlTab = searchParams.get("tab") as TabKey | null;
+  const validTabs: TabKey[] = ["overview", "services", "doctors", "departments", "contact"];
+  const [tab, setTab] = useState<TabKey>(
+    urlTab && validTabs.includes(urlTab) ? urlTab : "overview"
+  );
+
+  function switchTab(next: TabKey) {
+    setTab(next);
+    const params = new URLSearchParams(window.location.search);
+    params.set("tab", next);
+    router.replace(`${window.location.pathname}?${params.toString()}`, { scroll: false });
+  }
+
   const [selectedDeptId, setSelectedDeptId] = useState<string | null>(initialDepartmentId || null);
   const [highlightedDeptId, setHighlightedDeptId] = useState<string | null>(initialDepartmentId || null);
 
   // Handle initial department selection
   useEffect(() => {
     if (initialDepartmentId) {
-      setTab("departments");
+      switchTab("departments");
       setSelectedDeptId(initialDepartmentId);
       setHighlightedDeptId(initialDepartmentId);
       
@@ -439,7 +455,7 @@ export function HospitalTabs({
             <button
               key={k}
               className={`ht-tab-btn${tab === k ? " active" : ""}`}
-              onClick={() => { setTab(k); if (k !== "departments") setSelectedDeptId(null); }}
+              onClick={() => { switchTab(k); if (k !== "departments") setSelectedDeptId(null); }}
             >
               {label}
             </button>
@@ -510,7 +526,7 @@ export function HospitalTabs({
                     <div className="ht-sub">Most experienced specialists</div>
                   </div>
                 </div>
-                <button className="ht-view-all" onClick={() => setTab("doctors")}>
+                <button className="ht-view-all" onClick={() => switchTab("doctors")}>
                   View all <lucideReact.ArrowRight size={11} />
                 </button>
               </div>

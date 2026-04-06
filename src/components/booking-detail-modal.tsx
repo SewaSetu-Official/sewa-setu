@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { X, CalendarDays, Clock, MapPin, Phone, User, Package, CreditCard, Stethoscope, RefreshCw, Lock, PhoneCall, Mail, CheckCircle2 } from "lucide-react";
+import Link from "next/link";
+import { X, CalendarDays, Clock, MapPin, Phone, User, Package, CreditCard, Stethoscope, RefreshCw, Lock, PhoneCall, Mail, CheckCircle2, FileText } from "lucide-react";
 import { formatMoneyCents } from "@/lib/money";
 import { RescheduleModal } from "./reschedule-modal";
 
@@ -242,6 +243,16 @@ function BookingDetailPopup({
 
         {/* Body */}
         <div className="flex-1 overflow-y-auto px-6 py-5 space-y-1" style={{ background: "#faf9f6" }}>
+
+          {/* View Receipt */}
+          <Link
+            href={`/booking/receipt/${booking.id}`}
+            className="flex items-center justify-center gap-2 w-full h-10 rounded-2xl text-sm font-bold mb-3 transition-all"
+            style={{ background: "linear-gradient(135deg,#0f1e38 0%,#1a3059 100%)", color: "#c8a96e", boxShadow: "0 4px 14px rgba(15,30,56,.25)" }}
+          >
+            <FileText size={14} />
+            View Boarding Pass / Receipt
+          </Link>
 
           {/* Appointment details */}
           <p className="text-[0.6rem] font-bold uppercase tracking-widest text-[#c8a96e] mb-2">Appointment</p>

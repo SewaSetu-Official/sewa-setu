@@ -52,6 +52,8 @@ export function AvailabilityModal({
     patientAge: "",
     patientPhone: "",
     buyerEmail: "",
+    patientGender: "",
+    patientDisability: "none",
   });
   const [pageStart, setPageStart] = useState<Date>(() => {
     const d = new Date();
@@ -143,6 +145,8 @@ export function AvailabilityModal({
       patientAge: "",
       patientPhone: "",
       buyerEmail: "",
+      patientGender: "",
+      patientDisability: "none",
     });
     onCloseAction();
   };
@@ -405,6 +409,52 @@ export function AvailabilityModal({
                     </div>
                   </div>
 
+                  {/* Gender + Special Needs */}
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+                    <div>
+                      <label style={{ display: "block", fontSize: "0.75rem", fontWeight: 600, color: "#4a5568", marginBottom: 6 }}>
+                        Gender
+                      </label>
+                      <select
+                        value={formData.patientGender}
+                        onChange={(e) => setFormData(prev => ({ ...prev, patientGender: e.target.value }))}
+                        style={{
+                          width: "100%", height: 44, borderRadius: 10, padding: "0 12px",
+                          border: "1.5px solid rgba(15,30,56,.14)",
+                          background: "#fff", fontSize: "0.875rem", color: "#0f1e38",
+                          outline: "none", cursor: "pointer",
+                        }}
+                      >
+                        <option value="">Select</option>
+                        <option value="Male">Male</option>
+                        <option value="Female">Female</option>
+                        <option value="Other">Other</option>
+                        <option value="Prefer not to say">Prefer not to say</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label style={{ display: "block", fontSize: "0.75rem", fontWeight: 600, color: "#4a5568", marginBottom: 6 }}>
+                        Special Needs
+                      </label>
+                      <select
+                        value={formData.patientDisability}
+                        onChange={(e) => setFormData(prev => ({ ...prev, patientDisability: e.target.value }))}
+                        style={{
+                          width: "100%", height: 44, borderRadius: 10, padding: "0 12px",
+                          border: "1.5px solid rgba(15,30,56,.14)",
+                          background: "#fff", fontSize: "0.875rem", color: "#0f1e38",
+                          outline: "none", cursor: "pointer",
+                        }}
+                      >
+                        <option value="none">None</option>
+                        <option value="Visual impairment">Visual impairment</option>
+                        <option value="Hearing impairment">Hearing impairment</option>
+                        <option value="Mobility impairment">Mobility impairment</option>
+                        <option value="Other">Other</option>
+                      </select>
+                    </div>
+                  </div>
+
                   <div>
                     <label style={{ display: "block", fontSize: "0.75rem", fontWeight: 600, color: "#4a5568", marginBottom: 6 }}>
                       Email Address
@@ -441,6 +491,8 @@ export function AvailabilityModal({
                             patientAge: formData.patientAge,
                             patientPhone: formData.patientPhone,
                             buyerEmail: formData.buyerEmail,
+                            patientGender: formData.patientGender,
+                            patientDisability: formData.patientDisability,
                             consultationMode: selectedOcc.mode,
                             slotId: slot.id,
                             slotTime: `${selectedOcc.startTime}-${selectedOcc.endTime}`,

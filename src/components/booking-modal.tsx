@@ -66,6 +66,8 @@ export function BookingModal({ isOpen, onClose, hospitalName, hospitalId, select
     patientAge: "",
     patientPhone: "",
     buyerEmail: "",
+    patientGender: "",
+    patientDisability: "none",
   });
   const [pageStart, setPageStart] = useState<Date>(() => {
     const d = new Date();
@@ -127,7 +129,7 @@ export function BookingModal({ isOpen, onClose, hospitalName, hospitalId, select
     setSelectedDate("");
     setSelectedTime("");
     setTouched({});
-    setFormData({ patientName: "", patientAge: "", patientPhone: "", buyerEmail: "" });
+    setFormData({ patientName: "", patientAge: "", patientPhone: "", buyerEmail: "", patientGender: "", patientDisability: "none" });
     setIsLoading(false);
     setPageStart(() => { const d = new Date(); d.setHours(0,0,0,0); return d; });
     onClose();
@@ -162,9 +164,11 @@ export function BookingModal({ isOpen, onClose, hospitalName, hospitalId, select
           packageId,
           hospitalId,
           patientName:  formData.patientName,
-          patientAge:   formData.patientAge,
-          patientPhone: formData.patientPhone,
-          buyerEmail:   formData.buyerEmail,
+          patientAge:        formData.patientAge,
+          patientPhone:      formData.patientPhone,
+          buyerEmail:        formData.buyerEmail,
+          patientGender:     formData.patientGender,
+          patientDisability: formData.patientDisability,
           bookingDate:  new Date(selectedDate).toISOString(),
           slotTime:     selectedTime,
         }),
@@ -572,6 +576,50 @@ export function BookingModal({ isOpen, onClose, hospitalName, hospitalId, select
                               <AlertCircle className="h-3 w-3 flex-shrink-0" /> {errors.patientPhone}
                             </p>
                           )}
+                        </div>
+                      </div>
+
+                      {/* Gender + Disability */}
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+                        <div>
+                          <label htmlFor="bm-gender" style={{ display: "block", fontSize: "0.75rem", fontWeight: 600, color: "#4a5568", marginBottom: 6 }}>Gender</label>
+                          <select
+                            id="bm-gender"
+                            value={formData.patientGender}
+                            onChange={(e) => setFormData(p => ({ ...p, patientGender: e.target.value }))}
+                            style={{
+                              width: "100%", height: 44, borderRadius: 10, padding: "0 12px",
+                              border: "1.5px solid rgba(15,30,56,.14)",
+                              background: "#fff", fontSize: "0.875rem", color: "#0f1e38",
+                              outline: "none", cursor: "pointer",
+                            }}
+                          >
+                            <option value="">Select</option>
+                            <option value="Male">Male</option>
+                            <option value="Female">Female</option>
+                            <option value="Other">Other</option>
+                            <option value="Prefer not to say">Prefer not to say</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label htmlFor="bm-disability" style={{ display: "block", fontSize: "0.75rem", fontWeight: 600, color: "#4a5568", marginBottom: 6 }}>Special Needs</label>
+                          <select
+                            id="bm-disability"
+                            value={formData.patientDisability}
+                            onChange={(e) => setFormData(p => ({ ...p, patientDisability: e.target.value }))}
+                            style={{
+                              width: "100%", height: 44, borderRadius: 10, padding: "0 12px",
+                              border: "1.5px solid rgba(15,30,56,.14)",
+                              background: "#fff", fontSize: "0.875rem", color: "#0f1e38",
+                              outline: "none", cursor: "pointer",
+                            }}
+                          >
+                            <option value="none">None</option>
+                            <option value="Visual impairment">Visual impairment</option>
+                            <option value="Hearing impairment">Hearing impairment</option>
+                            <option value="Mobility impairment">Mobility impairment</option>
+                            <option value="Other">Other</option>
+                          </select>
                         </div>
                       </div>
 
