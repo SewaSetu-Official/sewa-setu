@@ -15,7 +15,21 @@ datasource db {
 
 enum UserRole {
   USER
-  ADMIN
+  ADMIN        // legacy platform admin (kept for backward compat)
+  PLATFORM_ADMIN
+}
+
+enum HospitalRole {
+  HOSPITAL_OWNER
+  HOSPITAL_MANAGER
+  RECEPTION
+  CONTENT_EDITOR
+}
+
+enum MembershipStatus {
+  PENDING
+  APPROVED
+  REJECTED
 }
 
 enum HospitalType {
@@ -45,7 +59,7 @@ enum BookingStatus {
 
 model User {
   id      String @id @default(cuid())
-  clerkId String @unique // Clerk user ID — the link between Clerk auth and our DB
+  clerkId String @unique
 
   fullName String
   email    String   @unique
@@ -53,15 +67,19 @@ model User {
   country  String   @default("NP")
   role     UserRole @default(USER)
 
-  patients Patient[]
-  bookings Booking[]
-  reviews  Review[]
+  bannedAt DateTime? // soft-disable without destroying history
+
+  patients    Patient[]
+  bookings    Booking[]
+  reviews     Review[]
+  memberships HospitalMembership[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([email])
   @@index([clerkId])
+  @@index([role])
 }
 
 model Patient {
@@ -167,23 +185,77 @@ model Hospital {
   emergencyAvailable Boolean @default(false)
   servicesSummary    String?
   verified           Boolean @default(false)
+  isActive           Boolean @default(true) // soft-disable without cascade delete
 
   location Location @relation(fields: [locationId], references: [id], onDelete: Restrict)
 
-  doctors     DoctorHospital[]
-  departments HospitalDepartment[]
-  packages    HospitalPackage[]
-  tags        HospitalTag[]
-  media       HospitalMedia[]
-  bookings    Booking[]
-  reviews     Review[]
-
-  createdAt         DateTime           @default(now())
-  updatedAt         DateTime           @updatedAt
+  doctors           DoctorHospital[]
+  departments       HospitalDepartment[]
+  packages          HospitalPackage[]
+  tags              HospitalTag[]
+  media             HospitalMedia[]
+  bookings          Booking[]
+  reviews           Review[]
   availabilitySlots AvailabilitySlot[]
+  memberships       HospitalMembership[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([locationId])
   @@index([name])
+  @@index([isActive, verified])
+}
+
+/**
+ * =========================
+ * HOSPITAL MEMBERSHIP (STAFF ACCESS)
+ * =========================
+ */
+
+model HospitalMembership {
+  id         String           @id @default(cuid())
+  userId     String
+  hospitalId String
+  role       HospitalRole
+  status     MembershipStatus @default(PENDING)
+
+  invitedBy      String?  // userId of inviter (null = self-requested)
+  rejectedReason String?  // platform admin reason on rejection
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  hospital Hospital @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, hospitalId])
+  @@index([hospitalId, status])
+  @@index([userId])
+}
+
+/**
+ * =========================
+ * AUDIT LOG
+ * =========================
+ */
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  actorUserId String   // DB userId of who performed the action
+  hospitalId  String?  // null for platform-level actions
+  action      String   // e.g. "BOOKING_CONFIRMED", "REVIEW_HIDDEN", "MEMBER_APPROVED"
+  entity      String   // e.g. "Booking", "Review", "HospitalMembership"
+  entityId    String   // the primary key of the affected record
+  before      Json?    // state before the change
+  after       Json?    // state after the change
+  ip          String?  // request IP for security audit trail
+  createdAt   DateTime @default(now())
+
+  @@index([hospitalId])
+  @@index([actorUserId])
+  @@index([entity, entityId])
+  @@index([createdAt])
 }
 
 /**
@@ -301,7 +373,7 @@ model HospitalPackage {
 
   dataOrigin String @default("MANUAL")
 
-  hospital Hospital @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  hospital Hospital  @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
   bookings Booking[]
 
   createdAt DateTime @default(now())
@@ -361,7 +433,7 @@ model HospitalTag {
 
 /**
  * =========================
- * SERVICES & AVAILABILITY (FUTURE BOOKING READY)
+ * SERVICES & AVAILABILITY
  * =========================
  */
 
@@ -448,8 +520,12 @@ model Review {
   id         String  @id @default(cuid())
   userId     String
   hospitalId String
-  rating     Int     // 1–5
+  rating     Int
   comment    String?
+
+  hidden     Boolean   @default(false) // soft-hide for moderation
+  hiddenById String?   // userId of staff/admin who hid it
+  hiddenAt   DateTime?
 
   user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   hospital Hospital @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
@@ -458,22 +534,25 @@ model Review {
 
   @@index([hospitalId])
   @@index([userId])
+  @@index([hidden])
 }
 
 /**
  * =========================
- * BOOKING (READY FOR FUTURE)
+ * BOOKING
  * =========================
  */
 
 model Booking {
-  id        String   @id @default(cuid())
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id          String   @id @default(cuid())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
   confirmedAt DateTime?
-  rescheduleCount Int @default(0)
+  rescheduleCount Int  @default(0)
 
-  stripeSessionId String? @unique // prevents duplicate bookings
+  stripeSessionId  String? @unique
+  stripeRefundId   String? // set when admin cancels and Stripe refund succeeds
+  refundedAt       DateTime?
 
   userId String
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -495,13 +574,20 @@ model Booking {
 
   mode        ConsultationMode
   scheduledAt DateTime
-  slotTime    String? // e.g. "09:30-10:00"
+  slotTime    String?
   notes       String?
 
-  amountPaid Int?    // in cents, from Stripe
+  amountPaid Int?
   currency   String? @default("eur")
 
   status BookingStatus @default(DRAFT)
+
+  // Staff action tracking (plain strings — traced fully via AuditLog)
+  cancelledAt         DateTime?
+  cancelledById       String?   // DB userId of staff/patient who cancelled
+  cancellationReason  String?
+  completedAt         DateTime?
+  checkedInAt         DateTime?
 
   @@index([userId])
   @@index([patientId])
@@ -509,5 +595,6 @@ model Booking {
   @@index([doctorId])
   @@index([status, scheduledAt])
   @@index([availabilitySlotId])
-  @@unique([availabilitySlotId, scheduledAt], name: "unique_slot_occurrence") // prevents double-booking
+  @@index([hospitalId, status, scheduledAt]) // for hospital dashboard queries
+  @@unique([availabilitySlotId, scheduledAt], name: "unique_slot_occurrence")
 }
