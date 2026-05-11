@@ -42,8 +42,21 @@ export async function GET(
   const pageSize = 20;
 
   const hospitalId = ctx.membership.hospitalId;
+  const isDoctorRole = ctx.membership.role === "DOCTOR";
+  const doctorProfile = isDoctorRole
+    ? await db.doctor.findFirst({
+        where: {
+          userId: ctx.user.id,
+          hospitals: { some: { hospitalId } },
+        },
+        select: { id: true, fullName: true },
+      })
+    : null;
 
-  const where: Record<string, unknown> = { hospitalId };
+  const where: Record<string, unknown> = {
+    hospitalId,
+    ...(isDoctorRole ? { doctorId: doctorProfile?.id ?? "__NO_DOCTOR_PROFILE__" } : {}),
+  };
 
   if (status !== "all") {
     const normalizedStatus = status.toUpperCase() as BookingStatus;
@@ -71,6 +84,10 @@ export async function GET(
     ];
   }
 
+  const orderBy = date
+    ? [{ scheduledAt: "asc" as const }, { slotTime: "asc" as const }, { createdAt: "desc" as const }]
+    : [{ createdAt: "desc" as const }];
+
   const [total, bookings] = await Promise.all([
     db.booking.count({ where: where as never }),
     db.booking.findMany({
@@ -80,17 +97,20 @@ export async function GET(
         doctor:  { select: { fullName: true } },
         package: { select: { title: true } },
       },
-      orderBy: [{ status: "asc" }, { scheduledAt: "asc" }, { slotTime: "asc" }],
+      orderBy,
       skip: (page - 1) * pageSize,
       take: pageSize,
     }),
   ]);
 
   return NextResponse.json({
+    role: ctx.membership.role,
+    doctorName: doctorProfile?.fullName ?? null,
     bookings: bookings.map((b) => ({
       id: b.id,
       status: b.status,
       scheduledAt: b.scheduledAt.toISOString(),
+      createdAt: b.createdAt.toISOString(),
       slotTime: b.slotTime ?? null,
       mode: b.mode,
       amountPaid: b.amountPaid ?? null,
@@ -160,6 +180,24 @@ export async function PATCH(
   });
 
   if (!booking) return NextResponse.json({ error: "Booking not found" }, { status: 404 });
+
+  if (ctx.membership.role === "DOCTOR") {
+    if (action !== "COMPLETE") {
+      return NextResponse.json({ error: "FORBIDDEN" }, { status: 403 });
+    }
+
+    const doctorProfile = await db.doctor.findFirst({
+      where: {
+        userId: ctx.user.id,
+        hospitals: { some: { hospitalId: ctx.membership.hospitalId } },
+      },
+      select: { id: true },
+    });
+
+    if (!doctorProfile || booking.doctorId !== doctorProfile.id) {
+      return NextResponse.json({ error: "FORBIDDEN" }, { status: 403 });
+    }
+  }
 
   // Validate transition
   const VALID_TRANSITIONS: Record<string, string[]> = {

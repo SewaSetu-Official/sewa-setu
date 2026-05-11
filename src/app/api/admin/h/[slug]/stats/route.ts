@@ -18,6 +18,21 @@ export async function GET(
   }
 
   const hospitalId = ctx.membership.hospitalId;
+  const isDoctorRole = ctx.membership.role === "DOCTOR";
+  const doctorProfile = isDoctorRole
+    ? await db.doctor.findFirst({
+        where: {
+          userId: ctx.user.id,
+          hospitals: { some: { hospitalId } },
+        },
+        select: { id: true, fullName: true },
+      })
+    : null;
+
+  const bookingScope = {
+    hospitalId,
+    ...(isDoctorRole ? { doctorId: doctorProfile?.id ?? "__NO_DOCTOR_PROFILE__" } : {}),
+  };
 
   const todayStart = new Date();
   todayStart.setHours(0, 0, 0, 0);
@@ -40,32 +55,32 @@ export async function GET(
     todayAppointments,
   ] = await Promise.all([
     // Today's totals
-    db.booking.count({ where: { hospitalId, scheduledAt: { gte: todayStart, lte: todayEnd } } }),
-    db.booking.count({ where: { hospitalId, scheduledAt: { gte: todayStart, lte: todayEnd }, status: "REQUESTED" } }),
-    db.booking.count({ where: { hospitalId, scheduledAt: { gte: todayStart, lte: todayEnd }, status: "COMPLETED" } }),
-    db.booking.count({ where: { hospitalId, scheduledAt: { gte: todayStart, lte: todayEnd }, status: "CANCELLED" } }),
+    db.booking.count({ where: { ...bookingScope, scheduledAt: { gte: todayStart, lte: todayEnd } } }),
+    db.booking.count({ where: { ...bookingScope, scheduledAt: { gte: todayStart, lte: todayEnd }, status: "REQUESTED" } }),
+    db.booking.count({ where: { ...bookingScope, scheduledAt: { gte: todayStart, lte: todayEnd }, status: "COMPLETED" } }),
+    db.booking.count({ where: { ...bookingScope, scheduledAt: { gte: todayStart, lte: todayEnd }, status: "CANCELLED" } }),
 
     // Today's revenue (confirmed + completed)
     db.booking.aggregate({
-      where: { hospitalId, scheduledAt: { gte: todayStart, lte: todayEnd }, status: { in: ["CONFIRMED", "COMPLETED"] } },
+      where: { ...bookingScope, scheduledAt: { gte: todayStart, lte: todayEnd }, status: { in: ["CONFIRMED", "COMPLETED"] } },
       _sum: { amountPaid: true },
     }),
 
     // This month's revenue
     db.booking.aggregate({
-      where: { hospitalId, createdAt: { gte: monthStart }, status: { in: ["CONFIRMED", "COMPLETED"] } },
+      where: { ...bookingScope, createdAt: { gte: monthStart }, status: { in: ["CONFIRMED", "COMPLETED"] } },
       _sum: { amountPaid: true },
     }),
 
     // All-time booking count
-    db.booking.count({ where: { hospitalId } }),
+    db.booking.count({ where: bookingScope }),
 
     // Global pending confirmations
-    db.booking.count({ where: { hospitalId, status: "REQUESTED" } }),
+    db.booking.count({ where: { ...bookingScope, status: "REQUESTED" } }),
 
     // Today's appointment queue — sorted by slot time
     db.booking.findMany({
-      where: { hospitalId, scheduledAt: { gte: todayStart, lte: todayEnd } },
+      where: { ...bookingScope, scheduledAt: { gte: todayStart, lte: todayEnd } },
       include: {
         patient: { select: { fullName: true, phone: true, gender: true, disability: true } },
         doctor:  { select: { fullName: true } },
@@ -77,6 +92,8 @@ export async function GET(
   ]);
 
   return NextResponse.json({
+    role: ctx.membership.role,
+    doctorName: doctorProfile?.fullName ?? null,
     today: {
       total: todayTotal,
       pending: todayPending,

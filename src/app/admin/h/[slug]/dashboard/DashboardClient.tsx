@@ -1,10 +1,13 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  CalendarDays, Clock, CheckCircle2,
-  Phone, User, Stethoscope, Package, RefreshCw,
-  AlertCircle, ChevronRight, TrendingUp,
+  AlertCircle,
+  Package,
+  Phone,
+  RefreshCw,
+  Stethoscope,
+  User,
 } from "lucide-react";
 
 type Appointment = {
@@ -19,11 +22,13 @@ type Appointment = {
   cancellationReason: string | null;
   checkedInAt: string | null;
   patient: { fullName: string; phone: string | null; gender: string | null; disability: string | null } | null;
-  doctor:  { fullName: string } | null;
-  package: { title: string }   | null;
+  doctor: { fullName: string } | null;
+  package: { title: string } | null;
 };
 
 type Stats = {
+  role: string;
+  doctorName: string | null;
   today: { total: number; pending: number; completed: number; cancelled: number; revenue: number };
   month: { revenue: number };
   totalBookings: number;
@@ -31,28 +36,266 @@ type Stats = {
   todayAppointments: Appointment[];
 };
 
-const STATUS_CONFIG: Record<string, { label: string; bg: string; color: string; dot: string }> = {
-  REQUESTED:  { label: "Pending",   bg: "rgba(245,158,11,.12)",  color: "#b45309", dot: "#f59e0b" },
-  CONFIRMED:  { label: "Confirmed", bg: "rgba(59,130,246,.12)",  color: "#1d4ed8", dot: "#3b82f6" },
-  COMPLETED:  { label: "Completed", bg: "rgba(16,185,129,.12)",  color: "#065f46", dot: "#10b981" },
-  CANCELLED:  { label: "Cancelled", bg: "rgba(239,68,68,.1)",    color: "#991b1b", dot: "#ef4444" },
+const STATUS_CONFIG: Record<string, { label: string; bg: string; color: string; border: string }> = {
+  REQUESTED: { label: "Needs confirmation", bg: "#fff7ed", color: "#c2410c", border: "rgba(194,65,12,.28)" },
+  CONFIRMED: { label: "Confirmed", bg: "#eff6ff", color: "#1d4ed8", border: "rgba(29,78,216,.2)" },
+  COMPLETED: { label: "Completed", bg: "#ecfdf5", color: "#047857", border: "rgba(4,120,87,.2)" },
+  CANCELLED: { label: "Cancelled", bg: "#fff1f2", color: "#be123c", border: "rgba(190,18,60,.2)" },
 };
 
-function formatSlotTime(t: string) {
+function formatSlotTime(t: string | null) {
+  if (!t) return "No time";
   const start = t.split("-")[0].trim();
-  const [h, m = 0] = start.split(":").map(Number);
-  const ampm = h < 12 ? "AM" : "PM";
-  const h12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
-  return `${h12}:${String(m).padStart(2, "0")} ${ampm}`;
+  const [hour = 0, minute = 0] = start.split(":").map(Number);
+  const ampm = hour < 12 ? "AM" : "PM";
+  const h12 = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
+  return `${h12}:${String(minute).padStart(2, "0")} ${ampm}`;
 }
 
-function formatMoney(cents: number, currency: string) {
-  const sym = currency.toLowerCase() === "eur" ? "€" : currency.toUpperCase();
-  return `${sym}${Math.round(cents / 100)}`;
+function formatMoney(cents: number | null, currency = "eur") {
+  if (cents == null) return "";
+  const symbol = currency.toLowerCase() === "eur" ? "€" : `${currency.toUpperCase()} `;
+  return `${symbol}${Math.round(cents / 100).toLocaleString()}`;
+}
+
+function appointmentTimeValue(appt: Appointment) {
+  const scheduled = new Date(appt.scheduledAt);
+  if (appt.slotTime) {
+    const [hour = 0, minute = 0] = appt.slotTime.split("-")[0].trim().split(":").map(Number);
+    scheduled.setHours(hour, minute, 0, 0);
+  }
+  return scheduled.getTime();
 }
 
 function todayLabel() {
-  return new Date().toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+  return new Date().toLocaleDateString("en-GB", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+}
+
+function modeLabel(mode: string) {
+  return mode === "ONLINE" ? "Online" : "In person";
+}
+
+type SummaryTone = "blue" | "amber" | "green" | "slate";
+
+function SummaryTile({ label, value, tone }: { label: string; value: number | string; tone: SummaryTone }) {
+  const colors = {
+    blue: { bg: "#eff6ff", color: "#1d4ed8" },
+    amber: { bg: "#fff7ed", color: "#c2410c" },
+    green: { bg: "#ecfdf5", color: "#047857" },
+    slate: { bg: "#f8fafc", color: "#334155" },
+  }[tone];
+
+  return (
+    <div className="rounded-xl border border-gray-100 bg-white px-4 py-3">
+      <p className="text-[11px] font-bold uppercase tracking-wide text-slate-400">{label}</p>
+      <p className="mt-1 text-2xl font-extrabold" style={{ color: colors.color }}>
+        {value}
+      </p>
+    </div>
+  );
+}
+
+function AppointmentRow({
+  appt,
+  actionLoading,
+  cancelTarget,
+  cancelReason,
+  onAction,
+  onSetCancel,
+  onCancelReasonChange,
+  onCancelAbort,
+  role,
+}: {
+  appt: Appointment;
+  actionLoading: string | null;
+  cancelTarget: string | null;
+  cancelReason: string;
+  onAction: (id: string, action: string, reason?: string) => void;
+  onSetCancel: (id: string) => void;
+  onCancelReasonChange: (value: string) => void;
+  onCancelAbort: () => void;
+  role: string;
+}) {
+  const status = STATUS_CONFIG[appt.status] ?? STATUS_CONFIG.CONFIRMED;
+  const isActioning = Boolean(actionLoading?.startsWith(appt.id));
+  const isCancelTarget = cancelTarget === appt.id;
+  const isTerminal = appt.status === "COMPLETED" || appt.status === "CANCELLED";
+  const awaitingDoctor = appt.status === "CONFIRMED" && Boolean(appt.checkedInAt);
+  const isDoctor = role === "DOCTOR";
+
+  return (
+    <div className="rounded-2xl border bg-white" style={{ borderColor: status.border }}>
+      <div className="grid gap-4 px-4 py-4 lg:grid-cols-[88px_minmax(0,1fr)_220px] lg:items-center">
+        <div className="rounded-xl bg-[#f8fafc] px-3 py-3 text-center">
+          <p className="text-lg font-extrabold text-[#0f172a]">{formatSlotTime(appt.slotTime)}</p>
+          <p className="mt-1 text-[10px] font-bold uppercase tracking-wide text-slate-400">{modeLabel(appt.mode)}</p>
+        </div>
+
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="text-base font-extrabold text-[#0f172a]">{appt.patient?.fullName ?? "Unknown patient"}</p>
+            <span className="rounded-full px-2.5 py-1 text-[11px] font-bold" style={{ background: status.bg, color: status.color }}>
+              {awaitingDoctor ? "Checked in" : status.label}
+            </span>
+          </div>
+          <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-slate-600">
+            {appt.doctor && (
+              <span className="inline-flex items-center gap-1.5">
+                <Stethoscope size={13} /> {appt.doctor.fullName}
+              </span>
+            )}
+            {appt.package && (
+              <span className="inline-flex items-center gap-1.5">
+                <Package size={13} /> {appt.package.title}
+              </span>
+            )}
+            {appt.patient?.phone && (
+              <a href={`tel:${appt.patient.phone}`} className="inline-flex items-center gap-1.5 font-bold text-[#0f172a] no-underline">
+                <Phone size={13} /> {appt.patient.phone}
+              </a>
+            )}
+            {appt.amountPaid != null && <span className="font-bold text-[#0f172a]">{formatMoney(appt.amountPaid, appt.currency)}</span>}
+          </div>
+          {appt.cancellationReason && <p className="mt-2 text-xs font-semibold text-rose-700">Reason: {appt.cancellationReason}</p>}
+        </div>
+
+        {!isTerminal && !isCancelTarget && (
+          <div className="flex flex-wrap justify-start gap-2 lg:justify-end">
+            {!isDoctor && appt.status === "REQUESTED" && (
+              <button
+                onClick={() => onAction(appt.id, "CONFIRM")}
+                disabled={isActioning}
+                className="h-9 rounded-lg bg-[#142746] px-3 text-xs font-bold text-[#d8b975] disabled:opacity-50"
+              >
+                Confirm
+              </button>
+            )}
+            {appt.status === "CONFIRMED" && (
+              <>
+                {!isDoctor && (
+                  <button
+                    onClick={() => onAction(appt.id, "CHECKIN")}
+                    disabled={isActioning || Boolean(appt.checkedInAt)}
+                    className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-3 text-xs font-bold text-emerald-800 disabled:opacity-45"
+                  >
+                    <User size={13} /> {appt.checkedInAt ? "Checked in" : "Check in"}
+                  </button>
+                )}
+                {(!isDoctor || appt.checkedInAt) && (
+                  <button
+                    onClick={() => onAction(appt.id, "COMPLETE")}
+                    disabled={isActioning}
+                    className="h-9 rounded-lg border border-emerald-200 bg-emerald-50 px-3 text-xs font-bold text-emerald-800 disabled:opacity-50"
+                  >
+                    Complete
+                  </button>
+                )}
+              </>
+            )}
+            {!isDoctor && (
+              <button
+                onClick={() => onSetCancel(appt.id)}
+                className="h-9 rounded-lg border border-rose-200 bg-rose-50 px-3 text-xs font-bold text-rose-700"
+              >
+                Cancel
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+
+      {isCancelTarget && (
+        <div className="border-t border-rose-100 bg-rose-50/50 px-4 py-3">
+          <textarea
+            value={cancelReason}
+            onChange={(event) => onCancelReasonChange(event.target.value)}
+            placeholder="Reason for cancellation"
+            rows={2}
+            className="w-full resize-none rounded-xl border border-rose-200 bg-white px-3 py-2 text-sm text-[#0f172a] outline-none"
+          />
+          <div className="mt-2 flex gap-2">
+            <button
+              onClick={() => onAction(appt.id, "CANCEL", cancelReason)}
+              disabled={!cancelReason.trim() || isActioning}
+              className="h-9 rounded-lg bg-rose-700 px-4 text-xs font-bold text-white disabled:opacity-45"
+            >
+              Confirm cancellation
+            </button>
+            <button onClick={onCancelAbort} className="h-9 rounded-lg bg-white px-4 text-xs font-bold text-slate-600">
+              Back
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function CompletedAppointmentRow({ appt }: { appt: Appointment }) {
+  const careItem = appt.doctor?.fullName ?? appt.package?.title ?? "Care item";
+
+  return (
+    <div className="rounded-xl border border-emerald-100 bg-white px-3 py-3">
+      <div className="flex items-start gap-3">
+        <div className="w-16 flex-shrink-0 rounded-lg bg-[#f8fafc] px-2 py-2 text-center">
+          <p className="text-sm font-extrabold leading-tight text-[#0f172a]">{formatSlotTime(appt.slotTime)}</p>
+          <p className="mt-1 text-[9px] font-bold uppercase tracking-wide text-slate-400">{modeLabel(appt.mode)}</p>
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center justify-between gap-2">
+            <p className="truncate text-sm font-extrabold text-[#0f172a]">{appt.patient?.fullName ?? "Unknown patient"}</p>
+            <span className="flex-shrink-0 rounded-full bg-emerald-50 px-2 py-1 text-[10px] font-bold text-emerald-700">
+              Completed
+            </span>
+          </div>
+          <p className="mt-1 truncate text-xs font-medium text-slate-500">{careItem}</p>
+          <div className="mt-1 flex items-center justify-between gap-2">
+            {appt.patient?.phone ? (
+              <a href={`tel:${appt.patient.phone}`} className="truncate text-xs font-bold text-[#0f172a] no-underline">
+                {appt.patient.phone}
+              </a>
+            ) : (
+              <span className="text-xs text-slate-300">No phone</span>
+            )}
+            {appt.amountPaid != null && <span className="text-xs font-extrabold text-[#0f172a]">{formatMoney(appt.amountPaid, appt.currency)}</span>}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Section({
+  title,
+  description,
+  empty,
+  children,
+}: {
+  title: string;
+  description: string;
+  empty: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="rounded-2xl border border-gray-100 bg-white p-4">
+      <div className="mb-3">
+        <h2 className="text-sm font-extrabold text-[#0f172a]">{title}</h2>
+        <p className="mt-0.5 text-xs font-medium text-slate-400">{description}</p>
+      </div>
+      {empty ? (
+        <div className="flex min-h-[120px] items-center justify-center rounded-xl bg-[#f8fafc] text-sm font-semibold text-slate-300">
+          Nothing here right now
+        </div>
+      ) : (
+        <div className="space-y-2.5">{children}</div>
+      )}
+    </section>
+  );
 }
 
 export default function DashboardClient({ slug }: { slug: string }) {
@@ -76,11 +319,7 @@ export default function DashboardClient({ slug }: { slug: string }) {
   }, [slug]);
 
   useEffect(() => {
-    const timeoutId = window.setTimeout(() => {
-      void fetchStats();
-    }, 0);
-
-    return () => window.clearTimeout(timeoutId);
+    void fetchStats();
   }, [fetchStats]);
 
   const handleAction = async (bookingId: string, action: string, reason?: string) => {
@@ -93,13 +332,16 @@ export default function DashboardClient({ slug }: { slug: string }) {
         body: JSON.stringify({ bookingId, action, reason }),
       });
       const data = await res.json();
-      if (!res.ok) { setError(data.error ?? "Action failed"); return; }
+      if (!res.ok) {
+        setError(data.error ?? "Action failed");
+        return;
+      }
       if (action === "CANCEL" && data.refundError) {
         setError(`Booking cancelled but refund failed: ${data.refundError}`);
       }
       setCancelTarget(null);
       setCancelReason("");
-      await fetchStats(); // Refresh
+      await fetchStats();
     } catch {
       setError("Network error. Please try again.");
     } finally {
@@ -107,265 +349,148 @@ export default function DashboardClient({ slug }: { slug: string }) {
     }
   };
 
-  if (loading) return (
-    <div className="flex items-center justify-center h-64">
-      <div className="h-8 w-8 animate-spin rounded-full border-2 border-solid border-[#c8a96e] border-r-transparent" />
-    </div>
-  );
-
-  if (!stats) return (
-    <div className="flex items-center justify-center h-64 gap-3 text-gray-400">
-      <AlertCircle size={20} /> <span>{error || "No data available"}</span>
-    </div>
-  );
-
-  const { today, month, pendingConfirmations, todayAppointments } = stats;
-
-  // Sort: REQUESTED first, then CONFIRMED, then rest
-  const sortedAppointments = [...todayAppointments].sort((a, b) => {
+  const sortedAppointments = useMemo(() => {
     const order: Record<string, number> = { REQUESTED: 0, CONFIRMED: 1, COMPLETED: 2, CANCELLED: 3 };
-    return (order[a.status] ?? 9) - (order[b.status] ?? 9);
-  });
+    return [...(stats?.todayAppointments ?? [])].sort((a, b) => {
+      const statusDelta = (order[a.status] ?? 9) - (order[b.status] ?? 9);
+      return statusDelta !== 0 ? statusDelta : appointmentTimeValue(a) - appointmentTimeValue(b);
+    });
+  }, [stats]);
+
+  const queues = useMemo(() => {
+    const isDoctor = stats?.role === "DOCTOR";
+    const needsAction = sortedAppointments.filter((appt) =>
+      isDoctor
+        ? appt.status === "CONFIRMED" && Boolean(appt.checkedInAt)
+        : appt.status === "REQUESTED" || (appt.status === "CONFIRMED" && appt.checkedInAt),
+    );
+    const upcoming = sortedAppointments.filter((appt) => appt.status === "CONFIRMED" && !appt.checkedInAt);
+    const completed = sortedAppointments.filter((appt) => appt.status === "COMPLETED");
+    const cancelled = sortedAppointments.filter((appt) => appt.status === "CANCELLED");
+    return { needsAction, upcoming, completed, cancelled };
+  }, [sortedAppointments, stats?.role]);
+
+  if (loading) {
+    return (
+      <div className="flex h-64 items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-[#c8a96e] border-r-transparent" />
+      </div>
+    );
+  }
+
+  if (!stats) {
+    return (
+      <div className="flex h-64 items-center justify-center gap-2 text-sm font-semibold text-slate-400">
+        <AlertCircle size={18} />
+        {error || "No dashboard data available"}
+      </div>
+    );
+  }
+
+  const isDoctor = stats.role === "DOCTOR";
+  const summaryTiles: { label: string; value: number | string; tone: SummaryTone }[] = isDoctor
+    ? [
+        { label: "Checked in", value: queues.needsAction.length, tone: queues.needsAction.length ? "amber" : "slate" },
+        { label: "Upcoming", value: queues.upcoming.length, tone: "blue" },
+        { label: "Completed", value: stats.today.completed, tone: "green" },
+        { label: "Scheduled", value: stats.today.total, tone: "slate" },
+      ]
+    : [
+        { label: "Needs action", value: queues.needsAction.length, tone: queues.needsAction.length ? "amber" : "slate" },
+        { label: "Upcoming", value: queues.upcoming.length, tone: "blue" },
+        { label: "Completed", value: stats.today.completed, tone: "green" },
+        { label: "Today revenue", value: formatMoney(stats.today.revenue, "eur"), tone: "slate" },
+      ];
 
   return (
-    <div className="space-y-6 max-w-5xl">
-
-      {/* Date header */}
-      <div className="flex items-center justify-between">
+    <div className="w-full max-w-[1180px] space-y-5">
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-xl font-extrabold text-[#0f1e38]">Today&apos;s Operations</h1>
-          <p className="text-sm text-gray-400 mt-0.5">{todayLabel()}</p>
+          <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#c8a96e]">
+            {isDoctor ? "Doctor workspace" : "Reception desk"}
+          </p>
+          <h1 className="mt-1 text-2xl font-extrabold text-[#0f172a]">
+            {isDoctor ? "My Appointments" : "Today's Operations"}
+          </h1>
+          <p className="mt-1 text-sm font-medium text-slate-500">{todayLabel()}</p>
+          {isDoctor && stats.doctorName && (
+            <p className="mt-1 text-sm font-bold text-[#0f172a]">{stats.doctorName}</p>
+          )}
         </div>
         <button
           onClick={fetchStats}
-          className="flex items-center gap-2 px-3 h-9 rounded-xl text-xs font-semibold transition-all"
-          style={{ background: "#fff", border: "1.5px solid rgba(15,30,56,.1)", color: "#6b7a96" }}
-          onMouseEnter={(e) => { e.currentTarget.style.borderColor = "#c8a96e"; e.currentTarget.style.color = "#c8a96e"; }}
-          onMouseLeave={(e) => { e.currentTarget.style.borderColor = "rgba(15,30,56,.1)"; e.currentTarget.style.color = "#6b7a96"; }}
+          className="inline-flex h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-600"
         >
-          <RefreshCw size={13} /> Refresh
+          <RefreshCw size={14} /> Refresh
         </button>
       </div>
 
-      {/* KPI cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        {[
-          { label: "Scheduled Today",  value: today.total,     icon: <CalendarDays size={18} className="text-[#c8a96e]" />, sub: "appointments" },
-          { label: "Pending",          value: today.pending,   icon: <Clock size={18} className="text-amber-500" />,        sub: "need confirmation", alert: today.pending > 0 },
-          { label: "Completed",        value: today.completed, icon: <CheckCircle2 size={18} className="text-emerald-500" />, sub: "seen today" },
-          { label: "Today's Revenue",  value: formatMoney(today.revenue, "eur"), icon: <TrendingUp size={18} className="text-[#c8a96e]" />, sub: `€${Math.round(month.revenue / 100)} this month`, isText: true },
-        ].map((card) => (
-          <div key={card.label} className="bg-white rounded-2xl p-4 border"
-            style={{ borderColor: card.alert ? "rgba(245,158,11,.3)" : "rgba(15,30,56,.07)", boxShadow: "0 1px 4px rgba(15,30,56,.04)" }}>
-            <div className="flex items-start justify-between mb-3">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">{card.label}</p>
-              <div className="h-8 w-8 rounded-xl flex items-center justify-center"
-                style={{ background: card.alert ? "rgba(245,158,11,.1)" : "#f7f4ef" }}>
-                {card.icon}
-              </div>
-            </div>
-            <p className="text-2xl font-extrabold text-[#0f1e38]">{card.value}</p>
-            <p className="text-xs text-gray-400 mt-0.5">{card.sub}</p>
-          </div>
-        ))}
-      </div>
-
-      {/* Global pending banner */}
-      {pendingConfirmations > 0 && (
-        <div className="flex items-center justify-between p-4 rounded-2xl"
-          style={{ background: "rgba(245,158,11,.08)", border: "1.5px solid rgba(245,158,11,.25)" }}>
-          <div className="flex items-center gap-3">
-            <Clock size={16} className="text-amber-500 flex-shrink-0" />
-            <p className="text-sm font-semibold text-[#0f1e38]">
-              {pendingConfirmations} booking{pendingConfirmations > 1 ? "s" : ""} waiting for confirmation
-            </p>
-          </div>
-          <a href={`/admin/h/${slug}/bookings?status=requested`}
-            className="flex items-center gap-1 text-xs font-bold text-amber-600 hover:text-amber-700">
-            View all <ChevronRight size={13} />
-          </a>
-        </div>
-      )}
-
       {error && (
-        <div className="p-3 rounded-xl text-sm font-semibold text-red-600"
-          style={{ background: "#fef2f2", border: "1px solid rgba(220,38,38,.2)" }}>
+        <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700">
           {error}
         </div>
       )}
 
-      {/* Appointment queue */}
-      <div>
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-sm font-bold text-[#0f1e38]">Appointment Queue</h2>
-          <a href={`/admin/h/${slug}/bookings`}
-            className="text-xs font-semibold text-[#c8a96e] hover:text-[#a88b50] flex items-center gap-1">
-            View all bookings <ChevronRight size={12} />
-          </a>
+      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+        {summaryTiles.map((tile) => (
+          <SummaryTile key={tile.label} label={tile.label} value={tile.value} tone={tile.tone} />
+        ))}
+      </div>
+
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(360px,0.48fr)]">
+        <div className="space-y-4">
+          <Section
+            title="Needs Action"
+            description={isDoctor ? "Checked-in patients ready for you to complete after care is finished." : "Confirm new requests, then complete checked-in appointments after care is finished."}
+            empty={queues.needsAction.length === 0}
+          >
+            {queues.needsAction.map((appt) => (
+              <AppointmentRow
+                key={appt.id}
+                appt={appt}
+                actionLoading={actionLoading}
+                cancelTarget={cancelTarget}
+                cancelReason={cancelReason}
+                onAction={handleAction}
+                onSetCancel={setCancelTarget}
+                onCancelReasonChange={setCancelReason}
+                onCancelAbort={() => {
+                  setCancelTarget(null);
+                  setCancelReason("");
+                }}
+                role={stats.role}
+              />
+            ))}
+          </Section>
+
+          <Section title={isDoctor ? "My Upcoming Patients" : "Upcoming Queue"} description="Confirmed patients who have not checked in yet." empty={queues.upcoming.length === 0}>
+            {queues.upcoming.map((appt) => (
+              <AppointmentRow
+                key={appt.id}
+                appt={appt}
+                actionLoading={actionLoading}
+                cancelTarget={cancelTarget}
+                cancelReason={cancelReason}
+                onAction={handleAction}
+                onSetCancel={setCancelTarget}
+                onCancelReasonChange={setCancelReason}
+                onCancelAbort={() => {
+                  setCancelTarget(null);
+                  setCancelReason("");
+                }}
+                role={stats.role}
+              />
+            ))}
+          </Section>
         </div>
 
-        {sortedAppointments.length === 0 ? (
-          <div className="bg-white rounded-2xl p-10 text-center border border-gray-100">
-            <CalendarDays size={28} className="text-gray-200 mx-auto mb-3" />
-            <p className="text-sm font-semibold text-gray-400">No appointments scheduled for today</p>
+        <Section title="Completed Today" description="Appointments already marked complete." empty={queues.completed.length === 0}>
+          <div className="space-y-3">
+          {queues.completed.map((appt) => (
+            <CompletedAppointmentRow key={appt.id} appt={appt} />
+          ))}
           </div>
-        ) : (
-          <div className="space-y-2">
-            {sortedAppointments.map((appt) => {
-              const st = STATUS_CONFIG[appt.status] ?? STATUS_CONFIG.CONFIRMED;
-              const isActioning = actionLoading?.startsWith(appt.id);
-              const isCancelTarget = cancelTarget === appt.id;
-
-              return (
-                <div key={appt.id} className="bg-white rounded-2xl border overflow-hidden"
-                  style={{ borderColor: appt.status === "REQUESTED" ? "rgba(245,158,11,.3)" : "rgba(15,30,56,.07)" }}>
-
-                  {/* Main row */}
-                  <div className="flex items-center gap-4 p-4">
-                    {/* Time */}
-                    <div className="flex-shrink-0 text-center w-16">
-                      <p className="text-base font-extrabold text-[#0f1e38] leading-tight">
-                        {appt.slotTime ? formatSlotTime(appt.slotTime) : "—"}
-                      </p>
-                      <p className="text-[10px] font-semibold uppercase tracking-wider mt-0.5"
-                        style={{ color: appt.mode === "ONLINE" ? "#c8a96e" : "#10b981" }}>
-                        {appt.mode === "ONLINE" ? "Online" : "In-Person"}
-                      </p>
-                    </div>
-
-                    {/* Divider */}
-                    <div className="w-px h-10 bg-gray-100 flex-shrink-0" />
-
-                    {/* Patient info */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <p className="font-bold text-[#0f1e38] text-sm truncate">
-                          {appt.patient?.fullName ?? "Unknown Patient"}
-                        </p>
-                        {appt.patient?.disability && appt.patient.disability !== "none" && (
-                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full flex-shrink-0"
-                            style={{ background: "rgba(99,102,241,.1)", color: "#6366f1" }}>
-                            {appt.patient.disability}
-                          </span>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-3 mt-0.5">
-                        {appt.doctor && (
-                          <span className="flex items-center gap-1 text-xs text-gray-400">
-                            <Stethoscope size={10} /> {appt.doctor.fullName}
-                          </span>
-                        )}
-                        {appt.package && (
-                          <span className="flex items-center gap-1 text-xs text-gray-400">
-                            <Package size={10} /> {appt.package.title}
-                          </span>
-                        )}
-                        {appt.patient?.phone && (
-                          <a href={`tel:${appt.patient.phone}`}
-                            className="flex items-center gap-1 text-xs text-[#c8a96e] hover:text-[#a88b50]">
-                            <Phone size={10} /> {appt.patient.phone}
-                          </a>
-                        )}
-                      </div>
-                      {appt.cancellationReason && (
-                        <p className="text-xs text-red-500 mt-1">Reason: {appt.cancellationReason}</p>
-                      )}
-                    </div>
-
-                    {/* Status + amount */}
-                    <div className="flex-shrink-0 flex flex-col items-end gap-1.5">
-                      <span className="flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full"
-                        style={{ background: st.bg, color: st.color }}>
-                        <span className="h-1.5 w-1.5 rounded-full flex-shrink-0" style={{ background: st.dot }} />
-                        {st.label}
-                      </span>
-                      {appt.amountPaid != null && (
-                        <p className="text-xs font-bold text-[#0f1e38]">
-                          {formatMoney(appt.amountPaid, appt.currency)}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Action bar */}
-                  {(appt.status === "REQUESTED" || appt.status === "CONFIRMED") && !isCancelTarget && (
-                    <div className="flex items-center gap-2 px-4 pb-3">
-                      {appt.status === "REQUESTED" && (
-                        <button
-                          onClick={() => handleAction(appt.id, "CONFIRM")}
-                          disabled={!!isActioning}
-                          className="flex-1 h-8 rounded-xl text-xs font-bold transition-all disabled:opacity-50"
-                          style={{ background: "linear-gradient(135deg,#0f1e38,#1a3059)", color: "#c8a96e" }}
-                        >
-                          {isActioning ? "..." : "✓ Confirm"}
-                        </button>
-                      )}
-                      {appt.status === "CONFIRMED" && (
-                        <button
-                          onClick={() => handleAction(appt.id, "CHECKIN")}
-                          disabled={!!isActioning || !!appt.checkedInAt}
-                          className="flex-1 h-8 rounded-xl text-xs font-bold transition-all disabled:opacity-50"
-                          style={{ background: "rgba(16,185,129,.12)", color: "#065f46", border: "1px solid rgba(16,185,129,.3)" }}
-                        >
-                          <User size={11} className="inline mr-1" />
-                          {appt.checkedInAt ? "Checked In" : "Check In"}
-                        </button>
-                      )}
-                      {appt.status === "CONFIRMED" && (
-                        <button
-                          onClick={() => handleAction(appt.id, "COMPLETE")}
-                          disabled={!!isActioning}
-                          className="flex-1 h-8 rounded-xl text-xs font-bold transition-all disabled:opacity-50"
-                          style={{ background: "rgba(16,185,129,.12)", color: "#065f46", border: "1px solid rgba(16,185,129,.3)" }}
-                        >
-                          {isActioning ? "..." : "✓ Complete"}
-                        </button>
-                      )}
-                      <button
-                        onClick={() => setCancelTarget(appt.id)}
-                        className="h-8 px-3 rounded-xl text-xs font-bold transition-all"
-                        style={{ background: "rgba(239,68,68,.08)", color: "#dc2626", border: "1px solid rgba(239,68,68,.2)" }}
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  )}
-
-                  {/* Cancel reason input */}
-                  {isCancelTarget && (
-                    <div className="px-4 pb-4 space-y-2">
-                      <textarea
-                        value={cancelReason}
-                        onChange={(e) => setCancelReason(e.target.value)}
-                        placeholder="Reason for cancellation (required)..."
-                        rows={2}
-                        className="w-full rounded-xl px-3 py-2 text-sm outline-none resize-none"
-                        style={{ border: "1.5px solid rgba(239,68,68,.3)", background: "#fff9f9" }}
-                      />
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => handleAction(appt.id, "CANCEL", cancelReason)}
-                          disabled={!cancelReason.trim() || !!isActioning}
-                          className="flex-1 h-8 rounded-xl text-xs font-bold disabled:opacity-50"
-                          style={{ background: "#dc2626", color: "#fff" }}
-                        >
-                          {isActioning ? "..." : "Confirm Cancellation"}
-                        </button>
-                        <button
-                          onClick={() => { setCancelTarget(null); setCancelReason(""); }}
-                          className="h-8 px-4 rounded-xl text-xs font-semibold"
-                          style={{ background: "#f7f4ef", color: "#6b7a96" }}
-                        >
-                          Back
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        )}
+        </Section>
       </div>
     </div>
   );

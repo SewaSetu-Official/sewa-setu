@@ -169,7 +169,7 @@ export default function HospitalAdminShell({
     { label: "Dashboard",    href: `${base}/dashboard`,     icon: <LayoutDashboard size={17} /> },
     { label: "Bookings",     href: `${base}/bookings`,      icon: <CalendarCheck size={17} />,   badge: pendingCount || undefined, permission: "VIEW_BOOKINGS" },
     { label: "Doctors",      href: `${base}/doctors`,       icon: <Stethoscope size={17} />,     permission: "VIEW_DOCTORS" },
-    { label: "Availability", href: `${base}/availability`,  icon: <Clock size={17} />,            permission: "MANAGE_AVAILABILITY" },
+    { label: "Schedules",    href: `${base}/availability`,  icon: <Clock size={17} />,            permission: "VIEW_AVAILABILITY" },
     { label: "Packages",     href: `${base}/packages`,      icon: <Package size={17} />,          permission: "MANAGE_PACKAGES" },
     { label: "Reviews",      href: `${base}/reviews`,       icon: <Star size={17} />,             permission: "MODERATE_REVIEWS" },
     { label: "Team",         href: `${base}/team`,          icon: <Users size={17} />,            permission: "VIEW_TEAM" },
