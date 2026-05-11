@@ -15,6 +15,14 @@ async function getClerkUser(clerkId: string) {
 
 export async function ensureClerkUserInDb(clerkId: string) {
   try {
+    const existingByClerkId = await db.user.findUnique({
+      where: { clerkId },
+    });
+
+    if (existingByClerkId) {
+      return existingByClerkId;
+    }
+
     const clerkUser = await getClerkUser(clerkId);
     const email = clerkUser.primaryEmailAddress?.emailAddress ?? clerkUser.emailAddresses[0]?.emailAddress;
 

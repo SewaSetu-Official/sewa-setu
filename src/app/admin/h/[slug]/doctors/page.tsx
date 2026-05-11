@@ -1,4 +1,4 @@
-import { requireHospitalAccess } from "@/lib/admin-auth";
+import { hasPermission, requireHospitalAccess } from "@/lib/admin-auth";
 import { redirect } from "next/navigation";
 import DoctorsClient from "./DoctorsClient";
 
@@ -9,11 +9,12 @@ export default async function DoctorsPage({
 }) {
   const { slug } = await params;
 
+  let ctx;
   try {
-    await requireHospitalAccess(slug, "VIEW_DOCTORS");
+    ctx = await requireHospitalAccess(slug, "VIEW_DOCTORS");
   } catch {
     redirect("/admin/request-access");
   }
 
-  return <DoctorsClient slug={slug} />;
+  return <DoctorsClient slug={slug} canManage={hasPermission(ctx.membership.role, "MANAGE_DOCTORS")} />;
 }
