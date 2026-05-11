@@ -58,7 +58,8 @@ export function ProfileEditModal({ children }: ProfileEditModalProps) {
               {/* Scrollable Content */}
               <div className="flex-1 overflow-y-auto">
                 <div className="p-8">
-                  <UserProfile 
+                  <UserProfile
+                    routing="hash"
                     appearance={{
                       elements: {
                         rootBox: "w-full",
@@ -114,7 +115,8 @@ export function ProfileEditModal({ children }: ProfileEditModalProps) {
             {/* Scrollable Content */}
             <div className="flex-1 overflow-y-auto">
               <div className="p-8">
-                <UserProfile 
+                <UserProfile
+                  routing="hash"
                   appearance={{
                     elements: {
                       rootBox: "w-full",
