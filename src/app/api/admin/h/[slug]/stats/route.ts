@@ -44,16 +44,32 @@ export async function GET(
   monthStart.setHours(0, 0, 0, 0);
 
   const [
+    hospital,
     todayTotal,
     todayPending,
     todayCompleted,
     todayCancelled,
     todayRevenue,
     monthRevenue,
+    monthBookings,
     totalBookings,
     pendingConfirmations,
+    activeDoctors,
+    activePackages,
+    pendingTeamRequests,
+    teamMembers,
     todayAppointments,
   ] = await Promise.all([
+    db.hospital.findUnique({
+      where: { id: hospitalId },
+      select: {
+        name: true,
+        verified: true,
+        isActive: true,
+        emergencyAvailable: true,
+      },
+    }),
+
     // Today's totals
     db.booking.count({ where: { ...bookingScope, scheduledAt: { gte: todayStart, lte: todayEnd } } }),
     db.booking.count({ where: { ...bookingScope, scheduledAt: { gte: todayStart, lte: todayEnd }, status: "REQUESTED" } }),
@@ -72,11 +88,21 @@ export async function GET(
       _sum: { amountPaid: true },
     }),
 
+    db.booking.count({ where: { ...bookingScope, createdAt: { gte: monthStart }, status: { not: "DRAFT" } } }),
+
     // All-time booking count
     db.booking.count({ where: bookingScope }),
 
     // Global pending confirmations
     db.booking.count({ where: { ...bookingScope, status: "REQUESTED" } }),
+
+    db.doctorHospital.count({ where: { hospitalId } }),
+
+    db.hospitalPackage.count({ where: { hospitalId, isActive: true } }),
+
+    db.hospitalMembership.count({ where: { hospitalId, status: "PENDING" } }),
+
+    db.hospitalMembership.count({ where: { hospitalId, status: "APPROVED" } }),
 
     // Today's appointment queue — sorted by slot time
     db.booking.findMany({
@@ -94,6 +120,12 @@ export async function GET(
   return NextResponse.json({
     role: ctx.membership.role,
     doctorName: doctorProfile?.fullName ?? null,
+    hospital: {
+      name: hospital?.name ?? null,
+      verified: hospital?.verified ?? false,
+      isActive: hospital?.isActive ?? false,
+      emergencyAvailable: hospital?.emergencyAvailable ?? false,
+    },
     today: {
       total: todayTotal,
       pending: todayPending,
@@ -103,9 +135,16 @@ export async function GET(
     },
     month: {
       revenue: monthRevenue._sum.amountPaid ?? 0,
+      bookings: monthBookings,
     },
     totalBookings,
     pendingConfirmations,
+    operations: {
+      activeDoctors,
+      activePackages,
+      pendingTeamRequests,
+      teamMembers,
+    },
     todayAppointments: todayAppointments.map((b) => ({
       id: b.id,
       status: b.status,

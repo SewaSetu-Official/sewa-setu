@@ -1,11 +1,26 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { BarChart2, TrendingUp, RefreshCw, AlertCircle, Stethoscope, Package } from "lucide-react";
+import { BarChart2, TrendingUp, RefreshCw, AlertCircle, Stethoscope, Package, RotateCcw, ReceiptText, Percent } from "lucide-react";
 
 type ReportsData = {
   range: number;
-  overview: { totalBookings: number; totalRevenue: number; rangeBookings: number; rangeRevenue: number };
+  overview: {
+    totalBookings: number;
+    totalRevenue: number;
+    totalRefunds: number;
+    netRevenue: number;
+    paidBookings: number;
+    rangeBookings: number;
+    rangeRevenue: number;
+    rangeRefunds: number;
+    rangeNetRevenue: number;
+    rangePaidBookings: number;
+    cancelledBookings: number;
+    refundedBookings: number;
+    cancellationRate: number;
+    refundRate: number;
+  };
   statusBreakdown: { status: string; count: number }[];
   dailyChart: { date: string; bookings: number; revenue: number }[];
   topDoctors: { doctorId: string; name: string; completedBookings: number }[];
@@ -57,6 +72,7 @@ export default function ReportsClient({ slug }: { slug: string }) {
   useEffect(() => { fetchReports(range); }, [range]); // eslint-disable-line
 
   const maxBookings = data ? Math.max(...data.dailyChart.map((d) => d.bookings), 1) : 1;
+  const maxRevenue = data ? Math.max(...data.dailyChart.map((d) => d.revenue), 1) : 1;
 
   return (
     <div className="space-y-6 max-w-5xl">
@@ -101,13 +117,13 @@ export default function ReportsClient({ slug }: { slug: string }) {
       ) : !data ? null : (
         <div className="space-y-5">
 
-          {/* Overview cards */}
+          {/* Finance cards */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
             {[
-              { label: "All-time Bookings",  value: data.overview.totalBookings.toLocaleString(),   icon: <BarChart2 size={16} className="text-[#c8a96e]" /> },
-              { label: "All-time Revenue",   value: formatMoney(data.overview.totalRevenue),         icon: <TrendingUp size={16} className="text-[#c8a96e]" /> },
-              { label: `Bookings (${range}d)`, value: data.overview.rangeBookings.toLocaleString(), icon: <BarChart2 size={16} className="text-blue-400" /> },
-              { label: `Revenue (${range}d)`,  value: formatMoney(data.overview.rangeRevenue),       icon: <TrendingUp size={16} className="text-emerald-400" /> },
+              { label: `Gross Revenue (${range}d)`, value: formatMoney(data.overview.rangeRevenue), sub: `${data.overview.rangePaidBookings} paid bookings`, icon: <TrendingUp size={16} className="text-emerald-500" /> },
+              { label: `Refunds (${range}d)`, value: formatMoney(data.overview.rangeRefunds), sub: `${data.overview.refundedBookings} refunded`, icon: <RotateCcw size={16} className="text-amber-500" /> },
+              { label: `Net Revenue (${range}d)`, value: formatMoney(data.overview.rangeNetRevenue), sub: "Gross minus refunds", icon: <ReceiptText size={16} className="text-[#c8a96e]" /> },
+              { label: "All-time Net", value: formatMoney(data.overview.netRevenue), sub: `${data.overview.paidBookings} paid bookings`, icon: <TrendingUp size={16} className="text-[#c8a96e]" /> },
             ].map((card) => (
               <div key={card.label} className="bg-white rounded-2xl p-4 border border-gray-100">
                 <div className="flex items-center justify-between mb-2">
@@ -117,6 +133,27 @@ export default function ReportsClient({ slug }: { slug: string }) {
                   </div>
                 </div>
                 <p className="text-xl font-extrabold text-[#0f1e38]">{card.value}</p>
+                <p className="text-xs text-gray-400 mt-0.5">{card.sub}</p>
+              </div>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            {[
+              { label: `Bookings (${range}d)`, value: data.overview.rangeBookings.toLocaleString(), sub: `${data.overview.cancelledBookings} cancelled`, icon: <BarChart2 size={16} className="text-blue-400" /> },
+              { label: "Cancellation Rate", value: `${data.overview.cancellationRate}%`, sub: "Of bookings in range", icon: <Percent size={16} className="text-rose-400" /> },
+              { label: "Refund Rate", value: `${data.overview.refundRate}%`, sub: "Of paid bookings", icon: <Percent size={16} className="text-amber-500" /> },
+              { label: "All-time Bookings", value: data.overview.totalBookings.toLocaleString(), sub: "All statuses", icon: <BarChart2 size={16} className="text-[#c8a96e]" /> },
+            ].map((card) => (
+              <div key={card.label} className="bg-white rounded-2xl p-4 border border-gray-100">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">{card.label}</p>
+                  <div className="h-7 w-7 rounded-xl flex items-center justify-center" style={{ background: "#f7f4ef" }}>
+                    {card.icon}
+                  </div>
+                </div>
+                <p className="text-xl font-extrabold text-[#0f1e38]">{card.value}</p>
+                <p className="text-xs text-gray-400 mt-0.5">{card.sub}</p>
               </div>
             ))}
           </div>
@@ -203,15 +240,22 @@ export default function ReportsClient({ slug }: { slug: string }) {
               <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-4">
                 Daily Bookings — Last {range} days
               </p>
-              <div className="flex items-end gap-1 h-28 pb-1 overflow-hidden">
+              <div className="flex items-end gap-1 h-32 pb-1 overflow-hidden">
                 {data.dailyChart.map((d) => (
                   <div key={d.date} className="flex flex-col items-center gap-1 flex-1 min-w-0 group">
-                    <div className="relative">
+                    <div className="relative flex h-28 items-end gap-0.5">
                       <div
-                        className="w-full max-w-[10px] mx-auto rounded-t-sm transition-all group-hover:opacity-80"
+                        className="w-[6px] rounded-t-sm transition-all group-hover:opacity-80"
                         style={{
                           height: Math.max(4, Math.round((d.bookings / maxBookings) * 96)),
                           background: "linear-gradient(180deg,#c8a96e,#a88b50)",
+                        }}
+                      />
+                      <div
+                        className="w-[6px] rounded-t-sm transition-all group-hover:opacity-80"
+                        style={{
+                          height: Math.max(4, Math.round((d.revenue / maxRevenue) * 96)),
+                          background: "linear-gradient(180deg,#10b981,#047857)",
                         }}
                       />
                       <div className="absolute -top-6 left-1/2 -translate-x-1/2 hidden group-hover:block bg-[#0f1e38] text-[#c8a96e] text-[10px] font-bold px-1.5 py-0.5 rounded whitespace-nowrap z-10">

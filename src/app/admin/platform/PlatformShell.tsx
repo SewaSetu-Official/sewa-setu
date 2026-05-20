@@ -19,8 +19,8 @@ const NAV: NavItem[] = [
   { label: "Hospitals",  href: "/admin/platform/hospitals",  icon: <Building2 size={17} /> },
   { label: "Users",      href: "/admin/platform/users",      icon: <Users size={17} />, adminOnly: true },
   { label: "Inquiries",  href: "/admin/platform/inquiries",  icon: <Inbox size={17} /> },
-  { label: "Bookings",   href: "/admin/platform/bookings",   icon: <CalendarDays size={17} />, adminOnly: true },
-  { label: "Revenue",    href: "/admin/platform/revenue",    icon: <TrendingUp size={17} />, adminOnly: true },
+  { label: "Bookings",   href: "/admin/platform/bookings",   icon: <CalendarDays size={17} /> },
+  { label: "Revenue",    href: "/admin/platform/revenue",    icon: <TrendingUp size={17} /> },
   { label: "Audit Logs", href: "/admin/platform/audit-logs", icon: <ShieldCheck size={17} /> },
   { label: "Settings",   href: "/admin/platform/settings",   icon: <Settings size={17} />, adminOnly: true },
 ];
@@ -123,6 +123,8 @@ export default function PlatformShell({
     pathname === "/admin/platform/dashboard" ||
     pathname === "/admin/platform/hospitals" ||
     pathname === "/admin/platform/inquiries" ||
+    pathname === "/admin/platform/bookings" ||
+    pathname === "/admin/platform/revenue" ||
     pathname === "/admin/platform/audit-logs";
 
   useEffect(() => {

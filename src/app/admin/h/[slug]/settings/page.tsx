@@ -9,11 +9,12 @@ export default async function SettingsPage({
 }) {
   const { slug } = await params;
 
+  let ctx;
   try {
-    await requireHospitalAccess(slug, "MANAGE_SETTINGS");
+    ctx = await requireHospitalAccess(slug, "MANAGE_PUBLIC_PROFILE");
   } catch {
     redirect("/admin/request-access");
   }
 
-  return <SettingsClient slug={slug} />;
+  return <SettingsClient slug={slug} role={ctx.membership.role} />;
 }

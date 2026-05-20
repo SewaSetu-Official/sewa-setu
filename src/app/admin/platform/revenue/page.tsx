@@ -29,6 +29,7 @@ type RevenueData = {
   };
   monthly: Monthly[];
   hospitals: HospitalRow[];
+  scope: "platform" | "assigned";
 };
 
 function fmt(cents: number) {
@@ -75,7 +76,9 @@ export default function PlatformRevenuePage() {
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-xl font-extrabold text-[#0f1e38]">Revenue</h1>
-          <p className="text-sm text-gray-400 mt-0.5">Platform-wide financial overview</p>
+          <p className="text-sm text-gray-400 mt-0.5">
+            {data?.scope === "assigned" ? "Financial overview for assigned hospitals" : "Platform-wide financial overview"}
+          </p>
         </div>
         <button onClick={fetchData}
           className="flex items-center gap-2 px-3 h-9 rounded-xl text-xs font-semibold transition-all"

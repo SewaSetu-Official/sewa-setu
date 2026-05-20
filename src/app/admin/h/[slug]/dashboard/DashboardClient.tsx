@@ -3,11 +3,15 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   AlertCircle,
+  BadgeCheck,
+  BarChart3,
   Package,
   Phone,
   RefreshCw,
+  ShieldCheck,
   Stethoscope,
   User,
+  Users,
 } from "lucide-react";
 
 type Appointment = {
@@ -29,10 +33,22 @@ type Appointment = {
 type Stats = {
   role: string;
   doctorName: string | null;
+  hospital: {
+    name: string | null;
+    verified: boolean;
+    isActive: boolean;
+    emergencyAvailable: boolean;
+  };
   today: { total: number; pending: number; completed: number; cancelled: number; revenue: number };
-  month: { revenue: number };
+  month: { revenue: number; bookings: number };
   totalBookings: number;
   pendingConfirmations: number;
+  operations: {
+    activeDoctors: number;
+    activePackages: number;
+    pendingTeamRequests: number;
+    teamMembers: number;
+  };
   todayAppointments: Appointment[];
 };
 
@@ -96,6 +112,48 @@ function SummaryTile({ label, value, tone }: { label: string; value: number | st
       <p className="mt-1 text-2xl font-extrabold" style={{ color: colors.color }}>
         {value}
       </p>
+    </div>
+  );
+}
+
+function OwnerMetric({
+  icon,
+  label,
+  value,
+  sub,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: number | string;
+  sub: string;
+}) {
+  return (
+    <div className="rounded-xl border border-gray-100 bg-white px-4 py-3">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-[11px] font-bold uppercase tracking-wide text-slate-400">{label}</p>
+          <p className="mt-1 text-2xl font-extrabold text-[#0f172a]">{value}</p>
+          <p className="mt-0.5 text-xs font-medium text-slate-400">{sub}</p>
+        </div>
+        <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl" style={{ background: "#f7f4ef", color: "#a8874f" }}>
+          {icon}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AlertItem({ tone, title, body }: { tone: "amber" | "green" | "red"; title: string; body: string }) {
+  const color = {
+    amber: { bg: "#fff7ed", border: "rgba(194,65,12,.18)", text: "#c2410c" },
+    green: { bg: "#ecfdf5", border: "rgba(4,120,87,.16)", text: "#047857" },
+    red: { bg: "#fff1f2", border: "rgba(190,18,60,.16)", text: "#be123c" },
+  }[tone];
+
+  return (
+    <div className="rounded-xl border px-3 py-3" style={{ background: color.bg, borderColor: color.border }}>
+      <p className="text-xs font-extrabold" style={{ color: color.text }}>{title}</p>
+      <p className="mt-1 text-xs font-medium text-slate-500">{body}</p>
     </div>
   );
 }
@@ -186,7 +244,7 @@ function AppointmentRow({
                     <User size={13} /> {appt.checkedInAt ? "Checked in" : "Check in"}
                   </button>
                 )}
-                {(!isDoctor || appt.checkedInAt) && (
+                {appt.checkedInAt && (
                   <button
                     onClick={() => onAction(appt.id, "COMPLETE")}
                     disabled={isActioning}
@@ -319,7 +377,11 @@ export default function DashboardClient({ slug }: { slug: string }) {
   }, [slug]);
 
   useEffect(() => {
-    void fetchStats();
+    const timeoutId = window.setTimeout(() => {
+      void fetchStats();
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
   }, [fetchStats]);
 
   const handleAction = async (bookingId: string, action: string, reason?: string) => {
@@ -388,6 +450,9 @@ export default function DashboardClient({ slug }: { slug: string }) {
   }
 
   const isDoctor = stats.role === "DOCTOR";
+  const isOwner = stats.role === "OWNER";
+  const isManager = stats.role === "MANAGER";
+  const isBusinessAdmin = isOwner || isManager;
   const summaryTiles: { label: string; value: number | string; tone: SummaryTone }[] = isDoctor
     ? [
         { label: "Checked in", value: queues.needsAction.length, tone: queues.needsAction.length ? "amber" : "slate" },
@@ -395,6 +460,13 @@ export default function DashboardClient({ slug }: { slug: string }) {
         { label: "Completed", value: stats.today.completed, tone: "green" },
         { label: "Scheduled", value: stats.today.total, tone: "slate" },
       ]
+    : isBusinessAdmin
+      ? [
+          { label: "Month revenue", value: formatMoney(stats.month.revenue, "eur"), tone: "slate" },
+          { label: "Month bookings", value: stats.month.bookings, tone: "blue" },
+          { label: "Needs action", value: queues.needsAction.length, tone: queues.needsAction.length ? "amber" : "slate" },
+          { label: "Today revenue", value: formatMoney(stats.today.revenue, "eur"), tone: "green" },
+        ]
     : [
         { label: "Needs action", value: queues.needsAction.length, tone: queues.needsAction.length ? "amber" : "slate" },
         { label: "Upcoming", value: queues.upcoming.length, tone: "blue" },
@@ -407,10 +479,10 @@ export default function DashboardClient({ slug }: { slug: string }) {
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#c8a96e]">
-            {isDoctor ? "Doctor workspace" : "Reception desk"}
+            {isDoctor ? "Doctor workspace" : isOwner ? "Owner command center" : isManager ? "Manager operations" : "Reception desk"}
           </p>
           <h1 className="mt-1 text-2xl font-extrabold text-[#0f172a]">
-            {isDoctor ? "My Appointments" : "Today's Operations"}
+            {isDoctor ? "My Appointments" : isBusinessAdmin ? stats.hospital.name ?? "Hospital Overview" : "Today's Operations"}
           </h1>
           <p className="mt-1 text-sm font-medium text-slate-500">{todayLabel()}</p>
           {isDoctor && stats.doctorName && (
@@ -436,6 +508,81 @@ export default function DashboardClient({ slug }: { slug: string }) {
           <SummaryTile key={tile.label} label={tile.label} value={tile.value} tone={tile.tone} />
         ))}
       </div>
+
+      {isBusinessAdmin && (
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+          <OwnerMetric
+            icon={<Stethoscope size={16} />}
+            label="Doctors"
+            value={stats.operations.activeDoctors}
+            sub="Linked to this hospital"
+          />
+          <OwnerMetric
+            icon={<Package size={16} />}
+            label="Active Packages"
+            value={stats.operations.activePackages}
+            sub="Visible service catalog"
+          />
+          <OwnerMetric
+            icon={<Users size={16} />}
+            label="Team"
+            value={stats.operations.teamMembers}
+            sub={`${stats.operations.pendingTeamRequests} pending request${stats.operations.pendingTeamRequests === 1 ? "" : "s"}`}
+          />
+          <OwnerMetric
+            icon={<BarChart3 size={16} />}
+            label="All Bookings"
+            value={stats.totalBookings}
+            sub={`${stats.pendingConfirmations} awaiting confirmation`}
+          />
+        </div>
+      )}
+
+      {isBusinessAdmin && (
+        <section className="rounded-2xl border border-gray-100 bg-white p-4">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 className="text-sm font-extrabold text-[#0f172a]">Owner Signals</h2>
+              <p className="mt-0.5 text-xs font-medium text-slate-400">
+                Quick business and access checks for this hospital.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold"
+                style={{
+                  background: stats.hospital.verified ? "#ecfdf5" : "#fff7ed",
+                  color: stats.hospital.verified ? "#047857" : "#c2410c",
+                }}>
+                <BadgeCheck size={12} /> {stats.hospital.verified ? "Verified" : "Verification pending"}
+              </span>
+              <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold"
+                style={{
+                  background: stats.hospital.isActive ? "#ecfdf5" : "#fff1f2",
+                  color: stats.hospital.isActive ? "#047857" : "#be123c",
+                }}>
+                <ShieldCheck size={12} /> {stats.hospital.isActive ? "Active" : "Inactive"}
+              </span>
+            </div>
+          </div>
+          <div className="grid gap-3 md:grid-cols-3">
+            <AlertItem
+              tone={stats.pendingConfirmations > 0 ? "amber" : "green"}
+              title={stats.pendingConfirmations > 0 ? "Confirmations waiting" : "Booking queue clear"}
+              body={stats.pendingConfirmations > 0 ? `${stats.pendingConfirmations} booking request${stats.pendingConfirmations === 1 ? "" : "s"} still need confirmation.` : "No unconfirmed booking requests right now."}
+            />
+            <AlertItem
+              tone={stats.operations.pendingTeamRequests > 0 ? "amber" : "green"}
+              title={stats.operations.pendingTeamRequests > 0 ? "Team requests pending" : "Team access settled"}
+              body={stats.operations.pendingTeamRequests > 0 ? `${stats.operations.pendingTeamRequests} access request${stats.operations.pendingTeamRequests === 1 ? "" : "s"} need review.` : "No pending team access requests."}
+            />
+            <AlertItem
+              tone={stats.hospital.emergencyAvailable ? "green" : "amber"}
+              title={stats.hospital.emergencyAvailable ? "Emergency flag enabled" : "Emergency flag off"}
+              body={stats.hospital.emergencyAvailable ? "Emergency availability is visible on the listing." : "Emergency availability is not shown on the listing."}
+            />
+          </div>
+        </section>
+      )}
 
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(360px,0.48fr)]">
         <div className="space-y-4">

@@ -23,6 +23,25 @@ function dateKey(date: Date) {
   return formatDate(date);
 }
 
+function timeToMinutes(value: string) {
+  const [hour, minute] = value.split(":").map(Number);
+  if (
+    !Number.isInteger(hour) ||
+    !Number.isInteger(minute) ||
+    hour < 0 ||
+    hour > 23 ||
+    minute < 0 ||
+    minute > 59
+  ) {
+    return null;
+  }
+  return hour * 60 + minute;
+}
+
+function windowsOverlap(startA: number, endA: number, startB: number, endB: number) {
+  return startA < endB && startB < endA;
+}
+
 // GET /api/admin/h/[slug]/availability
 export async function GET(
   req: Request,
@@ -404,6 +423,107 @@ export async function GET(
   });
 }
 
+// POST /api/admin/h/[slug]/availability - create weekly availability window
+export async function POST(
+  req: Request,
+  { params }: { params: Promise<{ slug: string }> }
+) {
+  const { slug } = await params;
+
+  let ctx;
+  try { ctx = await requireHospitalAccess(slug, "MANAGE_AVAILABILITY", { apiMode: true }); }
+  catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : "UNAUTHORIZED";
+    return NextResponse.json({ error: msg }, { status: msg === "FORBIDDEN" ? 403 : 401 });
+  }
+
+  let body: {
+    doctorId?: string;
+    dayOfWeek?: number;
+    mode?: "ONLINE" | "PHYSICAL";
+    startTime?: string;
+    endTime?: string;
+    slotDurationMinutes?: number;
+  };
+  try { body = await req.json(); } catch {
+    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+  }
+
+  const doctorId = body.doctorId?.trim();
+  const dayOfWeek = Number(body.dayOfWeek);
+  const mode = body.mode;
+  const startTime = body.startTime?.trim();
+  const endTime = body.endTime?.trim();
+  const slotDurationMinutes = Number(body.slotDurationMinutes ?? 30);
+
+  if (!doctorId || !mode || !startTime || !endTime) {
+    return NextResponse.json({ error: "doctorId, mode, startTime and endTime are required" }, { status: 400 });
+  }
+  if (!["ONLINE", "PHYSICAL"].includes(mode)) {
+    return NextResponse.json({ error: "Invalid consultation mode" }, { status: 400 });
+  }
+  if (!Number.isInteger(dayOfWeek) || dayOfWeek < 0 || dayOfWeek > 6) {
+    return NextResponse.json({ error: "Invalid day of week" }, { status: 400 });
+  }
+  if (!Number.isInteger(slotDurationMinutes) || slotDurationMinutes < 5 || slotDurationMinutes > 240) {
+    return NextResponse.json({ error: "Slot duration must be between 5 and 240 minutes" }, { status: 400 });
+  }
+
+  const startMinutes = timeToMinutes(startTime);
+  const endMinutes = timeToMinutes(endTime);
+  if (startMinutes === null || endMinutes === null || startMinutes >= endMinutes) {
+    return NextResponse.json({ error: "Invalid time window" }, { status: 400 });
+  }
+  if ((endMinutes - startMinutes) < slotDurationMinutes) {
+    return NextResponse.json({ error: "Window must be at least one slot duration long" }, { status: 400 });
+  }
+
+  const doctorHospital = await db.doctorHospital.findUnique({
+    where: { doctorId_hospitalId: { doctorId, hospitalId: ctx.membership.hospitalId } },
+    select: { doctorId: true },
+  });
+  if (!doctorHospital) {
+    return NextResponse.json({ error: "Doctor is not assigned to this hospital" }, { status: 404 });
+  }
+
+  const existingSlots = await db.availabilitySlot.findMany({
+    where: { doctorId, hospitalId: ctx.membership.hospitalId, mode, dayOfWeek },
+    select: { startTime: true, endTime: true },
+  });
+  const conflict = existingSlots.find((slot) => {
+    const existingStart = timeToMinutes(slot.startTime);
+    const existingEnd = timeToMinutes(slot.endTime);
+    return existingStart !== null && existingEnd !== null && windowsOverlap(startMinutes, endMinutes, existingStart, existingEnd);
+  });
+  if (conflict) {
+    return NextResponse.json({ error: "This schedule overlaps an existing window" }, { status: 409 });
+  }
+
+  const slot = await db.availabilitySlot.create({
+    data: {
+      doctorId,
+      hospitalId: ctx.membership.hospitalId,
+      mode,
+      dayOfWeek,
+      startTime,
+      endTime,
+      slotDurationMinutes,
+      isActive: true,
+    },
+  });
+
+  await writeAuditLog({
+    actorUserId: ctx.user.id,
+    hospitalId: ctx.membership.hospitalId,
+    action: "SLOT_CREATED",
+    entity: "AvailabilitySlot",
+    entityId: slot.id,
+    after: { doctorId, mode, dayOfWeek, startTime, endTime, slotDurationMinutes },
+  });
+
+  return NextResponse.json({ success: true, slot }, { status: 201 });
+}
+
 // PATCH /api/admin/h/[slug]/availability — toggle slot active/inactive
 export async function PATCH(
   req: Request,
@@ -418,14 +538,22 @@ export async function PATCH(
     return NextResponse.json({ error: msg }, { status: msg === "FORBIDDEN" ? 403 : 401 });
   }
 
-  let body: { slotId?: string; isActive?: boolean };
+  let body: {
+    slotId?: string;
+    isActive?: boolean;
+    dayOfWeek?: number;
+    mode?: "ONLINE" | "PHYSICAL";
+    startTime?: string;
+    endTime?: string;
+    slotDurationMinutes?: number;
+  };
   try { body = await req.json(); } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
   const { slotId, isActive } = body;
-  if (!slotId || isActive === undefined) {
-    return NextResponse.json({ error: "slotId and isActive are required" }, { status: 400 });
+  if (!slotId) {
+    return NextResponse.json({ error: "slotId is required" }, { status: 400 });
   }
 
   const slot = await db.availabilitySlot.findFirst({
@@ -433,20 +561,98 @@ export async function PATCH(
   });
   if (!slot) return NextResponse.json({ error: "Slot not found" }, { status: 404 });
 
+  const nextDayOfWeek = body.dayOfWeek === undefined ? slot.dayOfWeek : Number(body.dayOfWeek);
+  const nextMode = body.mode ?? slot.mode;
+  const nextStartTime = body.startTime?.trim() ?? slot.startTime;
+  const nextEndTime = body.endTime?.trim() ?? slot.endTime;
+  const nextSlotDuration = body.slotDurationMinutes === undefined ? slot.slotDurationMinutes : Number(body.slotDurationMinutes);
+
+  if (!["ONLINE", "PHYSICAL"].includes(nextMode)) {
+    return NextResponse.json({ error: "Invalid consultation mode" }, { status: 400 });
+  }
+  if (!Number.isInteger(nextDayOfWeek) || nextDayOfWeek < 0 || nextDayOfWeek > 6) {
+    return NextResponse.json({ error: "Invalid day of week" }, { status: 400 });
+  }
+  if (!Number.isInteger(nextSlotDuration) || nextSlotDuration < 5 || nextSlotDuration > 240) {
+    return NextResponse.json({ error: "Slot duration must be between 5 and 240 minutes" }, { status: 400 });
+  }
+
+  const startMinutes = timeToMinutes(nextStartTime);
+  const endMinutes = timeToMinutes(nextEndTime);
+  if (startMinutes === null || endMinutes === null || startMinutes >= endMinutes) {
+    return NextResponse.json({ error: "Invalid time window" }, { status: 400 });
+  }
+  if ((endMinutes - startMinutes) < nextSlotDuration) {
+    return NextResponse.json({ error: "Window must be at least one slot duration long" }, { status: 400 });
+  }
+
+  const existingSlots = await db.availabilitySlot.findMany({
+    where: {
+      doctorId: slot.doctorId,
+      hospitalId: ctx.membership.hospitalId,
+      mode: nextMode,
+      dayOfWeek: nextDayOfWeek,
+      id: { not: slotId },
+    },
+    select: { startTime: true, endTime: true },
+  });
+  const conflict = existingSlots.find((existing) => {
+    const existingStart = timeToMinutes(existing.startTime);
+    const existingEnd = timeToMinutes(existing.endTime);
+    return existingStart !== null && existingEnd !== null && windowsOverlap(startMinutes, endMinutes, existingStart, existingEnd);
+  });
+  if (conflict) {
+    return NextResponse.json({ error: "This schedule overlaps an existing window" }, { status: 409 });
+  }
+
+  const updateData = {
+    dayOfWeek: nextDayOfWeek,
+    mode: nextMode,
+    startTime: nextStartTime,
+    endTime: nextEndTime,
+    slotDurationMinutes: nextSlotDuration,
+    ...(isActive === undefined ? {} : { isActive }),
+  };
+
   const updated = await db.availabilitySlot.update({
     where: { id: slotId },
-    data: { isActive },
+    data: updateData,
   });
+
+  const scheduleChanged =
+    slot.dayOfWeek !== updated.dayOfWeek ||
+    slot.mode !== updated.mode ||
+    slot.startTime !== updated.startTime ||
+    slot.endTime !== updated.endTime ||
+    slot.slotDurationMinutes !== updated.slotDurationMinutes;
 
   await writeAuditLog({
     actorUserId: ctx.user.id,
     hospitalId: ctx.membership.hospitalId,
-    action: isActive ? "SLOT_ACTIVATED" : "SLOT_DEACTIVATED",
+    action: scheduleChanged
+      ? "SLOT_UPDATED"
+      : updated.isActive
+        ? "SLOT_ACTIVATED"
+        : "SLOT_DEACTIVATED",
     entity: "AvailabilitySlot",
     entityId: slotId,
-    before: { isActive: slot.isActive },
-    after: { isActive: updated.isActive },
+    before: {
+      dayOfWeek: slot.dayOfWeek,
+      mode: slot.mode,
+      startTime: slot.startTime,
+      endTime: slot.endTime,
+      slotDurationMinutes: slot.slotDurationMinutes,
+      isActive: slot.isActive,
+    },
+    after: {
+      dayOfWeek: updated.dayOfWeek,
+      mode: updated.mode,
+      startTime: updated.startTime,
+      endTime: updated.endTime,
+      slotDurationMinutes: updated.slotDurationMinutes,
+      isActive: updated.isActive,
+    },
   });
 
-  return NextResponse.json({ success: true, isActive: updated.isActive });
+  return NextResponse.json({ success: true, slot: updated });
 }

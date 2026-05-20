@@ -45,6 +45,12 @@ type Booking = {
 type BookingsResponse = {
   role: string;
   doctorName: string | null;
+  permissions: {
+    canConfirm: boolean;
+    canCancel: boolean;
+    canComplete: boolean;
+    canCheckIn: boolean;
+  };
   bookings: Booking[];
   total: number;
   page: number;
@@ -205,10 +211,12 @@ export default function BookingsClient({ slug }: { slug: string }) {
 
   const hasFilters = date || search;
   const isDoctor = data?.role === "DOCTOR";
-  const headerSummary = data
-    ? `${data.total.toLocaleString()} booking${data.total !== 1 ? "s" : ""}${isDoctor && data.doctorName ? ` for ${data.doctorName}` : ""}`
-    : "Loading...";
-
+  const permissions = data?.permissions ?? {
+    canConfirm: false,
+    canCancel: false,
+    canComplete: false,
+    canCheckIn: false,
+  };
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20, width: "100%" }}>
 
@@ -503,17 +511,17 @@ export default function BookingsClient({ slug }: { slug: string }) {
                         {/* Actions */}
                         <td style={{ padding: "14px 18px", verticalAlign: "top" }}>
                           <div style={{ display: "flex", gap: 5, justifyContent: "flex-end", flexWrap: "wrap" }}>
-                            {!isDoctor && booking.status === "REQUESTED" && (
+                            {permissions.canConfirm && booking.status === "REQUESTED" && (
                               <ActionBtn
                                 onClick={() => handleAction(booking.id, "CONFIRM")}
-                                disabled={isActioning || (isDoctor && !booking.checkedInAt)}
+                                disabled={isActioning}
                                 variant="primary"
                               >
                                 {actionLoading === booking.id + "CONFIRM" ? "…" : "Confirm"}
                               </ActionBtn>
                             )}
 
-                            {!isDoctor && booking.status === "CONFIRMED" && (
+                            {permissions.canCheckIn && booking.status === "CONFIRMED" && (
                               <ActionBtn
                                 onClick={() => handleAction(booking.id, "CHECKIN")}
                                 disabled={isActioning || !!booking.checkedInAt}
@@ -523,17 +531,17 @@ export default function BookingsClient({ slug }: { slug: string }) {
                               </ActionBtn>
                             )}
 
-                            {booking.status === "CONFIRMED" && (
+                            {permissions.canComplete && booking.status === "CONFIRMED" && (
                               <ActionBtn
                                 onClick={() => handleAction(booking.id, "COMPLETE")}
-                                disabled={isActioning}
+                                disabled={isActioning || !booking.checkedInAt}
                                 variant="success-outline"
                               >
                                 {actionLoading === booking.id + "COMPLETE" ? "…" : "Complete"}
                               </ActionBtn>
                             )}
 
-                            {!isDoctor && (booking.status === "REQUESTED" || booking.status === "CONFIRMED") && (
+                            {permissions.canCancel && (booking.status === "REQUESTED" || booking.status === "CONFIRMED") && (
                               <ActionBtn
                                 onClick={() => { setCancelTarget(booking.id); setExpandedId(booking.id); }}
                                 variant="danger"

@@ -106,6 +106,12 @@ export async function GET(
   return NextResponse.json({
     role: ctx.membership.role,
     doctorName: doctorProfile?.fullName ?? null,
+    permissions: {
+      canConfirm: hasPermission(ctx.membership.role, "CONFIRM_BOOKING"),
+      canCancel: hasPermission(ctx.membership.role, "CANCEL_BOOKING"),
+      canComplete: hasPermission(ctx.membership.role, "COMPLETE_BOOKING"),
+      canCheckIn: hasPermission(ctx.membership.role, "CHECKIN_BOOKING"),
+    },
     bookings: bookings.map((b) => ({
       id: b.id,
       status: b.status,
@@ -211,6 +217,12 @@ export async function PATCH(
     return NextResponse.json({
       error: `Cannot ${action.toLowerCase()} a booking with status ${booking.status}`,
     }, { status: 400 });
+  }
+  if (action === "CHECKIN" && booking.checkedInAt) {
+    return NextResponse.json({ error: "Booking is already checked in" }, { status: 400 });
+  }
+  if (action === "COMPLETE" && !booking.checkedInAt) {
+    return NextResponse.json({ error: "Check in the patient before completing this booking" }, { status: 400 });
   }
 
   const now = new Date();

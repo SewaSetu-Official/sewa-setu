@@ -12,7 +12,7 @@ export async function GET(
   const { slug } = await params;
 
   let ctx;
-  try { ctx = await requireHospitalAccess(slug, "MANAGE_SETTINGS", { apiMode: true }); }
+  try { ctx = await requireHospitalAccess(slug, "MANAGE_PUBLIC_PROFILE", { apiMode: true }); }
   catch (e: unknown) {
     const msg = e instanceof Error ? e.message : "UNAUTHORIZED";
     return NextResponse.json({ error: msg }, { status: msg === "FORBIDDEN" ? 403 : 401 });
@@ -48,7 +48,11 @@ export async function GET(
 
   if (!hospital) return NextResponse.json({ error: "Hospital not found" }, { status: 404 });
 
-  return NextResponse.json({ hospital });
+  return NextResponse.json({
+    hospital,
+    role: ctx.membership.role,
+    canManageOwnerControls: ctx.membership.role === "OWNER",
+  });
 }
 
 // PATCH /api/admin/h/[slug]/settings
@@ -59,7 +63,7 @@ export async function PATCH(
   const { slug } = await params;
 
   let ctx;
-  try { ctx = await requireHospitalAccess(slug, "MANAGE_SETTINGS", { apiMode: true }); }
+  try { ctx = await requireHospitalAccess(slug, "MANAGE_PUBLIC_PROFILE", { apiMode: true }); }
   catch (e: unknown) {
     const msg = e instanceof Error ? e.message : "UNAUTHORIZED";
     return NextResponse.json({ error: msg }, { status: msg === "FORBIDDEN" ? 403 : 401 });

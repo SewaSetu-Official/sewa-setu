@@ -183,15 +183,39 @@ This is the recommended onboarding sequence:
 6. Owner invites `MANAGER`, `RECEPTIONIST`, `DOCTOR`, and `STAFF`.
 7. Only approved memberships can enter the hospital workspace.
 
-## Implications For The Current Codebase
+## Current Implementation Status
 
-These are the main differences between this target model and the current project:
+The core role enums now match this target model:
 
-- `UserRole.ADMIN` should become `PLATFORM_SUPPORT` or be retired.
-- `HospitalRole.CONTENT_EDITOR` should not remain a core hospital role in the final model.
-- `src/lib/admin-auth.ts` currently treats platform admins as owner-level hospital users. That is convenient, but it is not the target security model.
-- `src/lib/admin-permissions.ts` currently models only owner, manager, reception, and content editor permissions. It will need to expand to the final role set.
-- If doctors will log in, `Doctor` should be linked to `User` before doctor-scoped permissions are enforced.
+- Platform: `USER`, `PLATFORM_SUPPORT`, `PLATFORM_ADMIN`
+- Hospital: `OWNER`, `MANAGER`, `RECEPTIONIST`, `DOCTOR`, `STAFF`
+
+The current hospital admin direction is:
+
+- `OWNER` and `MANAGER` share the main hospital admin workspace.
+- `OWNER` keeps authority over ownership, manager assignment, legal identity, billing/subscription, high-risk exports, and security controls.
+- `MANAGER` gets day-to-day operational control: bookings, doctors, departments, packages, availability, reviews, non-authority team operations, reports, and public profile settings.
+- `RECEPTIONIST` should become a focused front-desk workspace.
+- `DOCTOR` should become an own-schedule and own-appointment workspace.
+- `STAFF` remains intentionally narrow and should not be expanded until a concrete workflow exists.
+
+Implemented or partially implemented:
+
+- `src/lib/admin-auth.ts` requires approved hospital membership for hospital workspace access.
+- Platform support is scoped through `SupportAssignment` for supported platform views.
+- `src/lib/admin-permissions.ts` includes `OWNER`, `MANAGER`, `RECEPTIONIST`, and `DOCTOR` permissions.
+- Hospital public profile settings are available to `OWNER` and `MANAGER`.
+- Owner controls are separated from public profile settings and remain `OWNER` only.
+- Team management protects owner authority: managers can approve and manage receptionists, doctors, and staff, but cannot assign, approve, remove, or demote owners/managers.
+- Owner/Manager schedule management can create new weekly doctor availability windows with overlap protection.
+
+Still pending:
+
+- Full owner-only billing/subscription/legal data models.
+- Receptionist-specific front-desk workspace.
+- Doctor-specific workspace and own-schedule management.
+- Concrete `STAFF` assigned-task workflow.
+- Controlled break-glass patient-data access.
 
 ## Approval Target
 

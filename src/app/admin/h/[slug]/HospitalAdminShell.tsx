@@ -174,7 +174,7 @@ export default function HospitalAdminShell({
     { label: "Reviews",      href: `${base}/reviews`,       icon: <Star size={17} />,             permission: "MODERATE_REVIEWS" },
     { label: "Team",         href: `${base}/team`,          icon: <Users size={17} />,            permission: "VIEW_TEAM" },
     { label: "Reports",      href: `${base}/reports`,       icon: <BarChart2 size={17} />,        permission: "VIEW_REPORTS" },
-    { label: "Settings",     href: `${base}/settings`,      icon: <Settings size={17} />,         permission: "MANAGE_SETTINGS" },
+    { label: "Settings",     href: `${base}/settings`,      icon: <Settings size={17} />,         permission: "MANAGE_PUBLIC_PROFILE" },
   ] as NavItem[]).filter((item) => !item.permission || hasPermission(role, item.permission));
 
   return (

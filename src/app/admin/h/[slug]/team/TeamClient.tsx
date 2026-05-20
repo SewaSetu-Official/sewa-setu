@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import type { HospitalRole } from "@prisma/client";
-import { Users, RefreshCw, AlertCircle, Trash2, ChevronDown } from "lucide-react";
+import { Users, RefreshCw, AlertCircle, Trash2, ChevronDown, ShieldCheck, UserCog, ClipboardCheck } from "lucide-react";
 import {
   HOSPITAL_ROLE_LABELS,
   canManageHospitalMember,
@@ -24,6 +24,14 @@ const STATUS_CONFIG: Record<string, { label: string; bg: string; color: string }
   APPROVED: { label: "Approved", bg: "rgba(16,185,129,.1)", color: "#059669" },
   PENDING: { label: "Pending", bg: "rgba(245,158,11,.1)", color: "#b45309" },
   REJECTED: { label: "Rejected", bg: "rgba(239,68,68,.08)", color: "#dc2626" },
+};
+
+const ROLE_DESCRIPTIONS: Record<HospitalRole, string> = {
+  OWNER: "Business authority, ownership, billing, legal, and high-risk controls",
+  MANAGER: "Runs hospital operations, team workflows, schedules, packages, and reports",
+  RECEPTIONIST: "Front-desk booking, confirmation, cancellation, reschedule, and check-in work",
+  DOCTOR: "Own schedule and assigned patient appointments",
+  STAFF: "Limited support access for assigned operational tasks",
 };
 
 function formatDate(iso: string) {
@@ -124,14 +132,18 @@ export default function TeamClient({
   const approved = members.filter((member) => member.status === "APPROVED");
   const pending = members.filter((member) => member.status === "PENDING");
   const rejected = members.filter((member) => member.status === "REJECTED");
+  const owners = approved.filter((member) => member.role === "OWNER").length;
+  const managers = approved.filter((member) => member.role === "MANAGER").length;
+  const operators = approved.filter((member) => ["RECEPTIONIST", "DOCTOR", "STAFF"].includes(member.role)).length;
+  const canManageAuthority = actorRole === "OWNER";
 
   return (
-    <div className="space-y-6 max-w-4xl">
+    <div className="space-y-6 max-w-5xl">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-extrabold text-[#0f1e38]">Team</h1>
           <p className="text-sm text-gray-400 mt-0.5">
-            {approved.length} active | {pending.length} pending
+            {approved.length} active | {pending.length} pending | {owners} owner{owners === 1 ? "" : "s"}
           </p>
         </div>
         <button
@@ -150,6 +162,39 @@ export default function TeamClient({
           <RefreshCw size={13} /> Refresh
         </button>
       </div>
+
+      <div className="grid gap-3 md:grid-cols-3">
+        <AuthorityCard
+          icon={<ShieldCheck size={16} />}
+          title="Authority"
+          value={`${owners} owner${owners === 1 ? "" : "s"}`}
+          note={canManageAuthority ? "You can assign owners and managers." : "Owner and manager authority is owner-only."}
+          tone={canManageAuthority ? "gold" : "slate"}
+        />
+        <AuthorityCard
+          icon={<UserCog size={16} />}
+          title="Management"
+          value={`${managers} manager${managers === 1 ? "" : "s"}`}
+          note="Managers run day-to-day operations."
+          tone="blue"
+        />
+        <AuthorityCard
+          icon={<ClipboardCheck size={16} />}
+          title="Operations"
+          value={`${operators} operator${operators === 1 ? "" : "s"}`}
+          note="Reception, doctors, and limited staff."
+          tone="green"
+        />
+      </div>
+
+      {!canManageAuthority && (
+        <div className="rounded-2xl border border-amber-100 bg-amber-50 px-4 py-3">
+          <p className="text-sm font-bold text-[#0f1e38]">Manager access is operational</p>
+          <p className="mt-1 text-xs font-medium text-amber-800">
+            You can approve and manage receptionists, doctors, and staff. Owner and manager role changes require an owner.
+          </p>
+        </div>
+      )}
 
       {error && (
         <div
@@ -243,6 +288,42 @@ export default function TeamClient({
   );
 }
 
+function AuthorityCard({
+  icon,
+  title,
+  value,
+  note,
+  tone,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  value: string;
+  note: string;
+  tone: "gold" | "blue" | "green" | "slate";
+}) {
+  const colors = {
+    gold: { bg: "rgba(200,169,110,.12)", color: "#9b7637" },
+    blue: { bg: "rgba(59,130,246,.08)", color: "#1d4ed8" },
+    green: { bg: "rgba(16,185,129,.08)", color: "#047857" },
+    slate: { bg: "rgba(15,30,56,.06)", color: "#475569" },
+  }[tone];
+
+  return (
+    <div className="rounded-2xl border border-gray-100 bg-white p-4">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">{title}</p>
+          <p className="mt-1 text-xl font-extrabold text-[#0f1e38]">{value}</p>
+          <p className="mt-1 text-xs text-gray-400">{note}</p>
+        </div>
+        <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl" style={{ background: colors.bg, color: colors.color }}>
+          {icon}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function MemberRow({
   actorRole,
   actorUserId,
@@ -266,6 +347,7 @@ function MemberRow({
   const canEdit = canManageTarget && member.userId !== actorUserId;
   const assignableRoles = getAssignableHospitalRoles(actorRole);
   const visibleRoles = Array.from(new Set<HospitalRole>([member.role, ...assignableRoles]));
+  const canChangeRole = canEdit && assignableRoles.includes(member.role);
 
   return (
     <div className="bg-white rounded-2xl border border-gray-100 p-4 flex items-center gap-4 flex-wrap">
@@ -283,6 +365,7 @@ function MemberRow({
           Joined {formatDate(member.createdAt)}
           {member.invitedBy ? " | Invited" : " | Self-requested"}
         </p>
+        <p className="text-[11px] text-gray-400 mt-1">{ROLE_DESCRIPTIONS[member.role]}</p>
       </div>
 
       <span className="text-xs font-bold px-2.5 py-1 rounded-full flex-shrink-0" style={{ background: status.bg, color: status.color }}>
@@ -293,7 +376,7 @@ function MemberRow({
         <select
           value={member.role}
           onChange={(e) => onRoleChange(member.id, e.target.value as HospitalRole)}
-          disabled={!canEdit || !!busy}
+          disabled={!canChangeRole || !!busy}
           className="h-8 rounded-xl pl-3 pr-7 text-xs font-semibold appearance-none outline-none disabled:opacity-50"
           style={{ background: "#f7f4ef", border: "1.5px solid rgba(15,30,56,.1)", color: "#0f1e38" }}
         >
