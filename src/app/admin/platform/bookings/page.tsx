@@ -323,8 +323,16 @@ export default function PlatformBookingsPage() {
         </div>
       ) : (
         <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
-          <div className="w-full">
-            <table className="w-full table-fixed text-sm">
+          <div className="w-full overflow-x-auto">
+            <table className="w-full min-w-[1040px] text-sm">
+              <colgroup>
+                <col className="w-[15%]" />
+                <col className="w-[17%]" />
+                <col className="w-[26%]" />
+                <col className="w-[14%]" />
+                <col className="w-[12%]" />
+                <col className="w-[16%]" />
+              </colgroup>
               <thead style={{ background: "#f7f4ef" }}>
                 <tr>
                   <th className="text-left px-4 py-3 text-[11px] font-bold uppercase tracking-widest text-gray-400">
