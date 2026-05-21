@@ -6,8 +6,8 @@ import { usePathname } from "next/navigation";
 import { SignOutButton } from "@clerk/nextjs";
 import {
   LayoutDashboard, CalendarCheck, Stethoscope, Clock,
-  Package, Star, Users, BarChart2, Settings,
-  Menu, Building2, ChevronRight, LogOut,
+  Package, Star, Users, BarChart2, Settings, CreditCard,
+  Menu, Building2, ChevronRight, LogOut, ClipboardList,
 } from "lucide-react";
 import type { HospitalRole } from "@prisma/client";
 import { hasPermission } from "@/lib/admin-permissions";
@@ -173,7 +173,9 @@ export default function HospitalAdminShell({
     { label: "Packages",     href: `${base}/packages`,      icon: <Package size={17} />,          permission: "MANAGE_PACKAGES" },
     { label: "Reviews",      href: `${base}/reviews`,       icon: <Star size={17} />,             permission: "MODERATE_REVIEWS" },
     { label: "Team",         href: `${base}/team`,          icon: <Users size={17} />,            permission: "VIEW_TEAM" },
+    { label: "Tasks",        href: `${base}/tasks`,         icon: <ClipboardList size={17} />,    permission: "VIEW_STAFF_TASKS" },
     { label: "Reports",      href: `${base}/reports`,       icon: <BarChart2 size={17} />,        permission: "VIEW_REPORTS" },
+    { label: "Business",     href: `${base}/business`,      icon: <CreditCard size={17} />,       permission: "VIEW_OWNER_BUSINESS" },
     { label: "Settings",     href: `${base}/settings`,      icon: <Settings size={17} />,         permission: "MANAGE_PUBLIC_PROFILE" },
   ] as NavItem[]).filter((item) => !item.permission || hasPermission(role, item.permission));
 

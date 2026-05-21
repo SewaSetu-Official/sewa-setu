@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import {
   AlertCircle,
   BadgeCheck,
@@ -25,6 +26,9 @@ type Appointment = {
   notes: string | null;
   cancellationReason: string | null;
   checkedInAt: string | null;
+  clinicalNotes: string | null;
+  clinicalOutcome: string | null;
+  followUpInstructions: string | null;
   patient: { fullName: string; phone: string | null; gender: string | null; disability: string | null } | null;
   doctor: { fullName: string } | null;
   package: { title: string } | null;
@@ -163,28 +167,40 @@ function AppointmentRow({
   actionLoading,
   cancelTarget,
   cancelReason,
+  completeTarget,
+  completeForm,
   onAction,
   onSetCancel,
+  onSetComplete,
   onCancelReasonChange,
+  onCompleteFormChange,
   onCancelAbort,
+  onCompleteAbort,
   role,
 }: {
   appt: Appointment;
   actionLoading: string | null;
   cancelTarget: string | null;
   cancelReason: string;
+  completeTarget: string | null;
+  completeForm: { clinicalOutcome: string; clinicalNotes: string; followUpInstructions: string };
   onAction: (id: string, action: string, reason?: string) => void;
   onSetCancel: (id: string) => void;
+  onSetComplete: (id: string) => void;
   onCancelReasonChange: (value: string) => void;
+  onCompleteFormChange: (value: { clinicalOutcome: string; clinicalNotes: string; followUpInstructions: string }) => void;
   onCancelAbort: () => void;
+  onCompleteAbort: () => void;
   role: string;
 }) {
   const status = STATUS_CONFIG[appt.status] ?? STATUS_CONFIG.CONFIRMED;
   const isActioning = Boolean(actionLoading?.startsWith(appt.id));
   const isCancelTarget = cancelTarget === appt.id;
+  const isCompleteTarget = completeTarget === appt.id;
   const isTerminal = appt.status === "COMPLETED" || appt.status === "CANCELLED";
   const awaitingDoctor = appt.status === "CONFIRMED" && Boolean(appt.checkedInAt);
   const isDoctor = role === "DOCTOR";
+  const canComplete = role === "OWNER" || role === "MANAGER" || role === "DOCTOR";
 
   return (
     <div className="rounded-2xl border bg-white" style={{ borderColor: status.border }}>
@@ -220,9 +236,10 @@ function AppointmentRow({
             {appt.amountPaid != null && <span className="font-bold text-[#0f172a]">{formatMoney(appt.amountPaid, appt.currency)}</span>}
           </div>
           {appt.cancellationReason && <p className="mt-2 text-xs font-semibold text-rose-700">Reason: {appt.cancellationReason}</p>}
+          {appt.clinicalOutcome && <p className="mt-2 text-xs font-semibold text-emerald-700">Outcome: {appt.clinicalOutcome}</p>}
         </div>
 
-        {!isTerminal && !isCancelTarget && (
+        {!isTerminal && !isCancelTarget && !isCompleteTarget && (
           <div className="flex flex-wrap justify-start gap-2 lg:justify-end">
             {!isDoctor && appt.status === "REQUESTED" && (
               <button
@@ -244,13 +261,13 @@ function AppointmentRow({
                     <User size={13} /> {appt.checkedInAt ? "Checked in" : "Check in"}
                   </button>
                 )}
-                {appt.checkedInAt && (
+                {appt.checkedInAt && canComplete && (
                   <button
-                    onClick={() => onAction(appt.id, "COMPLETE")}
+                    onClick={() => onSetComplete(appt.id)}
                     disabled={isActioning}
                     className="h-9 rounded-lg border border-emerald-200 bg-emerald-50 px-3 text-xs font-bold text-emerald-800 disabled:opacity-50"
                   >
-                    Complete
+                    Complete with notes
                   </button>
                 )}
               </>
@@ -290,6 +307,45 @@ function AppointmentRow({
           </div>
         </div>
       )}
+
+      {isCompleteTarget && (
+        <div className="border-t border-emerald-100 bg-emerald-50/40 px-4 py-3">
+          <div className="grid gap-3 md:grid-cols-2">
+            <input
+              value={completeForm.clinicalOutcome}
+              onChange={(event) => onCompleteFormChange({ ...completeForm, clinicalOutcome: event.target.value })}
+              placeholder="Outcome, e.g. stable, reviewed, referred"
+              className="h-10 rounded-xl border border-emerald-200 bg-white px-3 text-sm text-[#0f172a] outline-none md:col-span-2"
+            />
+            <textarea
+              value={completeForm.clinicalNotes}
+              onChange={(event) => onCompleteFormChange({ ...completeForm, clinicalNotes: event.target.value })}
+              placeholder="Clinical notes"
+              rows={3}
+              className="resize-none rounded-xl border border-emerald-200 bg-white px-3 py-2 text-sm text-[#0f172a] outline-none"
+            />
+            <textarea
+              value={completeForm.followUpInstructions}
+              onChange={(event) => onCompleteFormChange({ ...completeForm, followUpInstructions: event.target.value })}
+              placeholder="Follow-up instructions"
+              rows={3}
+              className="resize-none rounded-xl border border-emerald-200 bg-white px-3 py-2 text-sm text-[#0f172a] outline-none"
+            />
+          </div>
+          <div className="mt-2 flex gap-2">
+            <button
+              onClick={() => onAction(appt.id, "COMPLETE")}
+              disabled={isActioning}
+              className="h-9 rounded-lg bg-emerald-700 px-4 text-xs font-bold text-white disabled:opacity-45"
+            >
+              Save and complete
+            </button>
+            <button onClick={onCompleteAbort} className="h-9 rounded-lg bg-white px-4 text-xs font-bold text-slate-600">
+              Back
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -312,6 +368,7 @@ function CompletedAppointmentRow({ appt }: { appt: Appointment }) {
             </span>
           </div>
           <p className="mt-1 truncate text-xs font-medium text-slate-500">{careItem}</p>
+          {appt.clinicalOutcome && <p className="mt-1 truncate text-xs font-bold text-emerald-700">{appt.clinicalOutcome}</p>}
           <div className="mt-1 flex items-center justify-between gap-2">
             {appt.patient?.phone ? (
               <a href={`tel:${appt.patient.phone}`} className="truncate text-xs font-bold text-[#0f172a] no-underline">
@@ -356,12 +413,51 @@ function Section({
   );
 }
 
+function RoleWorkflowCard({
+  title,
+  body,
+  actions,
+}: {
+  title: string;
+  body: string;
+  actions: { label: string; href: string }[];
+}) {
+  return (
+    <section className="rounded-2xl border border-gray-100 bg-white p-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h2 className="text-sm font-extrabold text-[#0f172a]">{title}</h2>
+          <p className="mt-1 max-w-2xl text-xs font-semibold text-slate-400">{body}</p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {actions.map((action) => (
+            <Link
+              key={action.href}
+              href={action.href}
+              className="inline-flex h-9 items-center rounded-xl px-3 text-xs font-extrabold no-underline"
+              style={{ background: "#0f1e38", color: "#c8a96e" }}
+            >
+              {action.label}
+            </Link>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 export default function DashboardClient({ slug }: { slug: string }) {
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [cancelTarget, setCancelTarget] = useState<string | null>(null);
   const [cancelReason, setCancelReason] = useState("");
+  const [completeTarget, setCompleteTarget] = useState<string | null>(null);
+  const [completeForm, setCompleteForm] = useState({
+    clinicalOutcome: "",
+    clinicalNotes: "",
+    followUpInstructions: "",
+  });
   const [error, setError] = useState("");
 
   const fetchStats = useCallback(async () => {
@@ -391,7 +487,12 @@ export default function DashboardClient({ slug }: { slug: string }) {
       const res = await fetch(`/api/admin/h/${slug}/bookings`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ bookingId, action, reason }),
+        body: JSON.stringify({
+          bookingId,
+          action,
+          reason,
+          ...(action === "COMPLETE" ? completeForm : {}),
+        }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -403,6 +504,8 @@ export default function DashboardClient({ slug }: { slug: string }) {
       }
       setCancelTarget(null);
       setCancelReason("");
+      setCompleteTarget(null);
+      setCompleteForm({ clinicalOutcome: "", clinicalNotes: "", followUpInstructions: "" });
       await fetchStats();
     } catch {
       setError("Network error. Please try again.");
@@ -452,6 +555,8 @@ export default function DashboardClient({ slug }: { slug: string }) {
   const isDoctor = stats.role === "DOCTOR";
   const isOwner = stats.role === "OWNER";
   const isManager = stats.role === "MANAGER";
+  const isReceptionist = stats.role === "RECEPTIONIST";
+  const isStaff = stats.role === "STAFF";
   const isBusinessAdmin = isOwner || isManager;
   const summaryTiles: { label: string; value: number | string; tone: SummaryTone }[] = isDoctor
     ? [
@@ -467,7 +572,14 @@ export default function DashboardClient({ slug }: { slug: string }) {
           { label: "Needs action", value: queues.needsAction.length, tone: queues.needsAction.length ? "amber" : "slate" },
           { label: "Today revenue", value: formatMoney(stats.today.revenue, "eur"), tone: "green" },
         ]
-    : [
+    : isStaff
+      ? [
+          { label: "Access", value: "Limited", tone: "slate" },
+          { label: "Today", value: "-", tone: "slate" },
+          { label: "Tasks", value: "-", tone: "slate" },
+          { label: "Status", value: "Support", tone: "blue" },
+        ]
+      : [
         { label: "Needs action", value: queues.needsAction.length, tone: queues.needsAction.length ? "amber" : "slate" },
         { label: "Upcoming", value: queues.upcoming.length, tone: "blue" },
         { label: "Completed", value: stats.today.completed, tone: "green" },
@@ -479,10 +591,10 @@ export default function DashboardClient({ slug }: { slug: string }) {
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#c8a96e]">
-            {isDoctor ? "Doctor workspace" : isOwner ? "Owner command center" : isManager ? "Manager operations" : "Reception desk"}
+            {isDoctor ? "Doctor workspace" : isOwner ? "Owner command center" : isManager ? "Manager operations" : isReceptionist ? "Reception desk" : "Staff workspace"}
           </p>
           <h1 className="mt-1 text-2xl font-extrabold text-[#0f172a]">
-            {isDoctor ? "My Appointments" : isBusinessAdmin ? stats.hospital.name ?? "Hospital Overview" : "Today's Operations"}
+            {isDoctor ? "My Appointments" : isBusinessAdmin ? stats.hospital.name ?? "Hospital Overview" : isStaff ? "Limited Support Access" : "Today's Operations"}
           </h1>
           <p className="mt-1 text-sm font-medium text-slate-500">{todayLabel()}</p>
           {isDoctor && stats.doctorName && (
@@ -509,7 +621,46 @@ export default function DashboardClient({ slug }: { slug: string }) {
         ))}
       </div>
 
-      {isBusinessAdmin && (
+      {isStaff && (
+        <section className="rounded-2xl border border-gray-100 bg-white p-8 text-center">
+          <ShieldCheck size={28} className="mx-auto text-[#c8a96e]" />
+          <h2 className="mt-3 text-lg font-extrabold text-[#0f172a]">Staff access is limited</h2>
+          <p className="mx-auto mt-2 max-w-xl text-sm font-medium text-slate-500">
+            This role is ready for assigned support tasks, but it does not expose bookings, business data, team authority, settings, or hospital-wide controls.
+          </p>
+          <Link
+            href={`/admin/h/${slug}/tasks`}
+            className="mt-4 inline-flex h-10 items-center rounded-xl px-4 text-sm font-extrabold no-underline"
+            style={{ background: "#0f1e38", color: "#c8a96e" }}
+          >
+            Open assigned tasks
+          </Link>
+        </section>
+      )}
+
+      {!isStaff && isReceptionist && (
+        <RoleWorkflowCard
+          title="Front Desk Workflow"
+          body="Handle booking requests from one place: confirm requests, reschedule doctor appointments, cancel with a reason, and check in patients when they arrive. Completion stays with doctors or management."
+          actions={[
+            { label: "Open bookings", href: `/admin/h/${slug}/bookings` },
+            { label: "View schedules", href: `/admin/h/${slug}/availability` },
+          ]}
+        />
+      )}
+
+      {!isStaff && isDoctor && (
+        <RoleWorkflowCard
+          title="Doctor Workflow"
+          body="Your dashboard and schedule are scoped to your linked doctor profile. Complete appointments only after the front desk has checked in the patient."
+          actions={[
+            { label: "My schedule", href: `/admin/h/${slug}/availability` },
+            { label: "My bookings", href: `/admin/h/${slug}/bookings` },
+          ]}
+        />
+      )}
+
+      {!isStaff && isBusinessAdmin && (
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
           <OwnerMetric
             icon={<Stethoscope size={16} />}
@@ -538,7 +689,7 @@ export default function DashboardClient({ slug }: { slug: string }) {
         </div>
       )}
 
-      {isBusinessAdmin && (
+      {!isStaff && isBusinessAdmin && (
         <section className="rounded-2xl border border-gray-100 bg-white p-4">
           <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
             <div>
@@ -584,7 +735,7 @@ export default function DashboardClient({ slug }: { slug: string }) {
         </section>
       )}
 
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(360px,0.48fr)]">
+      {!isStaff && <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(360px,0.48fr)]">
         <div className="space-y-4">
           <Section
             title="Needs Action"
@@ -598,12 +749,20 @@ export default function DashboardClient({ slug }: { slug: string }) {
                 actionLoading={actionLoading}
                 cancelTarget={cancelTarget}
                 cancelReason={cancelReason}
+                completeTarget={completeTarget}
+                completeForm={completeForm}
                 onAction={handleAction}
                 onSetCancel={setCancelTarget}
+                onSetComplete={setCompleteTarget}
                 onCancelReasonChange={setCancelReason}
+                onCompleteFormChange={setCompleteForm}
                 onCancelAbort={() => {
                   setCancelTarget(null);
                   setCancelReason("");
+                }}
+                onCompleteAbort={() => {
+                  setCompleteTarget(null);
+                  setCompleteForm({ clinicalOutcome: "", clinicalNotes: "", followUpInstructions: "" });
                 }}
                 role={stats.role}
               />
@@ -618,12 +777,20 @@ export default function DashboardClient({ slug }: { slug: string }) {
                 actionLoading={actionLoading}
                 cancelTarget={cancelTarget}
                 cancelReason={cancelReason}
+                completeTarget={completeTarget}
+                completeForm={completeForm}
                 onAction={handleAction}
                 onSetCancel={setCancelTarget}
+                onSetComplete={setCompleteTarget}
                 onCancelReasonChange={setCancelReason}
+                onCompleteFormChange={setCompleteForm}
                 onCancelAbort={() => {
                   setCancelTarget(null);
                   setCancelReason("");
+                }}
+                onCompleteAbort={() => {
+                  setCompleteTarget(null);
+                  setCompleteForm({ clinicalOutcome: "", clinicalNotes: "", followUpInstructions: "" });
                 }}
                 role={stats.role}
               />
@@ -638,7 +805,7 @@ export default function DashboardClient({ slug }: { slug: string }) {
           ))}
           </div>
         </Section>
-      </div>
+      </div>}
     </div>
   );
 }

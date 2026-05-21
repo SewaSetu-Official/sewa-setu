@@ -13,6 +13,7 @@ import {
   Save,
   Settings,
   ShieldCheck,
+  Users,
 } from "lucide-react";
 
 type HospitalSettings = {
@@ -27,7 +28,10 @@ type HospitalSettings = {
   emergencyAvailable: boolean;
   servicesSummary: string | null;
   verified: boolean;
+  verifiedAt: string | null;
   isActive: boolean;
+  suspendedAt: string | null;
+  suspensionReason: string | null;
   location: {
     country: string;
     province: string | null;
@@ -42,10 +46,50 @@ type SettingsResponse = {
   hospital: HospitalSettings;
   role: HospitalRole;
   canManageOwnerControls: boolean;
+  ownerSummary: OwnerSummary | null;
 };
+
+type OwnerSummary = {
+  billing: {
+    provider: string;
+    status: "connected" | "not_configured";
+    paidBookings: number;
+    refundedBookings: number;
+    totalRevenue: number;
+  };
+  governance: {
+    owners: number;
+    activeMembers: number;
+    pendingRequests: number;
+    verified: boolean;
+    verifiedAt: string | null;
+    isActive: boolean;
+    suspendedAt: string | null;
+    suspensionReason: string | null;
+  };
+  readiness: {
+    completed: number;
+    total: number;
+    items: { label: string; complete: boolean }[];
+  };
+};
+
+function formatMoney(cents: number) {
+  return `EUR ${Math.round(cents / 100).toLocaleString()}`;
+}
+
+function formatDate(value: string | null) {
+  if (!value) return "Not recorded";
+  return new Date(value).toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+}
 
 export default function SettingsClient({ slug, role }: { slug: string; role: HospitalRole }) {
   const [hospital, setHospital] = useState<HospitalSettings | null>(null);
+  const [ownerSummary, setOwnerSummary] = useState<OwnerSummary | null>(null);
   const [canManageOwnerControls, setCanManageOwnerControls] = useState(role === "OWNER");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -69,6 +113,7 @@ export default function SettingsClient({ slug, role }: { slug: string; role: Hos
       if (!res.ok) throw new Error("Failed");
       const data = (await res.json()) as SettingsResponse;
       setHospital(data.hospital);
+      setOwnerSummary(data.ownerSummary);
       setCanManageOwnerControls(data.canManageOwnerControls);
       setForm({
         phone: data.hospital.phone ?? "",
@@ -180,8 +225,75 @@ export default function SettingsClient({ slug, role }: { slug: string; role: Hos
           <p className="text-sm text-gray-400">Could not load settings</p>
         </div>
       ) : (
-        <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
+        <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_400px]">
           <form onSubmit={handleSave} className="space-y-5">
+            {canManageOwnerControls && ownerSummary && (
+              <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white">
+                <div className="px-5 py-4" style={{ background: "linear-gradient(135deg,#0f1e38,#192d52)" }}>
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl" style={{ background: "rgba(200,169,110,.14)", color: "#c8a96e" }}>
+                      <LockKeyhole size={17} />
+                    </div>
+                    <div>
+                      <p className="text-sm font-extrabold text-white">Owner Settings</p>
+                      <p className="text-xs font-medium text-white/55">Billing, activation, legal readiness, and ownership metadata.</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-5 p-5">
+                  <div className="grid gap-3 md:grid-cols-3">
+                    <OwnerMetric label="Revenue" value={formatMoney(ownerSummary.billing.totalRevenue)} sub={`${ownerSummary.billing.paidBookings} paid bookings`} />
+                    <OwnerMetric label="Team" value={`${ownerSummary.governance.activeMembers}`} sub={`${ownerSummary.governance.pendingRequests} pending requests`} />
+                    <OwnerMetric label="Readiness" value={`${ownerSummary.readiness.completed}/${ownerSummary.readiness.total}`} sub="profile checks complete" />
+                  </div>
+
+                  <div className="grid gap-4 lg:grid-cols-2">
+                    <div className="rounded-2xl p-4" style={{ background: "#f7f4ef" }}>
+                      <p className="text-xs font-extrabold uppercase tracking-widest text-gray-400">Billing / Payments</p>
+                      <div className="mt-3 space-y-3">
+                        <OwnerDetail icon={<CreditCard size={15} />} label="Provider" value={ownerSummary.billing.provider} />
+                        <OwnerDetail icon={<BadgeCheck size={15} />} label="Status" value={ownerSummary.billing.status === "connected" ? "Stripe connected" : "Stripe not configured"} />
+                        <OwnerDetail icon={<ShieldCheck size={15} />} label="Refunded bookings" value={String(ownerSummary.billing.refundedBookings)} />
+                      </div>
+                    </div>
+
+                    <div className="rounded-2xl p-4" style={{ background: "#f7f4ef" }}>
+                      <p className="text-xs font-extrabold uppercase tracking-widest text-gray-400">Activation / Ownership</p>
+                      <div className="mt-3 space-y-3">
+                        <OwnerDetail icon={<Building2 size={15} />} label="Hospital status" value={ownerSummary.governance.isActive ? "Active" : "Inactive"} />
+                        <OwnerDetail icon={<ShieldCheck size={15} />} label="Verification" value={ownerSummary.governance.verified ? `Verified ${formatDate(ownerSummary.governance.verifiedAt)}` : "Pending platform verification"} />
+                        <OwnerDetail icon={<Users size={15} />} label="Approved owners" value={String(ownerSummary.governance.owners)} />
+                      </div>
+                    </div>
+                  </div>
+
+                  {ownerSummary.governance.suspendedAt && (
+                    <div className="rounded-2xl border border-red-100 bg-red-50 p-4">
+                      <p className="text-xs font-extrabold uppercase tracking-widest text-red-500">Suspension visibility</p>
+                      <p className="mt-2 text-sm font-bold text-[#0f1e38]">Suspended on {formatDate(ownerSummary.governance.suspendedAt)}</p>
+                      <p className="mt-1 text-xs font-semibold text-red-700">{ownerSummary.governance.suspensionReason ?? "No reason recorded."}</p>
+                    </div>
+                  )}
+
+                  <div>
+                    <p className="mb-2 text-xs font-extrabold uppercase tracking-widest text-gray-400">Legal / Profile Review</p>
+                    <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                      {ownerSummary.readiness.items.map((item) => (
+                        <div key={item.label} className="flex items-center gap-2 rounded-xl border border-gray-100 bg-white px-3 py-2">
+                          <span
+                            className="h-2.5 w-2.5 rounded-full"
+                            style={{ background: item.complete ? "#10b981" : "#f59e0b" }}
+                          />
+                          <span className="text-xs font-bold text-[#0f1e38]">{item.label}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
             <div className="bg-white rounded-2xl border border-gray-100 p-5 space-y-4">
               <div className="flex items-center gap-2">
                 <div className="h-9 w-9 rounded-xl flex items-center justify-center" style={{ background: "#f7f4ef" }}>
@@ -278,6 +390,12 @@ export default function SettingsClient({ slug, role }: { slug: string; role: Hos
               <InfoRow label="Type" value={hospital.type.toLowerCase()} />
               <InfoRow label="Slug" value={hospital.slug} mono />
               <InfoRow label="Location" value={locationLabel || "No location recorded"} />
+              {canManageOwnerControls && (
+                <>
+                  <InfoRow label="Verified At" value={formatDate(hospital.verifiedAt)} />
+                  <InfoRow label="Suspension" value={hospital.suspendedAt ? `${formatDate(hospital.suspendedAt)} / ${hospital.suspensionReason ?? "No reason recorded"}` : "Not suspended"} />
+                </>
+              )}
 
               <div className="flex flex-wrap gap-2 pt-1">
                 <StatusPill
@@ -291,7 +409,7 @@ export default function SettingsClient({ slug, role }: { slug: string; role: Hos
               </div>
             </div>
 
-            {canManageOwnerControls && (
+            {canManageOwnerControls && ownerSummary && (
               <div className="bg-white rounded-2xl border border-gray-100 p-5 space-y-4">
                 <div className="flex items-center gap-2">
                   <div className="h-9 w-9 rounded-xl flex items-center justify-center" style={{ background: "rgba(200,169,110,.12)" }}>
@@ -306,23 +424,52 @@ export default function SettingsClient({ slug, role }: { slug: string; role: Hos
                 <OwnerControlRow
                   icon={<BadgeCheck size={15} />}
                   title="Authority"
-                  value="Owner protected"
+                  value={`${ownerSummary.governance.owners} approved owner${ownerSummary.governance.owners === 1 ? "" : "s"}`}
                 />
                 <OwnerControlRow
                   icon={<CreditCard size={15} />}
                   title="Stripe billing"
-                  value="Payment reporting active"
+                  value={ownerSummary.billing.status === "connected" ? "Payment reporting active" : "Awaiting Stripe configuration"}
                 />
                 <OwnerControlRow
                   icon={<ShieldCheck size={15} />}
                   title="Legal identity"
                   value={hospital.verified ? "Verified by platform" : "Pending verification"}
                 />
+                <OwnerControlRow
+                  icon={<Users size={15} />}
+                  title="Pending access"
+                  value={`${ownerSummary.governance.pendingRequests} request${ownerSummary.governance.pendingRequests === 1 ? "" : "s"} waiting`}
+                />
               </div>
             )}
           </aside>
         </div>
       )}
+    </div>
+  );
+}
+
+function OwnerMetric({ label, value, sub }: { label: string; value: string; sub: string }) {
+  return (
+    <div className="rounded-2xl border border-gray-100 bg-white p-4">
+      <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">{label}</p>
+      <p className="mt-1 text-xl font-extrabold text-[#0f1e38]">{value}</p>
+      <p className="mt-0.5 text-xs font-semibold text-gray-400">{sub}</p>
+    </div>
+  );
+}
+
+function OwnerDetail({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
+  return (
+    <div className="flex items-center gap-3 rounded-xl bg-white px-3 py-2">
+      <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg" style={{ background: "rgba(200,169,110,.12)", color: "#a8874f" }}>
+        {icon}
+      </span>
+      <div className="min-w-0">
+        <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">{label}</p>
+        <p className="truncate text-xs font-extrabold text-[#0f1e38]">{value}</p>
+      </div>
     </div>
   );
 }

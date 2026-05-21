@@ -32,7 +32,10 @@ export async function GET(
       emergencyAvailable: true,
       servicesSummary: true,
       verified: true,
+      verifiedAt: true,
       isActive: true,
+      suspendedAt: true,
+      suspensionReason: true,
       location: {
         select: {
           country: true,
@@ -48,11 +51,78 @@ export async function GET(
 
   if (!hospital) return NextResponse.json({ error: "Hospital not found" }, { status: 404 });
 
+  const ownerSummary = ctx.membership.role === "OWNER"
+    ? await getOwnerSummary(ctx.membership.hospitalId, hospital)
+    : null;
+
   return NextResponse.json({
     hospital,
     role: ctx.membership.role,
     canManageOwnerControls: ctx.membership.role === "OWNER",
+    ownerSummary,
   });
+}
+
+async function getOwnerSummary(
+  hospitalId: string,
+  hospital: {
+    phone: string | null;
+    email: string | null;
+    website: string | null;
+    servicesSummary: string | null;
+    verified: boolean;
+    verifiedAt: Date | null;
+    isActive: boolean;
+    suspendedAt: Date | null;
+    suspensionReason: string | null;
+    location: unknown;
+  },
+) {
+  const [owners, pendingRequests, activeMembers, paidBookings, refundedBookings, revenue] = await Promise.all([
+    db.hospitalMembership.count({ where: { hospitalId, role: "OWNER", status: "APPROVED" } }),
+    db.hospitalMembership.count({ where: { hospitalId, status: "PENDING" } }),
+    db.hospitalMembership.count({ where: { hospitalId, status: "APPROVED" } }),
+    db.booking.count({ where: { hospitalId, status: { in: ["CONFIRMED", "COMPLETED"] } } }),
+    db.booking.count({ where: { hospitalId, stripeRefundId: { not: null } } }),
+    db.booking.aggregate({
+      where: { hospitalId, status: { in: ["CONFIRMED", "COMPLETED"] } },
+      _sum: { amountPaid: true },
+    }),
+  ]);
+
+  const readinessItems = [
+    { label: "Phone", complete: Boolean(hospital.phone) },
+    { label: "Email", complete: Boolean(hospital.email) },
+    { label: "Website", complete: Boolean(hospital.website) },
+    { label: "Services", complete: Boolean(hospital.servicesSummary) },
+    { label: "Location", complete: Boolean(hospital.location) },
+    { label: "Platform verification", complete: hospital.verified },
+  ];
+
+  return {
+    billing: {
+      provider: "Stripe",
+      status: process.env.STRIPE_SECRET_KEY ? "connected" : "not_configured",
+      paidBookings,
+      refundedBookings,
+      totalRevenue: revenue._sum.amountPaid ?? 0,
+    },
+    governance: {
+      owners,
+      activeMembers,
+      pendingRequests,
+      verified: hospital.verified,
+      verifiedAt: hospital.verifiedAt?.toISOString() ?? null,
+      isActive: hospital.isActive,
+      suspendedAt: hospital.suspendedAt?.toISOString() ?? null,
+      suspensionReason: hospital.suspensionReason,
+    },
+    readiness: {
+      completed: readinessItems.filter((item) => item.complete).length,
+      total: readinessItems.length,
+      items: readinessItems,
+    },
+  };
 }
 
 // PATCH /api/admin/h/[slug]/settings

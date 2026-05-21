@@ -19,6 +19,7 @@ export async function GET(
 
   const hospitalId = ctx.membership.hospitalId;
   const isDoctorRole = ctx.membership.role === "DOCTOR";
+  const isStaffRole = ctx.membership.role === "STAFF";
   const doctorProfile = isDoctorRole
     ? await db.doctor.findFirst({
         where: {
@@ -117,6 +118,30 @@ export async function GET(
     }),
   ]);
 
+  if (isStaffRole) {
+    return NextResponse.json({
+      role: ctx.membership.role,
+      doctorName: null,
+      hospital: {
+        name: hospital?.name ?? null,
+        verified: hospital?.verified ?? false,
+        isActive: hospital?.isActive ?? false,
+        emergencyAvailable: hospital?.emergencyAvailable ?? false,
+      },
+      today: { total: 0, pending: 0, completed: 0, cancelled: 0, revenue: 0 },
+      month: { revenue: 0, bookings: 0 },
+      totalBookings: 0,
+      pendingConfirmations: 0,
+      operations: {
+        activeDoctors: 0,
+        activePackages: 0,
+        pendingTeamRequests: 0,
+        teamMembers: 0,
+      },
+      todayAppointments: [],
+    });
+  }
+
   return NextResponse.json({
     role: ctx.membership.role,
     doctorName: doctorProfile?.fullName ?? null,
@@ -156,6 +181,9 @@ export async function GET(
       notes: b.notes ?? null,
       cancellationReason: b.cancellationReason ?? null,
       checkedInAt: b.checkedInAt?.toISOString() ?? null,
+      clinicalNotes: (b as { clinicalNotes?: string | null }).clinicalNotes ?? null,
+      clinicalOutcome: (b as { clinicalOutcome?: string | null }).clinicalOutcome ?? null,
+      followUpInstructions: (b as { followUpInstructions?: string | null }).followUpInstructions ?? null,
       patient: b.patient ? {
         fullName: b.patient.fullName,
         phone: b.patient.phone ?? null,

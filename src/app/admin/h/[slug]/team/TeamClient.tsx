@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import type { HospitalRole } from "@prisma/client";
-import { Users, RefreshCw, AlertCircle, Trash2, ChevronDown, ShieldCheck, UserCog, ClipboardCheck } from "lucide-react";
+import { Users, RefreshCw, AlertCircle, Trash2, ChevronDown, ShieldCheck, UserCog, ClipboardCheck, CheckCircle2, Clock3, XCircle } from "lucide-react";
 import {
   HOSPITAL_ROLE_LABELS,
   canManageHospitalMember,
@@ -33,6 +33,8 @@ const ROLE_DESCRIPTIONS: Record<HospitalRole, string> = {
   DOCTOR: "Own schedule and assigned patient appointments",
   STAFF: "Limited support access for assigned operational tasks",
 };
+
+const ROLE_ORDER: HospitalRole[] = ["OWNER", "MANAGER", "RECEPTIONIST", "DOCTOR", "STAFF"];
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
@@ -95,13 +97,14 @@ export default function TeamClient({
   };
 
   const handleStatusChange = async (memberId: string, status: "APPROVED" | "REJECTED") => {
+    const rejectedReason = status === "REJECTED" ? window.prompt("Reason for rejection? This stays in the membership record.") ?? "" : "";
     setActionLoading(memberId + "status");
     setError("");
     try {
       const res = await fetch(`/api/admin/h/${slug}/team`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ memberId, status }),
+        body: JSON.stringify({ memberId, status, rejectedReason }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Failed");
@@ -136,14 +139,19 @@ export default function TeamClient({
   const managers = approved.filter((member) => member.role === "MANAGER").length;
   const operators = approved.filter((member) => ["RECEPTIONIST", "DOCTOR", "STAFF"].includes(member.role)).length;
   const canManageAuthority = actorRole === "OWNER";
+  const roleCounts = ROLE_ORDER.map((roleName) => ({
+    role: roleName,
+    approved: approved.filter((member) => member.role === roleName).length,
+    pending: pending.filter((member) => member.role === roleName).length,
+  }));
 
   return (
-    <div className="space-y-6 max-w-5xl">
-      <div className="flex items-center justify-between">
+    <div className="space-y-6 w-full max-w-6xl">
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-xl font-extrabold text-[#0f1e38]">Team</h1>
+          <h1 className="text-xl font-extrabold text-[#0f1e38]">Team Permissions</h1>
           <p className="text-sm text-gray-400 mt-0.5">
-            {approved.length} active | {pending.length} pending | {owners} owner{owners === 1 ? "" : "s"}
+            Approve access, assign roles, and protect owner authority.
           </p>
         </div>
         <button
@@ -161,6 +169,32 @@ export default function TeamClient({
         >
           <RefreshCw size={13} /> Refresh
         </button>
+      </div>
+
+      <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white">
+        <div className="flex flex-wrap items-start justify-between gap-4 px-5 py-4" style={{ background: "linear-gradient(135deg,#0f1e38,#192d52)" }}>
+          <div>
+            <p className="text-sm font-extrabold text-white">Hospital Access Control</p>
+            <p className="mt-1 max-w-2xl text-xs font-semibold text-white/55">
+              Owners can approve and manage managers, receptionists, doctors, and staff. Managers stay limited to operational roles.
+            </p>
+          </div>
+          <div className="grid grid-cols-3 gap-2">
+            <HeaderStat icon={<CheckCircle2 size={13} />} label="Active" value={approved.length} />
+            <HeaderStat icon={<Clock3 size={13} />} label="Pending" value={pending.length} />
+            <HeaderStat icon={<ShieldCheck size={13} />} label="Owners" value={owners} />
+          </div>
+        </div>
+
+        <div className="grid gap-3 p-4 md:grid-cols-5">
+          {roleCounts.map((item) => (
+            <div key={item.role} className="rounded-2xl p-3" style={{ background: "#f7f4ef" }}>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">{HOSPITAL_ROLE_LABELS[item.role]}</p>
+              <p className="mt-1 text-xl font-extrabold text-[#0f1e38]">{item.approved}</p>
+              <p className="text-[11px] font-semibold text-gray-400">{item.pending} pending</p>
+            </div>
+          ))}
+        </div>
       </div>
 
       <div className="grid gap-3 md:grid-cols-3">
@@ -218,10 +252,16 @@ export default function TeamClient({
       ) : (
         <div className="space-y-6">
           {pending.length > 0 && (
-            <div>
-              <p className="text-xs font-bold uppercase tracking-widest text-amber-600 mb-3">
-                Pending Requests ({pending.length})
-              </p>
+            <div className="rounded-2xl border border-amber-100 bg-amber-50 p-4">
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-widest text-amber-600">
+                    Pending Requests ({pending.length})
+                  </p>
+                  <p className="mt-1 text-xs font-semibold text-amber-800">Review the requested role before approving access.</p>
+                </div>
+                <Clock3 size={18} className="text-amber-500" />
+              </div>
               <div className="space-y-2">
                 {pending.map((member) => (
                   <MemberRow
@@ -324,6 +364,15 @@ function AuthorityCard({
   );
 }
 
+function HeaderStat({ icon, label, value }: { icon: React.ReactNode; label: string; value: number }) {
+  return (
+    <div className="min-w-20 rounded-xl px-3 py-2 text-right" style={{ background: "rgba(255,255,255,.08)", border: "1px solid rgba(255,255,255,.1)" }}>
+      <div className="flex items-center justify-end gap-1 text-[#c8a96e]">{icon}<span className="text-lg font-extrabold">{value}</span></div>
+      <p className="text-[10px] font-bold uppercase tracking-widest text-white/40">{label}</p>
+    </div>
+  );
+}
+
 function MemberRow({
   actorRole,
   actorUserId,
@@ -394,18 +443,18 @@ function MemberRow({
           <button
             onClick={() => onStatusChange(member.id, "APPROVED")}
             disabled={!!busy}
-            className="h-8 px-3 rounded-xl text-xs font-bold disabled:opacity-50"
+            className="inline-flex h-8 items-center gap-1.5 rounded-xl px-3 text-xs font-bold disabled:opacity-50"
             style={{ background: "rgba(16,185,129,.1)", color: "#059669" }}
           >
-            {actionLoading === member.id + "status" ? "..." : "Approve"}
+            {actionLoading === member.id + "status" ? "..." : <><CheckCircle2 size={13} /> Approve</>}
           </button>
           <button
             onClick={() => onStatusChange(member.id, "REJECTED")}
             disabled={!!busy}
-            className="h-8 px-3 rounded-xl text-xs font-bold disabled:opacity-50"
+            className="inline-flex h-8 items-center gap-1.5 rounded-xl px-3 text-xs font-bold disabled:opacity-50"
             style={{ background: "rgba(239,68,68,.08)", color: "#dc2626" }}
           >
-            Reject
+            <XCircle size={13} /> Reject
           </button>
         </div>
       )}

@@ -22,6 +22,8 @@ import {
 
 type Booking = {
   id: string;
+  doctorId: string | null;
+  availabilitySlotId: string | null;
   status: string;
   scheduledAt: string;
   createdAt: string;
@@ -50,11 +52,21 @@ type BookingsResponse = {
     canCancel: boolean;
     canComplete: boolean;
     canCheckIn: boolean;
+    canReschedule: boolean;
   };
   bookings: Booking[];
   total: number;
   page: number;
   hasMore: boolean;
+};
+
+type RescheduleOption = {
+  windowId: string;
+  date: string;
+  mode: string;
+  startTime: string;
+  endTime: string;
+  slotTime: string;
 };
 
 const STATUS_TABS = [
@@ -102,6 +114,33 @@ function formatDateTime(iso: string) {
     day: "numeric", month: "short", year: "numeric",
     hour: "2-digit", minute: "2-digit",
   });
+}
+
+function formatDateKey(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function getAppointmentDateTime(scheduledAt: string, slotTime: string | null) {
+  const at = new Date(scheduledAt);
+  if (!slotTime) return at;
+  const start = slotTime.split("-")[0]?.trim();
+  const [hour, minute = 0] = start.split(":").map(Number);
+  if (Number.isInteger(hour) && Number.isInteger(minute)) {
+    at.setHours(hour, minute, 0, 0);
+  }
+  return at;
+}
+
+function getNextStep(booking: Booking) {
+  if (booking.status === "CANCELLED") return "Cancelled";
+  if (booking.status === "COMPLETED") return "Care completed";
+  if (booking.status === "REQUESTED") return "Needs confirmation";
+  if (booking.status === "CONFIRMED" && !booking.checkedInAt) return "Awaiting check-in";
+  if (booking.status === "CONFIRMED" && booking.checkedInAt) return "Ready to complete";
+  return "Review details";
 }
 
 function PatientInitials({ name }: { name: string }) {
@@ -154,6 +193,11 @@ export default function BookingsClient({ slug }: { slug: string }) {
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [cancelTarget, setCancelTarget] = useState<string | null>(null);
   const [cancelReason, setCancelReason] = useState("");
+  const [rescheduleTarget, setRescheduleTarget] = useState<string | null>(null);
+  const [rescheduleDate, setRescheduleDate] = useState(() => formatDateKey(new Date()));
+  const [rescheduleSlot, setRescheduleSlot] = useState("");
+  const [rescheduleOptions, setRescheduleOptions] = useState<RescheduleOption[]>([]);
+  const [rescheduleLoading, setRescheduleLoading] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [searchInput, setSearchInput] = useState("");
@@ -187,20 +231,74 @@ export default function BookingsClient({ slug }: { slug: string }) {
   const handleStatusTab = (s: string) => { setStatus(s); setPage(1); };
   const handleDate = (d: string) => { setDate(d); setPage(1); };
 
-  const handleAction = async (bookingId: string, action: string, reason?: string) => {
+  useEffect(() => {
+    if (!rescheduleTarget || !rescheduleDate || !data) return;
+    const booking = data.bookings.find((item) => item.id === rescheduleTarget);
+    if (!booking?.doctorId) return;
+    const doctorId = booking.doctorId;
+
+    const timeoutId = window.setTimeout(async () => {
+      setRescheduleLoading(true);
+      setRescheduleSlot("");
+      try {
+        const params = new URLSearchParams({
+          start: rescheduleDate,
+          viewMode: "single",
+          doctorId,
+        });
+        const res = await fetch(`/api/admin/h/${slug}/availability?${params.toString()}`);
+        if (!res.ok) throw new Error("Failed");
+        const payload = await res.json();
+        const doctor = payload.doctors?.[0];
+        const options = ((doctor?.occurrences ?? []) as Array<{
+          date: string;
+          mode: string;
+          startTime: string;
+          endTime: string;
+          windowId: string;
+          bookingId: string | null;
+        }>)
+          .filter((occurrence) => occurrence.date === rescheduleDate)
+          .filter((occurrence) => !occurrence.bookingId || occurrence.bookingId === booking.id)
+          .filter((occurrence) =>
+            getAppointmentDateTime(`${occurrence.date}T00:00:00`, `${occurrence.startTime} - ${occurrence.endTime}`).getTime() > Date.now()
+          )
+          .map((occurrence) => ({
+            windowId: occurrence.windowId,
+            date: occurrence.date,
+            mode: occurrence.mode,
+            startTime: occurrence.startTime,
+            endTime: occurrence.endTime,
+            slotTime: `${occurrence.startTime} - ${occurrence.endTime}`,
+          }));
+        setRescheduleOptions(options);
+      } catch {
+        setRescheduleOptions([]);
+        setError("Failed to load available slots for rescheduling.");
+      } finally {
+        setRescheduleLoading(false);
+      }
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [data, rescheduleDate, rescheduleTarget, slug]);
+
+  const handleAction = async (bookingId: string, action: string, reason?: string, extra?: Record<string, unknown>) => {
     setActionLoading(bookingId + action);
     setError("");
     try {
       const res = await fetch(`/api/admin/h/${slug}/bookings`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ bookingId, action, reason }),
+        body: JSON.stringify({ bookingId, action, reason, ...extra }),
       });
       const d = await res.json();
       if (!res.ok) { setError(d.error ?? "Action failed"); return; }
       if (action === "CANCEL" && d.refundError) setError(`Booking cancelled but refund failed: ${d.refundError}`);
       setCancelTarget(null);
       setCancelReason("");
+      setRescheduleTarget(null);
+      setRescheduleSlot("");
       await fetchBookings();
     } catch {
       setError("Network error. Please try again.");
@@ -209,6 +307,17 @@ export default function BookingsClient({ slug }: { slug: string }) {
     }
   };
 
+  const openReschedule = (booking: Booking) => {
+    setRescheduleTarget(booking.id);
+    setCancelTarget(null);
+    setCancelReason("");
+    setRescheduleDate(formatDateKey(new Date(booking.scheduledAt)));
+    setRescheduleSlot("");
+    setExpandedId(booking.id);
+  };
+
+  const selectedRescheduleOption = rescheduleOptions.find((option) => option.slotTime === rescheduleSlot);
+
   const hasFilters = date || search;
   const isDoctor = data?.role === "DOCTOR";
   const permissions = data?.permissions ?? {
@@ -216,6 +325,7 @@ export default function BookingsClient({ slug }: { slug: string }) {
     canCancel: false,
     canComplete: false,
     canCheckIn: false,
+    canReschedule: false,
   };
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20, width: "100%" }}>
@@ -550,10 +660,24 @@ export default function BookingsClient({ slug }: { slug: string }) {
                               </ActionBtn>
                             )}
 
+                            {permissions.canReschedule && booking.doctorId && !booking.checkedInAt && (booking.status === "REQUESTED" || booking.status === "CONFIRMED") && (
+                              <ActionBtn
+                                onClick={() => openReschedule(booking)}
+                                variant="ghost"
+                              >
+                                Reschedule
+                              </ActionBtn>
+                            )}
+
                             <button
                               onClick={() => {
                                 setExpandedId(prev => prev === booking.id ? null : booking.id);
-                                if (expandedId === booking.id) { setCancelTarget(null); setCancelReason(""); }
+                                if (expandedId === booking.id) {
+                                  setCancelTarget(null);
+                                  setCancelReason("");
+                                  setRescheduleTarget(null);
+                                  setRescheduleSlot("");
+                                }
                               }}
                               style={{
                                 display: "inline-flex", alignItems: "center", gap: 4,
@@ -582,6 +706,32 @@ export default function BookingsClient({ slug }: { slug: string }) {
                             }}>
                               {/* Left — Booking details */}
                               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                                <div style={{
+                                  gridColumn: "1 / -1",
+                                  background: "#f8f7f5",
+                                  borderRadius: 10,
+                                  border: "0.5px solid rgba(15,30,56,.08)",
+                                  padding: "10px 12px",
+                                  display: "flex",
+                                  justifyContent: "space-between",
+                                  gap: 12,
+                                  alignItems: "center",
+                                }}>
+                                  <div>
+                                    <p style={{ margin: "0 0 3px", fontSize: 9.5, fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", color: "#a0aec0" }}>
+                                      Next step
+                                    </p>
+                                    <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: "#0f1e38" }}>{getNextStep(booking)}</p>
+                                  </div>
+                                  <div style={{ textAlign: "right" }}>
+                                    <p style={{ margin: "0 0 3px", fontSize: 9.5, fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", color: "#a0aec0" }}>
+                                      Appointment
+                                    </p>
+                                    <p style={{ margin: 0, fontSize: 12, fontWeight: 700, color: "#0f1e38" }}>
+                                      {formatDate(booking.scheduledAt)} / {booking.slotTime ?? "No time"}
+                                    </p>
+                                  </div>
+                                </div>
                                 {[
                                   { label: "Booking ID", value: booking.id, mono: true },
                                   { label: "Created", value: formatDateTime(booking.createdAt) },
@@ -622,14 +772,14 @@ export default function BookingsClient({ slug }: { slug: string }) {
 
                               {/* Right — Cancel panel */}
                               <div style={{
-                                background: isCancelTarget ? "#fff8f8" : "#fff",
+                                background: isCancelTarget ? "#fff8f8" : rescheduleTarget === booking.id ? "#f8fbff" : "#fff",
                                 borderRadius: 10,
-                                border: `0.5px solid ${isCancelTarget ? "#fca5a5" : "rgba(15,30,56,.08)"}`,
+                                border: `0.5px solid ${isCancelTarget ? "#fca5a5" : rescheduleTarget === booking.id ? "#bfdbfe" : "rgba(15,30,56,.08)"}`,
                                 padding: "12px 14px",
                                 transition: "all .2s",
                               }}>
-                                <p style={{ margin: "0 0 9px", fontSize: 9.5, fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", color: isCancelTarget ? "#ef4444" : "#a0aec0" }}>
-                                  Cancellation panel
+                                <p style={{ margin: "0 0 9px", fontSize: 9.5, fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", color: isCancelTarget ? "#ef4444" : rescheduleTarget === booking.id ? "#1d4ed8" : "#a0aec0" }}>
+                                  {isCancelTarget ? "Cancellation panel" : rescheduleTarget === booking.id ? "Reschedule panel" : "Booking tools"}
                                 </p>
                                 {isCancelTarget ? (
                                   <div style={{ display: "flex", flexDirection: "column", gap: 9 }}>
@@ -660,9 +810,77 @@ export default function BookingsClient({ slug }: { slug: string }) {
                                       </ActionBtn>
                                     </div>
                                   </div>
+                                ) : rescheduleTarget === booking.id ? (
+                                  <div style={{ display: "flex", flexDirection: "column", gap: 9 }}>
+                                    <label style={{ fontSize: 10, fontWeight: 600, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.08em" }}>New date</label>
+                                    <input
+                                      type="date"
+                                      value={rescheduleDate}
+                                      min={formatDateKey(new Date())}
+                                      onChange={(event) => setRescheduleDate(event.target.value)}
+                                      style={{
+                                        height: 34,
+                                        borderRadius: 8,
+                                        border: "0.5px solid #bfdbfe",
+                                        padding: "0 10px",
+                                        fontSize: 12.5,
+                                        color: "#0f1e38",
+                                        outline: "none",
+                                        fontFamily: "inherit",
+                                      }}
+                                    />
+                                    <label style={{ fontSize: 10, fontWeight: 600, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.08em" }}>Available slot</label>
+                                    <select
+                                      value={rescheduleSlot}
+                                      onChange={(event) => setRescheduleSlot(event.target.value)}
+                                      disabled={rescheduleLoading || rescheduleOptions.length === 0}
+                                      style={{
+                                        height: 34,
+                                        borderRadius: 8,
+                                        border: "0.5px solid #bfdbfe",
+                                        padding: "0 10px",
+                                        fontSize: 12.5,
+                                        color: "#0f1e38",
+                                        outline: "none",
+                                        opacity: rescheduleLoading || rescheduleOptions.length === 0 ? 0.65 : 1,
+                                        fontFamily: "inherit",
+                                      }}
+                                    >
+                                      <option value="">{rescheduleLoading ? "Loading slots..." : "Select a time"}</option>
+                                      {rescheduleOptions.map((option) => (
+                                        <option key={`${option.windowId}-${option.slotTime}`} value={option.slotTime}>
+                                          {option.slotTime} / {option.mode === "ONLINE" ? "Online" : "Physical"}
+                                        </option>
+                                      ))}
+                                    </select>
+                                    {!rescheduleLoading && rescheduleOptions.length === 0 && (
+                                      <p style={{ margin: 0, fontSize: 11.5, color: "#64748b", lineHeight: 1.5 }}>
+                                        No open slots for this doctor on the selected date.
+                                      </p>
+                                    )}
+                                    <div style={{ display: "flex", gap: 7, flexWrap: "wrap" }}>
+                                      <ActionBtn
+                                        onClick={() => {
+                                          if (!selectedRescheduleOption) return;
+                                          handleAction(booking.id, "RESCHEDULE", undefined, {
+                                            scheduledAt: selectedRescheduleOption.date,
+                                            slotTime: selectedRescheduleOption.slotTime,
+                                            availabilitySlotId: selectedRescheduleOption.windowId,
+                                          });
+                                        }}
+                                        disabled={!selectedRescheduleOption || isActioning}
+                                        variant="primary"
+                                      >
+                                        {isActioning ? "..." : "Save new time"}
+                                      </ActionBtn>
+                                      <ActionBtn onClick={() => { setRescheduleTarget(null); setRescheduleSlot(""); }} variant="ghost">
+                                        Dismiss
+                                      </ActionBtn>
+                                    </div>
+                                  </div>
                                 ) : (
                                   <p style={{ margin: 0, fontSize: 12, color: "#9ca3af", lineHeight: 1.6 }}>
-                                    Click <strong style={{ fontWeight: 500, color: "#6b7280" }}>Cancel</strong> in the Actions column to open this panel.
+                                    Use the Actions column to cancel or reschedule active bookings.
                                   </p>
                                 )}
                               </div>

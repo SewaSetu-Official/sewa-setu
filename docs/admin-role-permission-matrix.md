@@ -75,7 +75,10 @@ It is intentionally stricter than the current implementation. The goal is to loc
 | Cancel bookings | Yes | Yes | Yes | Own | No |
 | Confirm bookings | Yes | Yes | Yes | No | No |
 | Check in patients | Yes | Yes | Yes | No | Assigned |
-| Mark appointment completed | Yes | Yes | Limited | Own | No |
+| Mark appointment completed | Yes | Yes | No | Own | No |
+| Write appointment outcome / completion notes | Limited | Limited | No | Own | No |
+| Assign staff tasks | Yes | Yes | No | No | No |
+| Update assigned staff tasks | No | No | No | No | Assigned |
 | Moderate hospital reviews | Yes | Yes | No | No | No |
 | View operational reports | Yes | Yes | Limited | Own | No |
 | Export operational reports | Yes | Limited | No | Own | No |
@@ -88,7 +91,7 @@ It is intentionally stricter than the current implementation. The goal is to loc
 | Edit patient contact / admin details | No | No | Limited | Limited | Limited | No | No |
 | View appointment history for this hospital | Controlled | No | Yes | Yes | Limited | Own | Assigned |
 | View clinical notes / medical details | Controlled | No | Controlled | No | No | Own | No |
-| Write clinical notes / medical updates | No | No | No | No | No | Own | No |
+| Write clinical notes / medical updates | No | No | Limited completion note | Limited completion note | No | Own | No |
 | Export patient data | Controlled | No | Controlled | No | No | No | No |
 
 ## Hard Rules Behind The Matrix
@@ -190,32 +193,33 @@ The core role enums now match this target model:
 - Platform: `USER`, `PLATFORM_SUPPORT`, `PLATFORM_ADMIN`
 - Hospital: `OWNER`, `MANAGER`, `RECEPTIONIST`, `DOCTOR`, `STAFF`
 
-The current hospital admin direction is:
+The implemented hospital admin direction is:
 
 - `OWNER` and `MANAGER` share the main hospital admin workspace.
 - `OWNER` keeps authority over ownership, manager assignment, legal identity, billing/subscription, high-risk exports, and security controls.
 - `MANAGER` gets day-to-day operational control: bookings, doctors, departments, packages, availability, reviews, non-authority team operations, reports, and public profile settings.
-- `RECEPTIONIST` should become a focused front-desk workspace.
-- `DOCTOR` should become an own-schedule and own-appointment workspace.
-- `STAFF` remains intentionally narrow and should not be expanded until a concrete workflow exists.
+- `RECEPTIONIST` has a focused front-desk workflow for booking requests, confirmation, rescheduling, cancellation, and check-in.
+- `DOCTOR` has an own-schedule and own-appointment workspace, including appointment completion with outcome, notes, and follow-up instructions.
+- `STAFF` remains intentionally narrow and uses assigned non-clinical task workflows.
 
 Implemented or partially implemented:
 
 - `src/lib/admin-auth.ts` requires approved hospital membership for hospital workspace access.
 - Platform support is scoped through `SupportAssignment` for supported platform views.
-- `src/lib/admin-permissions.ts` includes `OWNER`, `MANAGER`, `RECEPTIONIST`, and `DOCTOR` permissions.
+- `src/lib/admin-permissions.ts` includes `OWNER`, `MANAGER`, `RECEPTIONIST`, `DOCTOR`, and `STAFF` permissions.
 - Hospital public profile settings are available to `OWNER` and `MANAGER`.
 - Owner controls are separated from public profile settings and remain `OWNER` only.
 - Team management protects owner authority: managers can approve and manage receptionists, doctors, and staff, but cannot assign, approve, remove, or demote owners/managers.
 - Owner/Manager schedule management can create new weekly doctor availability windows with overlap protection.
+- Owner business reporting includes filtered daily/weekly/monthly/quarterly/yearly reporting and owner-only exports.
+- Owner settings expose billing/payment state, activation/suspension visibility, legal/profile readiness, and ownership metadata.
+- Staff tasks are schema-backed through `HospitalTask`, visible to owner/manager and assigned staff only.
 
-Still pending:
+Still pending beyond hospital-admin MVP:
 
-- Full owner-only billing/subscription/legal data models.
-- Receptionist-specific front-desk workspace.
-- Doctor-specific workspace and own-schedule management.
-- Concrete `STAFF` assigned-task workflow.
+- Full subscription/contract lifecycle models beyond Stripe/payment reporting.
 - Controlled break-glass patient-data access.
+- Dedicated clinical charting beyond appointment completion notes/outcomes.
 
 ## Approval Target
 
