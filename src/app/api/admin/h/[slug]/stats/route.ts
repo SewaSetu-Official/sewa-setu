@@ -1,8 +1,25 @@
 import { NextResponse } from "next/server";
 import { requireHospitalAccess } from "@/lib/admin-auth";
+import { hasPermission } from "@/lib/admin-permissions";
 import { db } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
+
+type HospitalTaskStatus = "PENDING" | "IN_PROGRESS" | "DONE" | "CANCELLED";
+type HospitalTaskPriority = "LOW" | "NORMAL" | "HIGH";
+type HospitalTaskRecord = {
+  id: string;
+  title: string;
+  priority: HospitalTaskPriority;
+  status: HospitalTaskStatus;
+  dueAt: Date | null;
+};
+const prisma = db as typeof db & {
+  hospitalTask: {
+    count: (args: unknown) => Promise<number>;
+    findMany: (args: unknown) => Promise<HospitalTaskRecord[]>;
+  };
+};
 
 export async function GET(
   _req: Request,
@@ -20,6 +37,7 @@ export async function GET(
   const hospitalId = ctx.membership.hospitalId;
   const isDoctorRole = ctx.membership.role === "DOCTOR";
   const isStaffRole = ctx.membership.role === "STAFF";
+  const canViewClinicalFields = hasPermission(ctx.membership.role, "COMPLETE_BOOKING");
   const doctorProfile = isDoctorRole
     ? await db.doctor.findFirst({
         where: {
@@ -60,6 +78,10 @@ export async function GET(
     pendingTeamRequests,
     teamMembers,
     todayAppointments,
+    taskOpen,
+    taskHighPriority,
+    taskDueToday,
+    assignedTasks,
   ] = await Promise.all([
     db.hospital.findUnique({
       where: { id: hospitalId },
@@ -116,6 +138,43 @@ export async function GET(
       orderBy: [{ slotTime: "asc" }, { scheduledAt: "asc" }],
       take: 50,
     }),
+
+    prisma.hospitalTask.count({
+      where: {
+        hospitalId,
+        ...(isStaffRole ? { assignedToUserId: ctx.user.id } : {}),
+        status: { in: ["PENDING", "IN_PROGRESS"] },
+      },
+    }),
+
+    prisma.hospitalTask.count({
+      where: {
+        hospitalId,
+        ...(isStaffRole ? { assignedToUserId: ctx.user.id } : {}),
+        priority: "HIGH",
+        status: { in: ["PENDING", "IN_PROGRESS"] },
+      },
+    }),
+
+    prisma.hospitalTask.count({
+      where: {
+        hospitalId,
+        ...(isStaffRole ? { assignedToUserId: ctx.user.id } : {}),
+        status: { in: ["PENDING", "IN_PROGRESS"] },
+        dueAt: { gte: todayStart, lte: todayEnd },
+      },
+    }),
+
+    prisma.hospitalTask.findMany({
+      where: {
+        hospitalId,
+        ...(isStaffRole ? { assignedToUserId: ctx.user.id } : {}),
+        status: { in: ["PENDING", "IN_PROGRESS"] },
+      },
+      select: { id: true, title: true, priority: true, status: true, dueAt: true },
+      orderBy: [{ priority: "desc" }, { dueAt: "asc" }, { createdAt: "desc" }],
+      take: 5,
+    }),
   ]);
 
   if (isStaffRole) {
@@ -137,6 +196,18 @@ export async function GET(
         activePackages: 0,
         pendingTeamRequests: 0,
         teamMembers: 0,
+      },
+      tasks: {
+        open: taskOpen,
+        highPriority: taskHighPriority,
+        dueToday: taskDueToday,
+        assigned: assignedTasks.map((task) => ({
+          id: task.id,
+          title: task.title,
+          priority: task.priority,
+          status: task.status,
+          dueAt: task.dueAt?.toISOString() ?? null,
+        })),
       },
       todayAppointments: [],
     });
@@ -170,6 +241,18 @@ export async function GET(
       pendingTeamRequests,
       teamMembers,
     },
+    tasks: {
+      open: taskOpen,
+      highPriority: taskHighPriority,
+      dueToday: taskDueToday,
+      assigned: assignedTasks.map((task) => ({
+        id: task.id,
+        title: task.title,
+        priority: task.priority,
+        status: task.status,
+        dueAt: task.dueAt?.toISOString() ?? null,
+      })),
+    },
     todayAppointments: todayAppointments.map((b) => ({
       id: b.id,
       status: b.status,
@@ -181,9 +264,9 @@ export async function GET(
       notes: b.notes ?? null,
       cancellationReason: b.cancellationReason ?? null,
       checkedInAt: b.checkedInAt?.toISOString() ?? null,
-      clinicalNotes: (b as { clinicalNotes?: string | null }).clinicalNotes ?? null,
-      clinicalOutcome: (b as { clinicalOutcome?: string | null }).clinicalOutcome ?? null,
-      followUpInstructions: (b as { followUpInstructions?: string | null }).followUpInstructions ?? null,
+      clinicalNotes: canViewClinicalFields ? (b as { clinicalNotes?: string | null }).clinicalNotes ?? null : null,
+      clinicalOutcome: canViewClinicalFields ? (b as { clinicalOutcome?: string | null }).clinicalOutcome ?? null : null,
+      followUpInstructions: canViewClinicalFields ? (b as { followUpInstructions?: string | null }).followUpInstructions ?? null : null,
       patient: b.patient ? {
         fullName: b.patient.fullName,
         phone: b.patient.phone ?? null,

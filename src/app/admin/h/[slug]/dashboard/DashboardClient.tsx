@@ -53,6 +53,18 @@ type Stats = {
     pendingTeamRequests: number;
     teamMembers: number;
   };
+  tasks: {
+    open: number;
+    highPriority: number;
+    dueToday: number;
+    assigned: {
+      id: string;
+      title: string;
+      priority: "LOW" | "NORMAL" | "HIGH";
+      status: "PENDING" | "IN_PROGRESS" | "DONE" | "CANCELLED";
+      dueAt: string | null;
+    }[];
+  };
   todayAppointments: Appointment[];
 };
 
@@ -99,6 +111,17 @@ function todayLabel() {
 function modeLabel(mode: string) {
   return mode === "ONLINE" ? "Online" : "In person";
 }
+
+function formatTaskDue(value: string | null) {
+  if (!value) return "No due date";
+  return new Date(value).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+}
+
+const TASK_PRIORITY_STYLE = {
+  LOW: { background: "#ecfdf5", color: "#047857" },
+  NORMAL: { background: "#eff6ff", color: "#1d4ed8" },
+  HIGH: { background: "#fff7ed", color: "#c2410c" },
+} satisfies Record<string, React.CSSProperties>;
 
 type SummaryTone = "blue" | "amber" | "green" | "slate";
 
@@ -524,15 +547,19 @@ export default function DashboardClient({ slug }: { slug: string }) {
 
   const queues = useMemo(() => {
     const isDoctor = stats?.role === "DOCTOR";
+    const isReceptionist = stats?.role === "RECEPTIONIST";
     const needsAction = sortedAppointments.filter((appt) =>
       isDoctor
         ? appt.status === "CONFIRMED" && Boolean(appt.checkedInAt)
-        : appt.status === "REQUESTED" || (appt.status === "CONFIRMED" && appt.checkedInAt),
+        : isReceptionist
+          ? appt.status === "REQUESTED"
+          : appt.status === "REQUESTED" || (appt.status === "CONFIRMED" && appt.checkedInAt),
     );
     const upcoming = sortedAppointments.filter((appt) => appt.status === "CONFIRMED" && !appt.checkedInAt);
+    const checkedIn = sortedAppointments.filter((appt) => appt.status === "CONFIRMED" && Boolean(appt.checkedInAt));
     const completed = sortedAppointments.filter((appt) => appt.status === "COMPLETED");
     const cancelled = sortedAppointments.filter((appt) => appt.status === "CANCELLED");
-    return { needsAction, upcoming, completed, cancelled };
+    return { needsAction, upcoming, checkedIn, completed, cancelled };
   }, [sortedAppointments, stats?.role]);
 
   if (loading) {
@@ -575,9 +602,16 @@ export default function DashboardClient({ slug }: { slug: string }) {
     : isStaff
       ? [
           { label: "Access", value: "Limited", tone: "slate" },
-          { label: "Today", value: "-", tone: "slate" },
-          { label: "Tasks", value: "-", tone: "slate" },
-          { label: "Status", value: "Support", tone: "blue" },
+          { label: "Open tasks", value: stats.tasks.open, tone: stats.tasks.open ? "blue" : "slate" },
+          { label: "Due today", value: stats.tasks.dueToday, tone: stats.tasks.dueToday ? "amber" : "slate" },
+          { label: "High priority", value: stats.tasks.highPriority, tone: stats.tasks.highPriority ? "amber" : "slate" },
+        ]
+      : isReceptionist
+        ? [
+          { label: "Pending requests", value: queues.needsAction.length, tone: queues.needsAction.length ? "amber" : "slate" },
+          { label: "Arrivals", value: queues.upcoming.length, tone: "blue" },
+          { label: "Checked in", value: queues.checkedIn.length, tone: queues.checkedIn.length ? "green" : "slate" },
+          { label: "Cancelled", value: stats.today.cancelled, tone: stats.today.cancelled ? "amber" : "slate" },
         ]
       : [
         { label: "Needs action", value: queues.needsAction.length, tone: queues.needsAction.length ? "amber" : "slate" },
@@ -622,26 +656,54 @@ export default function DashboardClient({ slug }: { slug: string }) {
       </div>
 
       {isStaff && (
-        <section className="rounded-2xl border border-gray-100 bg-white p-8 text-center">
-          <ShieldCheck size={28} className="mx-auto text-[#c8a96e]" />
-          <h2 className="mt-3 text-lg font-extrabold text-[#0f172a]">Staff access is limited</h2>
-          <p className="mx-auto mt-2 max-w-xl text-sm font-medium text-slate-500">
-            This role is ready for assigned support tasks, but it does not expose bookings, business data, team authority, settings, or hospital-wide controls.
-          </p>
-          <Link
-            href={`/admin/h/${slug}/tasks`}
-            className="mt-4 inline-flex h-10 items-center rounded-xl px-4 text-sm font-extrabold no-underline"
-            style={{ background: "#0f1e38", color: "#c8a96e" }}
-          >
-            Open assigned tasks
-          </Link>
+        <section className="rounded-2xl border border-gray-100 bg-white p-5">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <div className="flex items-center gap-2">
+                <ShieldCheck size={18} className="text-[#c8a96e]" />
+                <h2 className="text-lg font-extrabold text-[#0f172a]">Assigned Support Work</h2>
+              </div>
+              <p className="mt-1 max-w-2xl text-sm font-medium text-slate-500">
+                Staff access stays limited to non-clinical assigned tasks. Booking, business, team, and settings data remain hidden.
+              </p>
+            </div>
+            <Link
+              href={`/admin/h/${slug}/tasks`}
+              className="inline-flex h-10 items-center rounded-xl px-4 text-sm font-extrabold no-underline"
+              style={{ background: "#0f1e38", color: "#c8a96e" }}
+            >
+              Open task queue
+            </Link>
+          </div>
+
+          <div className="mt-4 space-y-2.5">
+            {stats.tasks.assigned.length === 0 ? (
+              <div className="rounded-xl bg-[#f8fafc] px-4 py-8 text-center text-sm font-semibold text-slate-300">
+                No open tasks assigned right now
+              </div>
+            ) : (
+              stats.tasks.assigned.map((task) => (
+                <div key={task.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-gray-100 px-4 py-3">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-extrabold text-[#0f172a]">{task.title}</p>
+                    <p className="mt-0.5 text-xs font-semibold text-slate-400">
+                      {task.status === "IN_PROGRESS" ? "In progress" : "Pending"} / Due {formatTaskDue(task.dueAt)}
+                    </p>
+                  </div>
+                  <span className="rounded-full px-2.5 py-1 text-[10px] font-bold" style={TASK_PRIORITY_STYLE[task.priority]}>
+                    {task.priority}
+                  </span>
+                </div>
+              ))
+            )}
+          </div>
         </section>
       )}
 
       {!isStaff && isReceptionist && (
         <RoleWorkflowCard
           title="Front Desk Workflow"
-          body="Handle booking requests from one place: confirm requests, reschedule doctor appointments, cancel with a reason, and check in patients when they arrive. Completion stays with doctors or management."
+          body="Handle patient flow from one place: confirm requests, reschedule doctor appointments, cancel with a reason, and check in arrivals. Clinical completion stays with doctors or management."
           actions={[
             { label: "Open bookings", href: `/admin/h/${slug}/bookings` },
             { label: "View schedules", href: `/admin/h/${slug}/availability` },
@@ -656,6 +718,30 @@ export default function DashboardClient({ slug }: { slug: string }) {
           actions={[
             { label: "My schedule", href: `/admin/h/${slug}/availability` },
             { label: "My bookings", href: `/admin/h/${slug}/bookings` },
+          ]}
+        />
+      )}
+
+      {!isStaff && isOwner && (
+        <RoleWorkflowCard
+          title="Owner Authority"
+          body="You hold the hospital's business authority: ownership, billing visibility, public profile readiness, team authority, reports, and high-risk exports."
+          actions={[
+            { label: "Business reports", href: `/admin/h/${slug}/business` },
+            { label: "Owner settings", href: `/admin/h/${slug}/settings` },
+            { label: "Team authority", href: `/admin/h/${slug}/team` },
+          ]}
+        />
+      )}
+
+      {!isStaff && isManager && (
+        <RoleWorkflowCard
+          title="Manager Operations"
+          body="Run day-to-day hospital operations: booking queues, doctors, schedules, packages, reviews, reports, and non-owner team workflows. Ownership, billing, and legal controls stay with owners."
+          actions={[
+            { label: "Booking queue", href: `/admin/h/${slug}/bookings` },
+            { label: "Schedules", href: `/admin/h/${slug}/availability` },
+            { label: "Reports", href: `/admin/h/${slug}/reports` },
           ]}
         />
       )}
@@ -693,9 +779,13 @@ export default function DashboardClient({ slug }: { slug: string }) {
         <section className="rounded-2xl border border-gray-100 bg-white p-4">
           <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
             <div>
-              <h2 className="text-sm font-extrabold text-[#0f172a]">Owner Signals</h2>
+              <h2 className="text-sm font-extrabold text-[#0f172a]">
+                {isOwner ? "Owner Signals" : "Operational Signals"}
+              </h2>
               <p className="mt-0.5 text-xs font-medium text-slate-400">
-                Quick business and access checks for this hospital.
+                {isOwner
+                  ? "Quick business, authority, and readiness checks for this hospital."
+                  : "Quick operational checks for requests, access, readiness, and active status."}
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -738,8 +828,14 @@ export default function DashboardClient({ slug }: { slug: string }) {
       {!isStaff && <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(360px,0.48fr)]">
         <div className="space-y-4">
           <Section
-            title="Needs Action"
-            description={isDoctor ? "Checked-in patients ready for you to complete after care is finished." : "Confirm new requests, then complete checked-in appointments after care is finished."}
+            title={isReceptionist ? "Pending Requests" : "Needs Action"}
+            description={
+              isDoctor
+                ? "Checked-in patients ready for you to complete after care is finished."
+                : isReceptionist
+                  ? "Confirm new booking requests or cancel them with a clear reason."
+                  : "Confirm new requests, then complete checked-in appointments after care is finished."
+            }
             empty={queues.needsAction.length === 0}
           >
             {queues.needsAction.map((appt) => (
@@ -769,7 +865,7 @@ export default function DashboardClient({ slug }: { slug: string }) {
             ))}
           </Section>
 
-          <Section title={isDoctor ? "My Upcoming Patients" : "Upcoming Queue"} description="Confirmed patients who have not checked in yet." empty={queues.upcoming.length === 0}>
+          <Section title={isDoctor ? "My Upcoming Patients" : isReceptionist ? "Arrivals To Check In" : "Upcoming Queue"} description="Confirmed patients who have not checked in yet." empty={queues.upcoming.length === 0}>
             {queues.upcoming.map((appt) => (
               <AppointmentRow
                 key={appt.id}
@@ -796,6 +892,36 @@ export default function DashboardClient({ slug }: { slug: string }) {
               />
             ))}
           </Section>
+
+          {isReceptionist && (
+            <Section title="Checked In" description="Patients already checked in and waiting for the doctor or care team." empty={queues.checkedIn.length === 0}>
+              {queues.checkedIn.map((appt) => (
+                <AppointmentRow
+                  key={appt.id}
+                  appt={appt}
+                  actionLoading={actionLoading}
+                  cancelTarget={cancelTarget}
+                  cancelReason={cancelReason}
+                  completeTarget={completeTarget}
+                  completeForm={completeForm}
+                  onAction={handleAction}
+                  onSetCancel={setCancelTarget}
+                  onSetComplete={setCompleteTarget}
+                  onCancelReasonChange={setCancelReason}
+                  onCompleteFormChange={setCompleteForm}
+                  onCancelAbort={() => {
+                    setCancelTarget(null);
+                    setCancelReason("");
+                  }}
+                  onCompleteAbort={() => {
+                    setCompleteTarget(null);
+                    setCompleteForm({ clinicalOutcome: "", clinicalNotes: "", followUpInstructions: "" });
+                  }}
+                  role={stats.role}
+                />
+              ))}
+            </Section>
+          )}
         </div>
 
         <Section title="Completed Today" description="Appointments already marked complete." empty={queues.completed.length === 0}>

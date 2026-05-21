@@ -185,6 +185,7 @@ export default function AvailabilityClient({
   const [departments, setDepartments] = useState<DepartmentOption[]>([]);
   const [doctorOptions, setDoctorOptions] = useState<DoctorOption[]>([]);
   const [dates, setDates] = useState<ScheduleDate[]>([]);
+  const [doctorName, setDoctorName] = useState<string | null>(null);
   const [weekStart, setWeekStart] = useState(() => formatDate(getToday()));
   const [selectedDoctorId, setSelectedDoctorId] = useState<string>("");
   const [viewMode, setViewMode] = useState<"single" | "all">("single");
@@ -282,6 +283,7 @@ export default function AvailabilityClient({
       setDates(data.dates ?? []);
       setDepartments(data.departments ?? []);
       setDoctorOptions(data.doctorOptions ?? []);
+      setDoctorName(typeof data.doctorName === "string" ? data.doctorName : null);
       if (!isDoctorRole && data.viewMode === "single" && typeof data.selectedDoctorId === "string") {
         setSelectedDoctorId((prev) => (prev === data.selectedDoctorId ? prev : data.selectedDoctorId));
       }
@@ -437,7 +439,11 @@ export default function AvailabilityClient({
         <div>
           <h1 className="text-xl font-extrabold text-[#0f1e38]">{isDoctorRole ? "My Schedule" : "Doctor Schedules"}</h1>
           <p className="text-sm text-gray-400 mt-0.5">
-            {isDoctorRole ? "Your weekly appointment slots and booked patients." : "Same slot calendar patients see, with receptionist booking context."}
+            {isDoctorRole
+              ? doctorName
+                ? `${doctorName}'s weekly appointment slots and booked patients.`
+                : "Your hospital account is not linked to a doctor profile yet."
+              : "Same slot calendar patients see, with receptionist booking context."}
           </p>
         </div>
         <button
@@ -850,7 +856,14 @@ export default function AvailabilityClient({
       ) : doctors.length === 0 ? (
         <div className="bg-white rounded-2xl p-12 text-center border border-gray-100">
           <Clock size={28} className="text-gray-200 mx-auto mb-3" />
-          <p className="text-sm font-semibold text-gray-400">No schedules configured</p>
+          <p className="text-sm font-semibold text-gray-400">
+            {isDoctorRole && !doctorName ? "No doctor profile linked" : "No schedules configured"}
+          </p>
+          {isDoctorRole && !doctorName && (
+            <p className="mx-auto mt-2 max-w-md text-xs font-semibold text-gray-300">
+              Ask an owner or manager to connect this user account to the correct doctor profile.
+            </p>
+          )}
         </div>
       ) : visibleDoctors.length === 0 ? (
         <div className="bg-white rounded-2xl p-12 text-center border border-gray-100">

@@ -33,6 +33,10 @@ function getAppointmentDateTime(scheduledAt: Date, slotTime: string | null) {
   return at;
 }
 
+function normalizeSlotTime(value: string | null | undefined) {
+  return value?.replace(/\s*-\s*/g, " - ").trim() ?? null;
+}
+
 // GET /api/admin/h/[slug]/bookings — paginated booking list with filters
 export async function GET(
   req: Request,
@@ -56,6 +60,7 @@ export async function GET(
 
   const hospitalId = ctx.membership.hospitalId;
   const isDoctorRole = ctx.membership.role === "DOCTOR";
+  const canViewClinicalFields = hasPermission(ctx.membership.role, "COMPLETE_BOOKING");
   const doctorProfile = isDoctorRole
     ? await db.doctor.findFirst({
         where: {
@@ -142,9 +147,9 @@ export async function GET(
       confirmedAt: b.confirmedAt?.toISOString() ?? null,
       completedAt: b.completedAt?.toISOString() ?? null,
       checkedInAt: b.checkedInAt?.toISOString() ?? null,
-      clinicalNotes: (b as { clinicalNotes?: string | null }).clinicalNotes ?? null,
-      clinicalOutcome: (b as { clinicalOutcome?: string | null }).clinicalOutcome ?? null,
-      followUpInstructions: (b as { followUpInstructions?: string | null }).followUpInstructions ?? null,
+      clinicalNotes: canViewClinicalFields ? (b as { clinicalNotes?: string | null }).clinicalNotes ?? null : null,
+      clinicalOutcome: canViewClinicalFields ? (b as { clinicalOutcome?: string | null }).clinicalOutcome ?? null : null,
+      followUpInstructions: canViewClinicalFields ? (b as { followUpInstructions?: string | null }).followUpInstructions ?? null : null,
       cancelledAt: b.cancelledAt?.toISOString() ?? null,
       refundedAt: b.refundedAt?.toISOString() ?? null,
       stripeRefundId: b.stripeRefundId ?? null,
@@ -272,7 +277,7 @@ export async function PATCH(
     if (!newAvailabilitySlotId) {
       return NextResponse.json({ error: "availabilitySlotId is required" }, { status: 400 });
     }
-    const newSlotTime = body.slotTime;
+    const newSlotTime = normalizeSlotTime(body.slotTime);
     if (!newSlotTime) {
       return NextResponse.json({ error: "slotTime is required" }, { status: 400 });
     }
@@ -318,6 +323,22 @@ export async function PATCH(
     }
     if (getAppointmentDateTime(newDate, newSlotTime).getTime() <= Date.now()) {
       return NextResponse.json({ error: "Cannot reschedule to a past or expired time slot" }, { status: 400 });
+    }
+
+    const existingBookingForSlot = await db.booking.findFirst({
+      where: {
+        id: { not: booking.id },
+        hospitalId: ctx.membership.hospitalId,
+        availabilitySlotId: newAvailabilitySlotId,
+        scheduledAt: newDate,
+        slotTime: newSlotTime,
+        status: { not: "CANCELLED" },
+      },
+      select: { id: true },
+    });
+
+    if (existingBookingForSlot) {
+      return NextResponse.json({ error: "That time slot is already booked. Please choose another." }, { status: 409 });
     }
 
     updateData.scheduledAt = newDate;

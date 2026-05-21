@@ -57,6 +57,9 @@ export default function TasksClient({ slug }: { slug: string }) {
   const [saving, setSaving] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [error, setError] = useState("");
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"open" | TaskStatus | "all">("open");
+  const [priorityFilter, setPriorityFilter] = useState<"all" | TaskPriority>("all");
   const [form, setForm] = useState({
     title: "",
     description: "",
@@ -87,12 +90,31 @@ export default function TasksClient({ slug }: { slug: string }) {
 
   const summary = useMemo(() => {
     const tasks = data?.tasks ?? [];
+    const today = new Date().toISOString().slice(0, 10);
     return {
       open: tasks.filter((task) => task.status === "PENDING" || task.status === "IN_PROGRESS").length,
       done: tasks.filter((task) => task.status === "DONE").length,
       high: tasks.filter((task) => task.priority === "HIGH" && task.status !== "DONE").length,
+      dueToday: tasks.filter((task) => task.dueAt?.slice(0, 10) === today && task.status !== "DONE" && task.status !== "CANCELLED").length,
     };
   }, [data]);
+
+  const visibleTasks = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return (data?.tasks ?? []).filter((task) => {
+      const matchesSearch =
+        !q ||
+        task.title.toLowerCase().includes(q) ||
+        (task.description?.toLowerCase().includes(q) ?? false) ||
+        (task.assignedToUser?.fullName.toLowerCase().includes(q) ?? false);
+      const matchesStatus =
+        statusFilter === "all" ||
+        (statusFilter === "open" && (task.status === "PENDING" || task.status === "IN_PROGRESS")) ||
+        task.status === statusFilter;
+      const matchesPriority = priorityFilter === "all" || task.priority === priorityFilter;
+      return matchesSearch && matchesStatus && matchesPriority;
+    });
+  }, [data?.tasks, priorityFilter, search, statusFilter]);
 
   const createTask = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -184,10 +206,45 @@ export default function TasksClient({ slug }: { slug: string }) {
         </div>
       )}
 
-      <div className="grid gap-3 md:grid-cols-3">
+      <div className="grid gap-3 md:grid-cols-4">
         <Summary label="Open" value={summary.open} icon={<Clock3 size={16} />} />
         <Summary label="Done" value={summary.done} icon={<CheckCircle2 size={16} />} />
         <Summary label="High Priority" value={summary.high} icon={<AlertCircle size={16} />} />
+        <Summary label="Due Today" value={summary.dueToday} icon={<ClipboardList size={16} />} />
+      </div>
+
+      <div className="grid gap-2 rounded-2xl border border-gray-100 bg-white p-3 md:grid-cols-[minmax(0,1fr)_160px_160px]">
+        <input
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+          placeholder="Search tasks, descriptions, or assignees"
+          className="h-10 rounded-xl px-3 text-sm outline-none"
+          style={{ background: "#f7f4ef", border: "1.5px solid rgba(15,30,56,.08)" }}
+        />
+        <select
+          value={statusFilter}
+          onChange={(event) => setStatusFilter(event.target.value as "open" | TaskStatus | "all")}
+          className="h-10 rounded-xl px-3 text-sm font-semibold outline-none"
+          style={{ background: "#f7f4ef", border: "1.5px solid rgba(15,30,56,.08)" }}
+        >
+          <option value="open">Open</option>
+          <option value="all">All statuses</option>
+          <option value="PENDING">Pending</option>
+          <option value="IN_PROGRESS">In progress</option>
+          <option value="DONE">Done</option>
+          <option value="CANCELLED">Cancelled</option>
+        </select>
+        <select
+          value={priorityFilter}
+          onChange={(event) => setPriorityFilter(event.target.value as "all" | TaskPriority)}
+          className="h-10 rounded-xl px-3 text-sm font-semibold outline-none"
+          style={{ background: "#f7f4ef", border: "1.5px solid rgba(15,30,56,.08)" }}
+        >
+          <option value="all">All priorities</option>
+          <option value="HIGH">High</option>
+          <option value="NORMAL">Normal</option>
+          <option value="LOW">Low</option>
+        </select>
       </div>
 
       <div className="grid gap-5 xl:grid-cols-[360px_minmax(0,1fr)]">
@@ -199,7 +256,7 @@ export default function TasksClient({ slug }: { slug: string }) {
               </div>
               <div>
                 <p className="text-sm font-extrabold text-[#0f172a]">New task</p>
-                <p className="text-xs font-medium text-slate-400">Assign to approved staff or operators.</p>
+                <p className="text-xs font-medium text-slate-400">Assign to approved staff members.</p>
               </div>
             </div>
 
@@ -228,10 +285,15 @@ export default function TasksClient({ slug }: { slug: string }) {
                 <option value="">Unassigned</option>
                 {data.assignableStaff.map((assignee) => (
                   <option key={assignee.userId} value={assignee.userId}>
-                    {assignee.fullName} / {assignee.role.toLowerCase()}
+                    {assignee.fullName}
                   </option>
                 ))}
               </select>
+              {data.assignableStaff.length === 0 && (
+                <p className="text-xs font-semibold text-amber-700">
+                  No approved staff members are available for assignment yet.
+                </p>
+              )}
               <div className="grid grid-cols-2 gap-3">
                 <select
                   value={form.priority}
@@ -263,7 +325,7 @@ export default function TasksClient({ slug }: { slug: string }) {
         )}
 
         <section className={data?.canManage ? "space-y-3" : "xl:col-span-2 space-y-3"}>
-          {(data?.tasks ?? []).map((task) => (
+          {visibleTasks.map((task) => (
             <TaskCard
               key={task.id}
               task={task}
@@ -273,10 +335,12 @@ export default function TasksClient({ slug }: { slug: string }) {
               onDelete={deleteTask}
             />
           ))}
-          {data?.tasks.length === 0 && (
+          {visibleTasks.length === 0 && (
             <div className="rounded-2xl border border-gray-100 bg-white p-12 text-center">
               <ClipboardList size={30} className="mx-auto text-gray-200" />
-              <p className="mt-3 text-sm font-bold text-slate-400">No tasks yet</p>
+              <p className="mt-3 text-sm font-bold text-slate-400">
+                {(data?.tasks.length ?? 0) === 0 ? "No tasks yet" : "No tasks match these filters"}
+              </p>
             </div>
           )}
         </section>

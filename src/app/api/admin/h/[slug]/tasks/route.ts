@@ -43,7 +43,7 @@ async function getAssignableStaff(hospitalId: string) {
     where: {
       hospitalId,
       status: "APPROVED",
-      role: { in: ["STAFF", "RECEPTIONIST", "MANAGER"] },
+      role: "STAFF",
     },
     include: { user: { select: { id: true, fullName: true, email: true } } },
     orderBy: [{ role: "asc" }, { user: { fullName: "asc" } }],
@@ -56,6 +56,20 @@ async function getAssignableStaff(hospitalId: string) {
     fullName: membership.user.fullName,
     email: membership.user.email,
   }));
+}
+
+async function isAssignableStaff(hospitalId: string, userId: string) {
+  const assignee = await db.hospitalMembership.findFirst({
+    where: {
+      hospitalId,
+      userId,
+      status: "APPROVED",
+      role: "STAFF",
+    },
+    select: { id: true },
+  });
+
+  return Boolean(assignee);
 }
 
 export async function GET(
@@ -137,16 +151,8 @@ export async function POST(
   }
 
   if (body.assignedToUserId) {
-    const assignee = await db.hospitalMembership.findFirst({
-      where: {
-        hospitalId: ctx.membership.hospitalId,
-        userId: body.assignedToUserId,
-        status: "APPROVED",
-        role: { in: ["STAFF", "RECEPTIONIST", "MANAGER"] },
-      },
-      select: { id: true },
-    });
-    if (!assignee) return NextResponse.json({ error: "Assignee is not approved for this hospital" }, { status: 400 });
+    const assigneeIsStaff = await isAssignableStaff(ctx.membership.hospitalId, body.assignedToUserId);
+    if (!assigneeIsStaff) return NextResponse.json({ error: "Assignee must be an approved staff member for this hospital" }, { status: 400 });
   }
 
   const task = await prisma.hospitalTask.create({
@@ -225,7 +231,13 @@ export async function PATCH(
       if (dueAt && Number.isNaN(dueAt.getTime())) return NextResponse.json({ error: "Invalid due date" }, { status: 400 });
       updateData.dueAt = dueAt;
     }
-    if (body.assignedToUserId !== undefined) updateData.assignedToUserId = body.assignedToUserId || null;
+    if (body.assignedToUserId !== undefined) {
+      if (body.assignedToUserId) {
+        const assigneeIsStaff = await isAssignableStaff(ctx.membership.hospitalId, body.assignedToUserId);
+        if (!assigneeIsStaff) return NextResponse.json({ error: "Assignee must be an approved staff member for this hospital" }, { status: 400 });
+      }
+      updateData.assignedToUserId = body.assignedToUserId || null;
+    }
   }
 
   const updated = await prisma.hospitalTask.update({

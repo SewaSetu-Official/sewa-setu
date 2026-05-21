@@ -32,6 +32,9 @@ type Booking = {
   amountPaid: number | null;
   currency: string;
   notes: string | null;
+  clinicalNotes: string | null;
+  clinicalOutcome: string | null;
+  followUpInstructions: string | null;
   cancellationReason: string | null;
   confirmedAt: string | null;
   completedAt: string | null;
@@ -134,11 +137,12 @@ function getAppointmentDateTime(scheduledAt: string, slotTime: string | null) {
   return at;
 }
 
-function getNextStep(booking: Booking) {
+function getNextStep(booking: Booking, role: string) {
   if (booking.status === "CANCELLED") return "Cancelled";
   if (booking.status === "COMPLETED") return "Care completed";
   if (booking.status === "REQUESTED") return "Needs confirmation";
   if (booking.status === "CONFIRMED" && !booking.checkedInAt) return "Awaiting check-in";
+  if (booking.status === "CONFIRMED" && booking.checkedInAt && role === "RECEPTIONIST") return "Waiting for doctor";
   if (booking.status === "CONFIRMED" && booking.checkedInAt) return "Ready to complete";
   return "Review details";
 }
@@ -193,6 +197,12 @@ export default function BookingsClient({ slug }: { slug: string }) {
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [cancelTarget, setCancelTarget] = useState<string | null>(null);
   const [cancelReason, setCancelReason] = useState("");
+  const [completeTarget, setCompleteTarget] = useState<string | null>(null);
+  const [completeForm, setCompleteForm] = useState({
+    clinicalOutcome: "",
+    clinicalNotes: "",
+    followUpInstructions: "",
+  });
   const [rescheduleTarget, setRescheduleTarget] = useState<string | null>(null);
   const [rescheduleDate, setRescheduleDate] = useState(() => formatDateKey(new Date()));
   const [rescheduleSlot, setRescheduleSlot] = useState("");
@@ -297,6 +307,8 @@ export default function BookingsClient({ slug }: { slug: string }) {
       if (action === "CANCEL" && d.refundError) setError(`Booking cancelled but refund failed: ${d.refundError}`);
       setCancelTarget(null);
       setCancelReason("");
+      setCompleteTarget(null);
+      setCompleteForm({ clinicalOutcome: "", clinicalNotes: "", followUpInstructions: "" });
       setRescheduleTarget(null);
       setRescheduleSlot("");
       await fetchBookings();
@@ -320,6 +332,7 @@ export default function BookingsClient({ slug }: { slug: string }) {
 
   const hasFilters = date || search;
   const isDoctor = data?.role === "DOCTOR";
+  const isReceptionist = data?.role === "RECEPTIONIST";
   const permissions = data?.permissions ?? {
     canConfirm: false,
     canCancel: false,
@@ -334,10 +347,16 @@ export default function BookingsClient({ slug }: { slug: string }) {
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16 }}>
         <div>
           <h1 style={{ fontSize: 20, fontWeight: 600, color: "#0f1e38", letterSpacing: "-0.02em", margin: 0 }}>
-            {isDoctor ? "My Bookings" : "Bookings"}
+            {isDoctor ? "My Patient Appointments" : isReceptionist ? "Front Desk Bookings" : "Bookings"}
           </h1>
           <p style={{ fontSize: 12, color: "#9ca3af", marginTop: 3, fontWeight: 400 }}>
-            {data ? `${data.total.toLocaleString()} booking${data.total !== 1 ? "s" : ""}` : "Loading…"}
+            {data
+              ? isReceptionist
+                ? `${data.total.toLocaleString()} front-desk booking${data.total !== 1 ? "s" : ""}`
+                : isDoctor
+                  ? `${data.total.toLocaleString()} patient appointment${data.total !== 1 ? "s" : ""}`
+                  : `${data.total.toLocaleString()} booking${data.total !== 1 ? "s" : ""}`
+              : "Loading…"}
           </p>
         </div>
         <button
@@ -643,11 +662,11 @@ export default function BookingsClient({ slug }: { slug: string }) {
 
                             {permissions.canComplete && booking.status === "CONFIRMED" && (
                               <ActionBtn
-                                onClick={() => handleAction(booking.id, "COMPLETE")}
+                                onClick={() => { setCompleteTarget(booking.id); setExpandedId(booking.id); }}
                                 disabled={isActioning || !booking.checkedInAt}
                                 variant="success-outline"
                               >
-                                {actionLoading === booking.id + "COMPLETE" ? "…" : "Complete"}
+                                {actionLoading === booking.id + "COMPLETE" ? "..." : isDoctor ? "Complete visit" : "Complete"}
                               </ActionBtn>
                             )}
 
@@ -675,6 +694,8 @@ export default function BookingsClient({ slug }: { slug: string }) {
                                 if (expandedId === booking.id) {
                                   setCancelTarget(null);
                                   setCancelReason("");
+                                  setCompleteTarget(null);
+                                  setCompleteForm({ clinicalOutcome: "", clinicalNotes: "", followUpInstructions: "" });
                                   setRescheduleTarget(null);
                                   setRescheduleSlot("");
                                 }
@@ -721,7 +742,7 @@ export default function BookingsClient({ slug }: { slug: string }) {
                                     <p style={{ margin: "0 0 3px", fontSize: 9.5, fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", color: "#a0aec0" }}>
                                       Next step
                                     </p>
-                                    <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: "#0f1e38" }}>{getNextStep(booking)}</p>
+                                    <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: "#0f1e38" }}>{getNextStep(booking, data.role)}</p>
                                   </div>
                                   <div style={{ textAlign: "right" }}>
                                     <p style={{ margin: "0 0 3px", fontSize: 9.5, fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", color: "#a0aec0" }}>
@@ -756,6 +777,17 @@ export default function BookingsClient({ slug }: { slug: string }) {
                                     {booking.notes || "No notes for this booking."}
                                   </p>
                                 </div>
+                                {(booking.clinicalOutcome || booking.clinicalNotes || booking.followUpInstructions) && (
+                                  <div style={{
+                                    gridColumn: "1 / -1", background: "#f0fdf4", borderRadius: 8,
+                                    border: "0.5px solid #bbf7d0", padding: "9px 12px",
+                                  }}>
+                                    <p style={{ margin: "0 0 5px", fontSize: 9.5, fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", color: "#047857" }}>Clinical summary</p>
+                                    {booking.clinicalOutcome && <p style={{ margin: "0 0 3px", fontSize: 12.5, fontWeight: 700, color: "#065f46" }}>{booking.clinicalOutcome}</p>}
+                                    {booking.clinicalNotes && <p style={{ margin: "0 0 3px", fontSize: 12.5, color: "#166534", lineHeight: 1.55 }}>{booking.clinicalNotes}</p>}
+                                    {booking.followUpInstructions && <p style={{ margin: 0, fontSize: 12, color: "#047857", lineHeight: 1.55 }}>Follow-up: {booking.followUpInstructions}</p>}
+                                  </div>
+                                )}
                                 {(booking.cancellationReason || booking.cancelledAt || booking.refundedAt || booking.stripeRefundId) && (
                                   <div style={{
                                     gridColumn: "1 / -1", background: "#fff5f5", borderRadius: 8,
@@ -770,16 +802,16 @@ export default function BookingsClient({ slug }: { slug: string }) {
                                 )}
                               </div>
 
-                              {/* Right — Cancel panel */}
+                              {/* Right — booking action panel */}
                               <div style={{
-                                background: isCancelTarget ? "#fff8f8" : rescheduleTarget === booking.id ? "#f8fbff" : "#fff",
+                                background: isCancelTarget ? "#fff8f8" : completeTarget === booking.id ? "#f0fdf4" : rescheduleTarget === booking.id ? "#f8fbff" : "#fff",
                                 borderRadius: 10,
-                                border: `0.5px solid ${isCancelTarget ? "#fca5a5" : rescheduleTarget === booking.id ? "#bfdbfe" : "rgba(15,30,56,.08)"}`,
+                                border: `0.5px solid ${isCancelTarget ? "#fca5a5" : completeTarget === booking.id ? "#bbf7d0" : rescheduleTarget === booking.id ? "#bfdbfe" : "rgba(15,30,56,.08)"}`,
                                 padding: "12px 14px",
                                 transition: "all .2s",
                               }}>
-                                <p style={{ margin: "0 0 9px", fontSize: 9.5, fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", color: isCancelTarget ? "#ef4444" : rescheduleTarget === booking.id ? "#1d4ed8" : "#a0aec0" }}>
-                                  {isCancelTarget ? "Cancellation panel" : rescheduleTarget === booking.id ? "Reschedule panel" : "Booking tools"}
+                                <p style={{ margin: "0 0 9px", fontSize: 9.5, fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", color: isCancelTarget ? "#ef4444" : completeTarget === booking.id ? "#047857" : rescheduleTarget === booking.id ? "#1d4ed8" : "#a0aec0" }}>
+                                  {isCancelTarget ? "Cancellation panel" : completeTarget === booking.id ? "Clinical completion" : rescheduleTarget === booking.id ? "Reschedule panel" : "Booking tools"}
                                 </p>
                                 {isCancelTarget ? (
                                   <div style={{ display: "flex", flexDirection: "column", gap: 9 }}>
@@ -806,6 +838,73 @@ export default function BookingsClient({ slug }: { slug: string }) {
                                         {isActioning ? "…" : "Confirm cancellation"}
                                       </ActionBtn>
                                       <ActionBtn onClick={() => { setCancelTarget(null); setCancelReason(""); }} variant="ghost">
+                                        Dismiss
+                                      </ActionBtn>
+                                    </div>
+                                  </div>
+                                ) : completeTarget === booking.id ? (
+                                  <div style={{ display: "flex", flexDirection: "column", gap: 9 }}>
+                                    <label style={{ fontSize: 10, fontWeight: 600, color: "#047857", textTransform: "uppercase", letterSpacing: "0.08em" }}>Outcome</label>
+                                    <input
+                                      value={completeForm.clinicalOutcome}
+                                      onChange={(event) => setCompleteForm((form) => ({ ...form, clinicalOutcome: event.target.value }))}
+                                      placeholder="e.g. Consultation completed"
+                                      style={{
+                                        height: 34,
+                                        borderRadius: 8,
+                                        border: "0.5px solid #bbf7d0",
+                                        padding: "0 10px",
+                                        fontSize: 12.5,
+                                        color: "#0f1e38",
+                                        outline: "none",
+                                        fontFamily: "inherit",
+                                      }}
+                                    />
+                                    <label style={{ fontSize: 10, fontWeight: 600, color: "#047857", textTransform: "uppercase", letterSpacing: "0.08em" }}>Clinical notes</label>
+                                    <textarea
+                                      value={completeForm.clinicalNotes}
+                                      onChange={(event) => setCompleteForm((form) => ({ ...form, clinicalNotes: event.target.value }))}
+                                      placeholder="Short notes for this appointment"
+                                      rows={3}
+                                      style={{
+                                        width: "100%", boxSizing: "border-box",
+                                        borderRadius: 8, padding: "9px 11px",
+                                        fontSize: 12.5, outline: "none", resize: "none",
+                                        background: "#fff", border: "0.5px solid #bbf7d0",
+                                        color: "#0f1e38", lineHeight: 1.5,
+                                        fontFamily: "inherit",
+                                      }}
+                                    />
+                                    <label style={{ fontSize: 10, fontWeight: 600, color: "#047857", textTransform: "uppercase", letterSpacing: "0.08em" }}>Follow-up</label>
+                                    <textarea
+                                      value={completeForm.followUpInstructions}
+                                      onChange={(event) => setCompleteForm((form) => ({ ...form, followUpInstructions: event.target.value }))}
+                                      placeholder="Follow-up advice or next steps"
+                                      rows={2}
+                                      style={{
+                                        width: "100%", boxSizing: "border-box",
+                                        borderRadius: 8, padding: "9px 11px",
+                                        fontSize: 12.5, outline: "none", resize: "none",
+                                        background: "#fff", border: "0.5px solid #bbf7d0",
+                                        color: "#0f1e38", lineHeight: 1.5,
+                                        fontFamily: "inherit",
+                                      }}
+                                    />
+                                    <div style={{ display: "flex", gap: 7, flexWrap: "wrap" }}>
+                                      <ActionBtn
+                                        onClick={() => handleAction(booking.id, "COMPLETE", undefined, completeForm)}
+                                        disabled={isActioning}
+                                        variant="success"
+                                      >
+                                        {isActioning ? "..." : "Mark complete"}
+                                      </ActionBtn>
+                                      <ActionBtn
+                                        onClick={() => {
+                                          setCompleteTarget(null);
+                                          setCompleteForm({ clinicalOutcome: "", clinicalNotes: "", followUpInstructions: "" });
+                                        }}
+                                        variant="ghost"
+                                      >
                                         Dismiss
                                       </ActionBtn>
                                     </div>
@@ -880,7 +979,11 @@ export default function BookingsClient({ slug }: { slug: string }) {
                                   </div>
                                 ) : (
                                   <p style={{ margin: 0, fontSize: 12, color: "#9ca3af", lineHeight: 1.6 }}>
-                                    Use the Actions column to cancel or reschedule active bookings.
+                                    {isDoctor
+                                      ? "Open checked-in appointments to complete the visit with outcome, notes, and follow-up."
+                                      : isReceptionist
+                                        ? "Use the Actions column to confirm requests, check in arrivals, cancel, or reschedule active doctor bookings."
+                                        : "Use the Actions column to cancel or reschedule active bookings."}
                                   </p>
                                 )}
                               </div>

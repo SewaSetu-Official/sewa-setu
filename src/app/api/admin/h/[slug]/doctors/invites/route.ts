@@ -52,6 +52,24 @@ export async function POST(
   if (!doctor) return NextResponse.json({ error: "Doctor not found" }, { status: 404 });
   if (doctor.userId) return NextResponse.json({ error: "Doctor is already linked to a user account" }, { status: 409 });
 
+  const existingUser = await db.user.findUnique({
+    where: { email },
+    select: {
+      id: true,
+      memberships: {
+        where: { hospitalId: ctx.membership.hospitalId },
+        select: { role: true, status: true },
+      },
+    },
+  });
+
+  const existingMembership = existingUser?.memberships[0] ?? null;
+  if (existingMembership && existingMembership.role !== "DOCTOR") {
+    return NextResponse.json({
+      error: `This email already has ${existingMembership.role.toLowerCase()} access for this hospital. Doctor invites cannot change existing hospital authority.`,
+    }, { status: 409 });
+  }
+
   await db.doctorInvite.updateMany({
     where: {
       doctorId,

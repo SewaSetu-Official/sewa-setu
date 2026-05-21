@@ -68,20 +68,20 @@ It is intentionally stricter than the current implementation. The goal is to loc
 | Remove staff | Yes | Limited | No | No | No |
 | Approve internal access requests | Yes | Limited | No | No | No |
 | Assign staff roles | Yes | Limited | No | No | No |
-| Manage doctor availability and schedules | Yes | Yes | No | Own | No |
-| View hospital-wide bookings | Yes | Yes | Yes | Own | Assigned |
+| Manage doctor availability and schedules | Yes | Yes | No | Own read-only | No |
+| View hospital-wide bookings | Yes | Yes | Yes | Own | No |
 | Create bookings | Yes | Yes | Yes | No | No |
-| Reschedule bookings | Yes | Yes | Yes | Own | No |
-| Cancel bookings | Yes | Yes | Yes | Own | No |
+| Reschedule bookings | Yes | Yes | Yes | No | No |
+| Cancel bookings | Yes | Yes | Yes | No | No |
 | Confirm bookings | Yes | Yes | Yes | No | No |
-| Check in patients | Yes | Yes | Yes | No | Assigned |
+| Check in patients | Yes | Yes | Yes | No | No |
 | Mark appointment completed | Yes | Yes | No | Own | No |
 | Write appointment outcome / completion notes | Limited | Limited | No | Own | No |
 | Assign staff tasks | Yes | Yes | No | No | No |
 | Update assigned staff tasks | No | No | No | No | Assigned |
 | Moderate hospital reviews | Yes | Yes | No | No | No |
-| View operational reports | Yes | Yes | Limited | Own | No |
-| Export operational reports | Yes | Limited | No | Own | No |
+| View operational reports | Yes | Yes | No | No | No |
+| Export operational reports | Yes | No | No | No | No |
 
 ## Patient Data Matrix
 
@@ -89,7 +89,7 @@ It is intentionally stricter than the current implementation. The goal is to loc
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | View patient identity and contact info | Controlled | No | Limited | Limited | Limited | Own | Assigned |
 | Edit patient contact / admin details | No | No | Limited | Limited | Limited | No | No |
-| View appointment history for this hospital | Controlled | No | Yes | Yes | Limited | Own | Assigned |
+| View appointment history for this hospital | Controlled | No | Yes | Yes | Limited | Own | No |
 | View clinical notes / medical details | Controlled | No | Controlled | No | No | Own | No |
 | Write clinical notes / medical updates | No | No | Limited completion note | Limited completion note | No | Own | No |
 | Export patient data | Controlled | No | Controlled | No | No | No | No |

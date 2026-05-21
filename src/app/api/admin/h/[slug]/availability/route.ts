@@ -23,6 +23,10 @@ function dateKey(date: Date) {
   return formatDate(date);
 }
 
+function normalizeSlotTime(value: string | null | undefined) {
+  return value?.replace(/\s*-\s*/g, " - ").trim() ?? "";
+}
+
 function timeToMinutes(value: string) {
   const [hour, minute] = value.split(":").map(Number);
   if (
@@ -362,7 +366,10 @@ export async function GET(
   const bookingBySlotDate = new Map(
     bookings
       .filter((booking) => booking.availabilitySlotId && booking.status !== "CANCELLED")
-      .map((booking) => [`${booking.availabilitySlotId}::${dateKey(booking.scheduledAt)}`, booking]),
+      .map((booking) => [
+        `${booking.availabilitySlotId}::${dateKey(booking.scheduledAt)}::${normalizeSlotTime(booking.slotTime)}`,
+        booking,
+      ]),
   );
 
   const rolling = buildRollingOccurrences(
@@ -386,7 +393,9 @@ export async function GET(
       const doctor = doctorMap[occurrence.doctorId];
       if (!doctor) continue;
 
-      const booking = bookingBySlotDate.get(`${occurrence.windowId}::${occurrence.date}`);
+      const booking = bookingBySlotDate.get(
+        `${occurrence.windowId}::${occurrence.date}::${normalizeSlotTime(`${occurrence.startTime} - ${occurrence.endTime}`)}`,
+      );
       doctor.occurrences.push({
         date: occurrence.date,
         dayOfWeek: occurrence.dayOfWeek,
@@ -487,7 +496,7 @@ export async function POST(
   }
 
   const existingSlots = await db.availabilitySlot.findMany({
-    where: { doctorId, hospitalId: ctx.membership.hospitalId, mode, dayOfWeek },
+    where: { doctorId, hospitalId: ctx.membership.hospitalId, mode, dayOfWeek, isActive: true },
     select: { startTime: true, endTime: true },
   });
   const conflict = existingSlots.find((slot) => {
@@ -566,6 +575,7 @@ export async function PATCH(
   const nextStartTime = body.startTime?.trim() ?? slot.startTime;
   const nextEndTime = body.endTime?.trim() ?? slot.endTime;
   const nextSlotDuration = body.slotDurationMinutes === undefined ? slot.slotDurationMinutes : Number(body.slotDurationMinutes);
+  const nextIsActive = isActive === undefined ? slot.isActive : isActive;
 
   if (!["ONLINE", "PHYSICAL"].includes(nextMode)) {
     return NextResponse.json({ error: "Invalid consultation mode" }, { status: 400 });
@@ -586,23 +596,26 @@ export async function PATCH(
     return NextResponse.json({ error: "Window must be at least one slot duration long" }, { status: 400 });
   }
 
-  const existingSlots = await db.availabilitySlot.findMany({
-    where: {
-      doctorId: slot.doctorId,
-      hospitalId: ctx.membership.hospitalId,
-      mode: nextMode,
-      dayOfWeek: nextDayOfWeek,
-      id: { not: slotId },
-    },
-    select: { startTime: true, endTime: true },
-  });
-  const conflict = existingSlots.find((existing) => {
-    const existingStart = timeToMinutes(existing.startTime);
-    const existingEnd = timeToMinutes(existing.endTime);
-    return existingStart !== null && existingEnd !== null && windowsOverlap(startMinutes, endMinutes, existingStart, existingEnd);
-  });
-  if (conflict) {
-    return NextResponse.json({ error: "This schedule overlaps an existing window" }, { status: 409 });
+  if (nextIsActive) {
+    const existingSlots = await db.availabilitySlot.findMany({
+      where: {
+        doctorId: slot.doctorId,
+        hospitalId: ctx.membership.hospitalId,
+        mode: nextMode,
+        dayOfWeek: nextDayOfWeek,
+        isActive: true,
+        id: { not: slotId },
+      },
+      select: { startTime: true, endTime: true },
+    });
+    const conflict = existingSlots.find((existing) => {
+      const existingStart = timeToMinutes(existing.startTime);
+      const existingEnd = timeToMinutes(existing.endTime);
+      return existingStart !== null && existingEnd !== null && windowsOverlap(startMinutes, endMinutes, existingStart, existingEnd);
+    });
+    if (conflict) {
+      return NextResponse.json({ error: "This schedule overlaps an existing active window" }, { status: 409 });
+    }
   }
 
   const updateData = {
