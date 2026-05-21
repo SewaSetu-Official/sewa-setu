@@ -67,6 +67,19 @@ enum DoctorInviteStatus {
   EXPIRED
 }
 
+enum HospitalTaskStatus {
+  PENDING
+  IN_PROGRESS
+  DONE
+  CANCELLED
+}
+
+enum HospitalTaskPriority {
+  LOW
+  NORMAL
+  HIGH
+}
+
 /**
  * =========================
  * ACCOUNTS & PATIENTS
@@ -91,6 +104,8 @@ model User {
   doctorProfile      Doctor?
   memberships        HospitalMembership[]
   supportAssignments SupportAssignment[]
+  assignedHospitalTasks HospitalTask[] @relation("HospitalTaskAssignee")
+  createdHospitalTasks  HospitalTask[] @relation("HospitalTaskCreator")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -223,6 +238,7 @@ model Hospital {
   memberships        HospitalMembership[]
   supportAssignments SupportAssignment[]
   doctorInvites      DoctorInvite[]
+  tasks              HospitalTask[]
   partnerInquiry     PartnerInquiry?
 
   createdAt DateTime @default(now())
@@ -621,6 +637,9 @@ model Booking {
   cancellationReason String?
   completedAt        DateTime?
   checkedInAt        DateTime?
+  clinicalNotes      String?
+  clinicalOutcome    String?
+  followUpInstructions String?
 
   @@unique([availabilitySlotId, scheduledAt], name: "unique_slot_occurrence")
   @@index([userId])
@@ -630,6 +649,31 @@ model Booking {
   @@index([status, scheduledAt])
   @@index([availabilitySlotId])
   @@index([hospitalId, status, scheduledAt]) // for hospital dashboard queries
+}
+
+model HospitalTask {
+  id          String               @id @default(cuid())
+  hospitalId  String
+  title       String
+  description String?
+  priority    HospitalTaskPriority @default(NORMAL)
+  status      HospitalTaskStatus   @default(PENDING)
+  dueAt       DateTime?
+
+  assignedToUserId String?
+  createdById      String
+  completedAt      DateTime?
+
+  hospital       Hospital @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  assignedToUser User?    @relation("HospitalTaskAssignee", fields: [assignedToUserId], references: [id], onDelete: SetNull)
+  createdBy      User     @relation("HospitalTaskCreator", fields: [createdById], references: [id], onDelete: Restrict)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([hospitalId, status])
+  @@index([assignedToUserId, status])
+  @@index([hospitalId, dueAt])
 }
 
 /**
