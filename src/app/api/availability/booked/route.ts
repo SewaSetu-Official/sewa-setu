@@ -4,8 +4,12 @@ import { db } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
+function normalizeSlotTime(value: string | null | undefined) {
+  return value?.replace(/\s*-\s*/g, " - ").trim() ?? "";
+}
+
 // GET /api/availability/booked?doctorId=xxx
-// Returns all confirmed booked (slotId, date) pairs for a doctor,
+// Returns all confirmed booked (slotId, date, slotTime) entries for a doctor,
 // plus isYours flag for the currently signed-in user.
 export async function GET(req: Request) {
   try {
@@ -39,6 +43,7 @@ export async function GET(req: Request) {
       select: {
         availabilitySlotId: true,
         scheduledAt: true,
+        slotTime: true,
         userId: true,
       },
     });
@@ -46,6 +51,7 @@ export async function GET(req: Request) {
     const booked = bookings.map((b) => ({
       slotId: b.availabilitySlotId!,
       date: b.scheduledAt.toISOString().slice(0, 10), // YYYY-MM-DD
+      slotTime: normalizeSlotTime(b.slotTime),
       isYours: currentDbUserId !== null && b.userId === currentDbUserId,
     }));
 

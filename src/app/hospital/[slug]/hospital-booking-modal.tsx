@@ -31,6 +31,10 @@ function formatFee(feeMin: number | null | undefined, currency: string | null | 
   return `${sym}${Math.round(feeMin / 100)}`;
 }
 
+function normalizeSlotTime(value: string | null | undefined) {
+  return value?.replace(/\s*-\s*/g, " - ").trim() ?? "";
+}
+
 type Step = "details" | "doctor" | "availability" | "review";
 
 type Props = {
@@ -68,7 +72,7 @@ function HospitalBookingModalDialog({ hospital, onCloseAction, preselectedDoctor
   const [selectedDoctor, setSelectedDoctor] = useState<ApiDoctor | null>(preselectedDoctor ?? null);
   const [selectedSlot, setSelectedSlot] = useState<ApiAvailabilitySlot | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  // booked slot sets: keys are `${slotId}::${date}`
+  // booked slot sets: keys are `${slotId}::${date}::${slotTime}`
   const [bookedSet, setBookedSet] = useState<Set<string>>(new Set());
   const [yourSet, setYourSet] = useState<Set<string>>(new Set());
 
@@ -79,11 +83,11 @@ function HospitalBookingModalDialog({ hospital, onCloseAction, preselectedDoctor
     if (!selectedDoctor) return;
     fetch(`/api/availability/booked?doctorId=${selectedDoctor.id}`)
       .then((r) => r.json())
-      .then((data: { booked?: { slotId: string; date: string; isYours: boolean }[] }) => {
+      .then((data: { booked?: { slotId: string; date: string; slotTime: string; isYours: boolean }[] }) => {
         const booked = new Set<string>();
         const yours = new Set<string>();
         for (const b of data.booked ?? []) {
-          const key = `${b.slotId}::${b.date}`;
+          const key = `${b.slotId}::${b.date}::${normalizeSlotTime(b.slotTime)}`;
           booked.add(key);
           if (b.isYours) yours.add(key);
         }
@@ -388,7 +392,7 @@ function HospitalBookingModalDialog({ hospital, onCloseAction, preselectedDoctor
                           <div key={`${dayOfWeek}-${time}`} className="px-2 py-2 space-y-1">
                             {slotsAtTime.map((slot) => {
                               const resolvedDate = nextOccurrenceDateStr(slot.dayOfWeek);
-                              const bookedKey = `${slot.id}::${resolvedDate}`;
+                              const bookedKey = `${slot.id}::${resolvedDate}::${normalizeSlotTime(`${slot.startTime}-${slot.endTime}`)}`;
                               const isBooked = bookedSet.has(bookedKey);
                               const isYours = yourSet.has(bookedKey);
 

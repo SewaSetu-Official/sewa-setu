@@ -14,6 +14,10 @@ export type ProvisionedBooking = {
   doctor: { fullName: string } | null;
 };
 
+function normalizeSlotTime(value: string | null | undefined) {
+  return value?.replace(/\s*-\s*/g, " - ").trim() ?? null;
+}
+
 /**
  * Idempotently creates a Booking record from a completed Stripe session.
  * Safe to call from both the webhook and the verify endpoint.
@@ -124,7 +128,7 @@ export async function provisionBooking(
               ? ConsultationMode.ONLINE
               : ConsultationMode.PHYSICAL,
           scheduledAt: meta.bookingDate ? new Date(meta.bookingDate) : new Date(),
-          slotTime: meta.slotTime ?? null,
+          slotTime: normalizeSlotTime(meta.slotTime),
           amountPaid: session.amount_total,
           currency: session.currency ?? "eur",
           status: BookingStatus.CONFIRMED,
