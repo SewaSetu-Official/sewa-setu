@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import {
   Building2, Search, RefreshCw, AlertCircle,
   BadgeCheck, ToggleLeft, ToggleRight, ChevronLeft, ChevronRight,
+  ShieldCheck, UserCheck, XCircle,
 } from "lucide-react";
 
 type Hospital = {
@@ -13,6 +14,18 @@ type Hospital = {
   location: string | null;
   bookingCount: number; doctorCount: number; staffCount: number;
   supportAssignments: { id: string; userId: string; fullName: string; email: string }[];
+  owners: OwnerRequest[];
+  pendingOwnerRequests: OwnerRequest[];
+  readiness: { completed: number; total: number; items: { label: string; complete: boolean }[] };
+};
+
+type OwnerRequest = {
+  id: string;
+  userId: string;
+  fullName: string;
+  email: string;
+  status: string;
+  createdAt: string;
 };
 
 export default function PlatformHospitalsPage() {
@@ -90,6 +103,54 @@ export default function PlatformHospitalsPage() {
     await updateHospital(hospital, { isActive: true }, "active");
   };
 
+  const handleOwnerRequest = async (hospital: Hospital, request: OwnerRequest, ownerStatus: "APPROVED" | "REJECTED") => {
+    const rejectedReason = ownerStatus === "REJECTED" ? window.prompt("Reason for rejecting this owner request?") : "";
+    if (ownerStatus === "REJECTED" && !rejectedReason?.trim()) return;
+    setActionLoading(request.id + ownerStatus);
+    setError("");
+    try {
+      const res = await fetch("/api/admin/platform/hospitals", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          hospitalId: hospital.id,
+          ownerMembershipId: request.id,
+          ownerStatus,
+          rejectedReason,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Failed");
+      setHospitals((prev) => prev.map((h) => {
+        if (h.id !== hospital.id) return h;
+        const pendingOwnerRequests = h.pendingOwnerRequests.filter((owner) => owner.id !== request.id);
+        const owners = ownerStatus === "APPROVED"
+          ? [...h.owners, { ...request, status: "APPROVED" }]
+          : h.owners;
+        return {
+          ...h,
+          owners,
+          pendingOwnerRequests,
+          readiness: {
+            ...h.readiness,
+            items: h.readiness.items.map((item) => item.label === "Owner" ? { ...item, complete: owners.length > 0 } : item),
+            completed: h.readiness.items.filter((item) => item.label === "Owner" ? owners.length > 0 : item.complete).length,
+          },
+        };
+      }));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to update owner request.");
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const trustStats = {
+    pendingOwners: hospitals.reduce((sum, hospital) => sum + hospital.pendingOwnerRequests.length, 0),
+    unverified: hospitals.filter((hospital) => !hospital.verified).length,
+    suspended: hospitals.filter((hospital) => !hospital.isActive).length,
+  };
+
   return (
     <div className="space-y-5 w-full">
       <div className="flex items-center justify-between flex-wrap gap-3">
@@ -107,6 +168,27 @@ export default function PlatformHospitalsPage() {
           <RefreshCw size={13} /> Refresh
         </button>
       </div>
+
+      <section className="overflow-hidden rounded-2xl border border-gray-100 bg-white">
+        <div className="flex flex-wrap items-start justify-between gap-4 px-5 py-4" style={{ background: "linear-gradient(135deg,#0f1e38,#192d52)" }}>
+          <div className="flex items-start gap-3">
+            <div className="flex h-11 w-11 items-center justify-center rounded-xl" style={{ background: "rgba(200,169,110,.14)", color: "#c8a96e" }}>
+              <ShieldCheck size={19} />
+            </div>
+            <div>
+              <p className="text-base font-extrabold text-white">Platform Trust Operations</p>
+              <p className="mt-1 max-w-2xl text-xs font-semibold text-white/55">
+                Approve owner authority, verify hospital readiness, and control activation from one governed surface.
+              </p>
+            </div>
+          </div>
+          <div className="grid grid-cols-3 gap-2">
+            <TrustStat label="Owner requests" value={trustStats.pendingOwners} />
+            <TrustStat label="Unverified" value={trustStats.unverified} />
+            <TrustStat label="Suspended" value={trustStats.suspended} />
+          </div>
+        </div>
+      </section>
 
       <div className="flex items-center gap-2 h-10 rounded-xl px-3 bg-white border border-gray-100 max-w-sm">
         <Search size={13} className="text-gray-400" />
@@ -133,18 +215,19 @@ export default function PlatformHospitalsPage() {
         </div>
       ) : (
         <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
-          <div className="hidden lg:grid grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.4fr)] gap-3 px-4 py-3"
+          <div className="hidden lg:grid grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.2fr)_minmax(0,1.3fr)] gap-3 px-4 py-3"
             style={{ background: "#f7f4ef" }}>
             <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400">Hospital</p>
             <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400">Metrics</p>
             <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400">Status</p>
+            <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400">Owners</p>
             <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400 text-right">Actions</p>
           </div>
 
           <div className="divide-y divide-gray-100">
             {hospitals.map((h) => (
               <div key={h.id} className="p-4" style={{ opacity: h.isActive ? 1 : 0.7 }}>
-                <div className="grid gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.4fr)] items-start">
+                <div className="grid gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.2fr)_minmax(0,1.3fr)] items-start">
                   <div className="flex items-start gap-3 min-w-0">
                     <div className="h-9 w-9 rounded-xl flex items-center justify-center flex-shrink-0"
                       style={{ background: "rgba(200,169,110,.1)" }}>
@@ -197,9 +280,65 @@ export default function PlatformHospitalsPage() {
                     )}
                   </div>
 
+                  <div className="space-y-2 lg:pt-1">
+                    <div className="rounded-xl px-3 py-2" style={{ background: "#f7f4ef" }}>
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Readiness</p>
+                        <p className="text-xs font-extrabold text-[#0f1e38]">{h.readiness.completed}/{h.readiness.total}</p>
+                      </div>
+                      <div className="mt-2 flex flex-wrap gap-1">
+                        {h.readiness.items.map((item) => (
+                          <span
+                            key={item.label}
+                            className="h-2 w-2 rounded-full"
+                            title={item.label}
+                            style={{ background: item.complete ? "#10b981" : "#f59e0b" }}
+                          />
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="space-y-1">
+                      {h.owners.slice(0, 2).map((owner) => (
+                        <p key={owner.id} className="truncate text-xs font-semibold text-[#0f1e38]">
+                          {owner.fullName}
+                        </p>
+                      ))}
+                      {h.owners.length === 0 && (
+                        <p className="text-xs font-semibold text-amber-700">No approved owner</p>
+                      )}
+                      {h.pendingOwnerRequests.length > 0 && (
+                        <p className="text-[11px] font-bold text-amber-700">
+                          {h.pendingOwnerRequests.length} owner request{h.pendingOwnerRequests.length === 1 ? "" : "s"}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
                   <div className="flex items-center gap-2 flex-wrap lg:justify-end">
                     {canManage ? (
                       <>
+                        {h.pendingOwnerRequests.map((request) => (
+                          <div key={request.id} className="flex w-full flex-wrap justify-end gap-1.5 rounded-xl bg-amber-50 p-2">
+                            <p className="w-full truncate text-right text-[11px] font-bold text-amber-900">{request.fullName}</p>
+                            <button
+                              onClick={() => handleOwnerRequest(h, request, "APPROVED")}
+                              disabled={actionLoading === request.id + "APPROVED"}
+                              className="inline-flex h-7 items-center gap-1 rounded-lg px-2 text-[11px] font-bold disabled:opacity-50"
+                              style={{ background: "rgba(16,185,129,.12)", color: "#047857" }}
+                            >
+                              <UserCheck size={11} /> Approve
+                            </button>
+                            <button
+                              onClick={() => handleOwnerRequest(h, request, "REJECTED")}
+                              disabled={actionLoading === request.id + "REJECTED"}
+                              className="inline-flex h-7 items-center gap-1 rounded-lg px-2 text-[11px] font-bold disabled:opacity-50"
+                              style={{ background: "rgba(239,68,68,.1)", color: "#dc2626" }}
+                            >
+                              <XCircle size={11} /> Reject
+                            </button>
+                          </div>
+                        ))}
                         <button onClick={() => handleVerification(h)} disabled={actionLoading === h.id + "verified"}
                           className="flex items-center gap-1 h-8 px-2.5 rounded-xl text-xs font-semibold disabled:opacity-50"
                           style={{ background: h.verified ? "rgba(245,158,11,.08)" : "rgba(99,102,241,.08)", color: h.verified ? "#b45309" : "#4338ca" }}>
@@ -243,6 +382,15 @@ export default function PlatformHospitalsPage() {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+function TrustStat({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="min-w-24 rounded-xl px-3 py-2 text-right" style={{ background: "rgba(255,255,255,.08)", border: "1px solid rgba(255,255,255,.1)" }}>
+      <p className="text-lg font-extrabold text-[#c8a96e]">{value}</p>
+      <p className="text-[9px] font-bold uppercase tracking-widest text-white/40">{label}</p>
     </div>
   );
 }
