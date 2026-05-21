@@ -237,11 +237,9 @@ export default function PlatformHospitalsPage() {
                       <p className="font-bold text-[#0f1e38] leading-tight break-words">{h.name}</p>
                       <p className="text-[11px] text-gray-400 break-all">/{h.slug}</p>
                       <p className="text-xs text-gray-500 mt-0.5 break-words">{h.location ?? h.type}</p>
-                      {h.supportAssignments.length > 0 && canManage && (
-                        <p className="text-[11px] text-gray-400 mt-1 break-words">
-                          Support: {h.supportAssignments.map((assignment) => assignment.fullName).join(", ")}
-                        </p>
-                      )}
+                      <p className={`text-[11px] mt-1 break-words ${h.supportAssignments.length ? "text-gray-400" : "font-bold text-amber-700"}`}>
+                        Support: {h.supportAssignments.length ? h.supportAssignments.map((assignment) => assignment.fullName).join(", ") : "No support assigned"}
+                      </p>
                     </div>
                   </div>
 
