@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 
 type Hospital = { id: string; name: string };
+type PlatformScope = "platform" | "assigned";
 type Booking = {
   id: string;
   status: string;
@@ -109,6 +110,7 @@ function fmtDateTime(iso: string) {
 export default function PlatformBookingsPage() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [hospitals, setHospitals] = useState<Hospital[]>([]);
+  const [scope, setScope] = useState<PlatformScope>("platform");
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(false);
@@ -146,7 +148,8 @@ export default function PlatformBookingsPage() {
         setBookings(data.bookings);
         setTotal(data.total);
         setHasMore(data.hasMore);
-        if (data.hospitals?.length) setHospitals(data.hospitals);
+        setScope(data.scope ?? "platform");
+        setHospitals(data.hospitals ?? []);
       } catch {
         setError("Failed to load bookings.");
       } finally {
@@ -182,8 +185,8 @@ export default function PlatformBookingsPage() {
         <div>
           <h1 className="text-xl font-extrabold text-[#0f1e38]">All Bookings</h1>
           <p className="text-sm text-gray-400 mt-0.5">
-            {total.toLocaleString()} booking{total !== 1 ? "s" : ""} across all
-            hospitals
+            {total.toLocaleString()} booking{total !== 1 ? "s" : ""} across{" "}
+            {scope === "assigned" ? "assigned hospitals" : "all hospitals"}
           </p>
         </div>
         <div className="flex gap-2">
@@ -241,7 +244,7 @@ export default function PlatformBookingsPage() {
             }}
             className="h-10 rounded-xl px-3 text-xs font-semibold outline-none cursor-pointer border border-gray-100 bg-white"
           >
-            <option value="">All hospitals</option>
+            <option value="">{scope === "assigned" ? "Assigned hospitals" : "All hospitals"}</option>
             {hospitals.map((h) => (
               <option key={h.id} value={h.id}>
                 {h.name}

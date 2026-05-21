@@ -67,6 +67,64 @@ enum DoctorInviteStatus {
   EXPIRED
 }
 
+enum HospitalTaskStatus {
+  PENDING
+  IN_PROGRESS
+  DONE
+  CANCELLED
+}
+
+enum HospitalTaskPriority {
+  LOW
+  NORMAL
+  HIGH
+}
+
+enum HospitalOnboardingStatus {
+  NEW
+  MEETING_DONE
+  DATA_REQUESTED
+  DATA_RECEIVED
+  DATA_ENTRY_IN_PROGRESS
+  WAITING_FOR_HOSPITAL_CONFIRMATION
+  READY_TO_PUBLISH
+  PUBLISHED
+  NEEDS_UPDATE
+  CANCELLED
+}
+
+enum HospitalOnboardingFileType {
+  DOCTOR_LIST
+  DEPARTMENT_LIST
+  SCHEDULE_LIST
+  PACKAGE_LIST
+  HOSPITAL_PROFILE
+  LOGO
+  PHOTOS
+  LICENSE_DOCUMENT
+  BROCHURE
+  OTHER
+}
+
+enum HospitalImportType {
+  DEPARTMENTS
+  DOCTORS
+  SCHEDULES
+  PACKAGES
+  MEDIA
+  MIXED
+}
+
+enum HospitalImportStatus {
+  UPLOADED
+  PARSING
+  VALIDATING
+  HAS_ERRORS
+  READY_TO_IMPORT
+  IMPORTED
+  CANCELLED
+}
+
 /**
  * =========================
  * ACCOUNTS & PATIENTS
@@ -85,12 +143,20 @@ model User {
 
   bannedAt DateTime? // soft-disable without destroying history
 
-  patients           Patient[]
-  bookings           Booking[]
-  reviews            Review[]
-  doctorProfile      Doctor?
-  memberships        HospitalMembership[]
-  supportAssignments SupportAssignment[]
+  patients                         Patient[]
+  bookings                         Booking[]
+  reviews                          Review[]
+  doctorProfile                    Doctor?
+  memberships                      HospitalMembership[]
+  supportAssignments               SupportAssignment[]
+  assignedHospitalTasks            HospitalTask[]                    @relation("HospitalTaskAssignee")
+  createdHospitalTasks             HospitalTask[]                    @relation("HospitalTaskCreator")
+  assignedHospitalOnboardings      HospitalOnboarding[]              @relation("HospitalOnboardingAssignee")
+  createdHospitalOnboardings       HospitalOnboarding[]              @relation("HospitalOnboardingCreator")
+  uploadedHospitalOnboardingFiles  HospitalOnboardingFile[]          @relation("HospitalOnboardingFileUploader")
+  authoredHospitalOnboardingNotes  HospitalOnboardingNote[]          @relation("HospitalOnboardingNoteAuthor")
+  completedHospitalOnboardingItems HospitalOnboardingChecklistItem[] @relation("HospitalOnboardingChecklistCompleter")
+  uploadedHospitalImportBatches    HospitalImportBatch[]             @relation("HospitalImportBatchUploader")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -200,15 +266,18 @@ model Hospital {
   email              String?
   website            String?
   openingHours       String?
-  emergencyAvailable Boolean   @default(false)
+  emergencyAvailable Boolean                  @default(false)
   servicesSummary    String?
-  verified           Boolean   @default(false)
+  verified           Boolean                  @default(false)
   verifiedAt         DateTime?
   verifiedById       String?
-  isActive           Boolean   @default(true) // soft-disable without cascade delete
+  isActive           Boolean                  @default(true) // soft-disable without cascade delete
   suspendedAt        DateTime?
   suspendedById      String?
   suspensionReason   String?
+  onboardingStatus   HospitalOnboardingStatus @default(NEW)
+  publishedAt        DateTime?
+  publishedById      String?
 
   location Location @relation(fields: [locationId], references: [id], onDelete: Restrict)
 
@@ -223,7 +292,10 @@ model Hospital {
   memberships        HospitalMembership[]
   supportAssignments SupportAssignment[]
   doctorInvites      DoctorInvite[]
+  tasks              HospitalTask[]
   partnerInquiry     PartnerInquiry?
+  onboarding         HospitalOnboarding?
+  importBatches      HospitalImportBatch[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -311,6 +383,9 @@ model Doctor {
   feeMax        Int?
   currency      String?
   verified      Boolean @default(false)
+  dataOrigin    String  @default("MANUAL")
+  sourceUrl     String?
+  sourceHash    String?
 
   user         User?              @relation(fields: [userId], references: [id], onDelete: SetNull)
   hospitals    DoctorHospital[]
@@ -478,6 +553,9 @@ model DoctorService {
   currency        String?
   durationMinutes Int?
   isActive        Boolean @default(true)
+  dataOrigin      String  @default("MANUAL")
+  sourceUrl       String?
+  sourceHash      String?
 
   doctor Doctor @relation(fields: [doctorId], references: [id], onDelete: Cascade)
 
@@ -497,6 +575,9 @@ model AvailabilitySlot {
   endTime             String
   slotDurationMinutes Int
   isActive            Boolean          @default(true)
+  dataOrigin          String           @default("MANUAL")
+  sourceUrl           String?
+  sourceHash          String?
 
   doctor   Doctor    @relation(fields: [doctorId], references: [id], onDelete: Cascade)
   hospital Hospital? @relation(fields: [hospitalId], references: [id], onDelete: SetNull)
@@ -518,11 +599,14 @@ model AvailabilitySlot {
  */
 
 model DoctorMedia {
-  id        String  @id @default(cuid())
-  doctorId  String
-  url       String
-  altText   String?
-  isPrimary Boolean @default(false)
+  id         String  @id @default(cuid())
+  doctorId   String
+  url        String
+  altText    String?
+  isPrimary  Boolean @default(false)
+  dataOrigin String  @default("MANUAL")
+  sourceUrl  String?
+  sourceHash String?
 
   doctor Doctor @relation(fields: [doctorId], references: [id], onDelete: Cascade)
 
@@ -536,6 +620,9 @@ model HospitalMedia {
   url        String
   altText    String?
   isPrimary  Boolean @default(false)
+  dataOrigin String  @default("MANUAL")
+  sourceUrl  String?
+  sourceHash String?
 
   hospital Hospital @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
 
@@ -616,13 +703,16 @@ model Booking {
   status BookingStatus @default(DRAFT)
 
   // Staff action tracking (plain strings — traced fully via AuditLog)
-  cancelledAt        DateTime?
-  cancelledById      String? // DB userId of staff/patient who cancelled
-  cancellationReason String?
-  completedAt        DateTime?
-  checkedInAt        DateTime?
+  cancelledAt          DateTime?
+  cancelledById        String? // DB userId of staff/patient who cancelled
+  cancellationReason   String?
+  completedAt          DateTime?
+  checkedInAt          DateTime?
+  clinicalNotes        String?
+  clinicalOutcome      String?
+  followUpInstructions String?
 
-  @@unique([availabilitySlotId, scheduledAt], name: "unique_slot_occurrence")
+  @@unique([availabilitySlotId, scheduledAt, slotTime])
   @@index([userId])
   @@index([patientId])
   @@index([hospitalId])
@@ -630,6 +720,31 @@ model Booking {
   @@index([status, scheduledAt])
   @@index([availabilitySlotId])
   @@index([hospitalId, status, scheduledAt]) // for hospital dashboard queries
+}
+
+model HospitalTask {
+  id          String               @id @default(cuid())
+  hospitalId  String
+  title       String
+  description String?
+  priority    HospitalTaskPriority @default(NORMAL)
+  status      HospitalTaskStatus   @default(PENDING)
+  dueAt       DateTime?
+
+  assignedToUserId String?
+  createdById      String
+  completedAt      DateTime?
+
+  hospital       Hospital @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  assignedToUser User?    @relation("HospitalTaskAssignee", fields: [assignedToUserId], references: [id], onDelete: SetNull)
+  createdBy      User     @relation("HospitalTaskCreator", fields: [createdById], references: [id], onDelete: Restrict)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([hospitalId, status])
+  @@index([assignedToUserId, status])
+  @@index([hospitalId, dueAt])
 }
 
 /**
@@ -652,7 +767,8 @@ model PartnerInquiry {
   reviewNotes  String?
   reviewedAt   DateTime?
 
-  hospital Hospital? @relation(fields: [hospitalId], references: [id], onDelete: SetNull)
+  hospital   Hospital?           @relation(fields: [hospitalId], references: [id], onDelete: SetNull)
+  onboarding HospitalOnboarding?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -661,6 +777,174 @@ model PartnerInquiry {
   @@index([status])
   @@index([email])
   @@index([createdAt])
+}
+
+/**
+ * =========================
+ * HOSPITAL ONBOARDING
+ * =========================
+ */
+
+model HospitalOnboarding {
+  id String @id @default(cuid())
+
+  hospitalId       String? @unique
+  partnerInquiryId String? @unique
+
+  status HospitalOnboardingStatus @default(NEW)
+
+  assignedToUserId String?
+  createdById      String
+
+  meetingDate        DateTime?
+  meetingNotes       String?
+  internalNotes      String?
+  dataReceivedAt     DateTime?
+  dataEntryStartedAt DateTime?
+  readyToPublishAt   DateTime?
+  publishedAt        DateTime?
+
+  confirmationSentAt        DateTime?
+  confirmedByHospitalAt     DateTime?
+  hospitalConfirmationNotes String?
+
+  hospital       Hospital?       @relation(fields: [hospitalId], references: [id], onDelete: SetNull)
+  partnerInquiry PartnerInquiry? @relation(fields: [partnerInquiryId], references: [id], onDelete: SetNull)
+  assignedTo     User?           @relation("HospitalOnboardingAssignee", fields: [assignedToUserId], references: [id], onDelete: SetNull)
+  createdBy      User            @relation("HospitalOnboardingCreator", fields: [createdById], references: [id], onDelete: Restrict)
+
+  files     HospitalOnboardingFile[]
+  notes     HospitalOnboardingNote[]
+  checklist HospitalOnboardingChecklistItem[]
+  imports   HospitalImportBatch[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+  @@index([assignedToUserId, status])
+  @@index([hospitalId])
+  @@index([partnerInquiryId])
+}
+
+model HospitalOnboardingFile {
+  id String @id @default(cuid())
+
+  onboardingId String
+  type         HospitalOnboardingFileType @default(OTHER)
+
+  fileName  String
+  fileUrl   String
+  mimeType  String?
+  sizeBytes Int?
+
+  description  String?
+  uploadedById String
+
+  onboarding HospitalOnboarding @relation(fields: [onboardingId], references: [id], onDelete: Cascade)
+  uploadedBy User               @relation("HospitalOnboardingFileUploader", fields: [uploadedById], references: [id], onDelete: Restrict)
+
+  createdAt DateTime @default(now())
+
+  @@index([onboardingId])
+  @@index([type])
+}
+
+model HospitalOnboardingNote {
+  id String @id @default(cuid())
+
+  onboardingId String
+  authorUserId String
+
+  title String?
+  body  String
+
+  onboarding HospitalOnboarding @relation(fields: [onboardingId], references: [id], onDelete: Cascade)
+  author     User               @relation("HospitalOnboardingNoteAuthor", fields: [authorUserId], references: [id], onDelete: Restrict)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([onboardingId])
+  @@index([authorUserId])
+}
+
+model HospitalOnboardingChecklistItem {
+  id String @id @default(cuid())
+
+  onboardingId String
+
+  title       String
+  description String?
+  isRequired  Boolean @default(true)
+  isCompleted Boolean @default(false)
+
+  completedAt   DateTime?
+  completedById String?
+  sortOrder     Int       @default(0)
+
+  onboarding  HospitalOnboarding @relation(fields: [onboardingId], references: [id], onDelete: Cascade)
+  completedBy User?              @relation("HospitalOnboardingChecklistCompleter", fields: [completedById], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([onboardingId, isCompleted])
+}
+
+model HospitalImportBatch {
+  id String @id @default(cuid())
+
+  onboardingId String
+  hospitalId   String?
+
+  type   HospitalImportType
+  status HospitalImportStatus @default(UPLOADED)
+
+  originalFileName String?
+  fileUrl          String?
+
+  totalRows   Int @default(0)
+  successRows Int @default(0)
+  errorRows   Int @default(0)
+
+  uploadedById String
+
+  onboarding HospitalOnboarding @relation(fields: [onboardingId], references: [id], onDelete: Cascade)
+  hospital   Hospital?          @relation(fields: [hospitalId], references: [id], onDelete: SetNull)
+  uploadedBy User               @relation("HospitalImportBatchUploader", fields: [uploadedById], references: [id], onDelete: Restrict)
+
+  rows HospitalImportRow[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([onboardingId])
+  @@index([hospitalId])
+  @@index([status])
+}
+
+model HospitalImportRow {
+  id String @id @default(cuid())
+
+  batchId   String
+  rowNumber Int
+
+  rawData        Json
+  normalizedData Json?
+  errors         Json?
+
+  isValid          Boolean @default(false)
+  importedEntity   String?
+  importedEntityId String?
+
+  batch HospitalImportBatch @relation(fields: [batchId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([batchId])
+  @@index([isValid])
 }
 
 model SupportAssignment {

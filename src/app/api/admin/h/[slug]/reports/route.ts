@@ -23,7 +23,7 @@ export async function GET(
   const days = Math.min(365, Math.max(7, parseInt(range, 10)));
 
   const since = new Date();
-  since.setDate(since.getDate() - days);
+  since.setDate(since.getDate() - (days - 1));
   since.setHours(0, 0, 0, 0);
 
   const [
@@ -32,7 +32,11 @@ export async function GET(
     topDoctors,
     topPackages,
     totalRevenue,
+    totalRefunds,
     totalBookings,
+    paidBookings,
+    cancelledBookings,
+    refundedBookings,
   ] = await Promise.all([
     // Booking count by status in range
     db.booking.groupBy({
@@ -44,7 +48,7 @@ export async function GET(
     // Daily booking + revenue for chart (last N days)
     db.booking.findMany({
       where: { hospitalId, createdAt: { gte: since }, status: { in: ["CONFIRMED", "COMPLETED", "CANCELLED", "REQUESTED"] } },
-      select: { createdAt: true, status: true, amountPaid: true },
+      select: { createdAt: true, status: true, amountPaid: true, stripeRefundId: true },
       orderBy: { createdAt: "asc" },
     }),
 
@@ -60,7 +64,7 @@ export async function GET(
     // Top 5 packages in range
     db.booking.groupBy({
       by: ["packageId"],
-      where: { hospitalId, createdAt: { gte: since }, packageId: { not: null } },
+      where: { hospitalId, createdAt: { gte: since }, status: { in: ["CONFIRMED", "COMPLETED"] }, packageId: { not: null } },
       _count: { id: true },
       orderBy: { _count: { id: "desc" } },
       take: 5,
@@ -72,8 +76,19 @@ export async function GET(
       _sum: { amountPaid: true },
     }),
 
+    db.booking.aggregate({
+      where: { hospitalId, stripeRefundId: { not: null } },
+      _sum: { amountPaid: true },
+    }),
+
     // All-time bookings
     db.booking.count({ where: { hospitalId } }),
+
+    db.booking.count({ where: { hospitalId, status: { in: ["CONFIRMED", "COMPLETED"] } } }),
+
+    db.booking.count({ where: { hospitalId, createdAt: { gte: since }, status: "CANCELLED" } }),
+
+    db.booking.count({ where: { hospitalId, createdAt: { gte: since }, stripeRefundId: { not: null } } }),
   ]);
 
   // Resolve doctor names
@@ -94,6 +109,13 @@ export async function GET(
 
   // Aggregate daily data
   const dailyMap: Record<string, { date: string; bookings: number; revenue: number }> = {};
+  for (let i = 0; i < days; i++) {
+    const day = new Date(since);
+    day.setDate(since.getDate() + i);
+    const dateKey = day.toISOString().slice(0, 10);
+    dailyMap[dateKey] = { date: dateKey, bookings: 0, revenue: 0 };
+  }
+
   for (const b of revenueData) {
     const dateKey = b.createdAt.toISOString().slice(0, 10);
     if (!dailyMap[dateKey]) dailyMap[dateKey] = { date: dateKey, bookings: 0, revenue: 0 };
@@ -107,13 +129,30 @@ export async function GET(
     .filter((b) => b.status === "CONFIRMED" || b.status === "COMPLETED")
     .reduce((sum, b) => sum + (b.amountPaid ?? 0), 0);
 
+  const rangeRefunds = revenueData
+    .filter((b) => b.stripeRefundId)
+    .reduce((sum, b) => sum + (b.amountPaid ?? 0), 0);
+
+  const rangePaidBookings = revenueData.filter((b) => b.status === "CONFIRMED" || b.status === "COMPLETED").length;
+  const rangeBookings = revenueData.length;
+
   return NextResponse.json({
     range: days,
     overview: {
       totalBookings,
       totalRevenue: totalRevenue._sum.amountPaid ?? 0,
-      rangeBookings: revenueData.length,
+      totalRefunds: totalRefunds._sum.amountPaid ?? 0,
+      netRevenue: Math.max(0, (totalRevenue._sum.amountPaid ?? 0) - (totalRefunds._sum.amountPaid ?? 0)),
+      paidBookings,
+      rangeBookings,
       rangeRevenue,
+      rangeRefunds,
+      rangeNetRevenue: Math.max(0, rangeRevenue - rangeRefunds),
+      rangePaidBookings,
+      cancelledBookings,
+      refundedBookings,
+      cancellationRate: rangeBookings > 0 ? Math.round((cancelledBookings / rangeBookings) * 100) : 0,
+      refundRate: rangePaidBookings > 0 ? Math.round((refundedBookings / rangePaidBookings) * 100) : 0,
     },
     statusBreakdown: statusBreakdown.map((s) => ({ status: s.status, count: s._count.id })),
     dailyChart: Object.values(dailyMap).sort((a, b) => a.date.localeCompare(b.date)),

@@ -68,7 +68,8 @@ export default async function DoctorInvitePage({
     return <MessageCard title="Invite already used" body="This invite has already been accepted or revoked." />;
   }
 
-  if (invite.expiresAt.getTime() < Date.now()) {
+  const now = new Date();
+  if (invite.expiresAt < now) {
     await db.doctorInvite.update({
       where: { id: invite.id },
       data: { status: "EXPIRED" },
@@ -111,6 +112,20 @@ export default async function DoctorInvitePage({
       <MessageCard
         title="Account already linked"
         body={`This user account is already linked to ${existingDoctorForUser.fullName}. Please contact the hospital admin.`}
+      />
+    );
+  }
+
+  const existingMembership = await db.hospitalMembership.findUnique({
+    where: { userId_hospitalId: { userId: user.id, hospitalId: invite.hospitalId } },
+    select: { role: true },
+  });
+
+  if (existingMembership && existingMembership.role !== "DOCTOR") {
+    return (
+      <MessageCard
+        title="Hospital role already assigned"
+        body={`This account already has ${existingMembership.role.toLowerCase()} access at ${invite.hospital.name}. Doctor invites cannot replace an existing hospital role.`}
       />
     );
   }

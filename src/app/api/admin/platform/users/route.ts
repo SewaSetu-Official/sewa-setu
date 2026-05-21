@@ -245,7 +245,13 @@ export async function PATCH(req: Request) {
       action: "SUPPORT_ASSIGNED",
       entity: "SupportAssignment",
       entityId: assignment.id,
-      after: { supportUserId: userId, hospitalId },
+      after: {
+        supportUserId: userId,
+        supportUser: user.fullName,
+        supportEmail: user.email,
+        hospitalId,
+        hospital: hospital.name,
+      },
     });
 
     return NextResponse.json({ success: true });
@@ -256,7 +262,13 @@ export async function PATCH(req: Request) {
       return NextResponse.json({ error: "assignmentId required" }, { status: 400 });
     }
 
-    const assignment = await db.supportAssignment.findUnique({ where: { id: assignmentId } });
+    const assignment = await db.supportAssignment.findUnique({
+      where: { id: assignmentId },
+      include: {
+        supportUser: { select: { fullName: true, email: true } },
+        hospital: { select: { name: true } },
+      },
+    });
     if (!assignment) return NextResponse.json({ error: "Assignment not found" }, { status: 404 });
 
     await db.supportAssignment.update({
@@ -270,7 +282,13 @@ export async function PATCH(req: Request) {
       action: "SUPPORT_UNASSIGNED",
       entity: "SupportAssignment",
       entityId: assignment.id,
-      before: { supportUserId: assignment.supportUserId, hospitalId: assignment.hospitalId },
+      before: {
+        supportUserId: assignment.supportUserId,
+        supportUser: assignment.supportUser.fullName,
+        supportEmail: assignment.supportUser.email,
+        hospitalId: assignment.hospitalId,
+        hospital: assignment.hospital.name,
+      },
     });
 
     return NextResponse.json({ success: true });

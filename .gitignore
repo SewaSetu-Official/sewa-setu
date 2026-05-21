@@ -49,3 +49,11 @@ next-env.d.ts
 
 # claude local settings (keep skills/ tracked for team)
 .claude
+
+# codex/agent local settings
+/.codex/
+/.agents/
+
+# local browser test artifacts
+/.playwright-mcp/
+/owner-dashboard-*.png

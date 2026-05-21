@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requirePlatformAdmin } from "@/lib/admin-auth";
+import { requirePlatformStaff } from "@/lib/admin-auth";
 import { db } from "@/lib/db";
 import { BookingStatus } from "@prisma/client";
 
@@ -9,10 +9,11 @@ const BOOKING_STATUSES: BookingStatus[] = ["DRAFT", "REQUESTED", "CONFIRMED", "C
 
 // GET /api/admin/platform/bookings?page=&search=&status=&hospitalId=&from=&to=
 export async function GET(req: NextRequest) {
-  try { await requirePlatformAdmin({ apiMode: true }); }
+  let ctx;
+  try { ctx = await requirePlatformStaff({ apiMode: true }); }
   catch (e: unknown) {
     const msg = e instanceof Error ? e.message : "UNAUTHORIZED";
-    return NextResponse.json({ error: msg }, { status: 401 });
+    return NextResponse.json({ error: msg }, { status: msg === "FORBIDDEN" ? 403 : 401 });
   }
 
   const { searchParams } = new URL(req.url);
@@ -24,7 +25,16 @@ export async function GET(req: NextRequest) {
   const to         = searchParams.get("to") ?? "";
   const PAGE_SIZE  = 20;
 
-  const where: Record<string, unknown> = {};
+  const assignedHospitalIds = ctx.assignedHospitalIds;
+  const supportHospitalFilter = hospitalId
+    ? (assignedHospitalIds.includes(hospitalId) ? hospitalId : { in: [] as string[] })
+    : { in: assignedHospitalIds };
+
+  const where: Record<string, unknown> = {
+    ...(ctx.isAdmin
+      ? (hospitalId ? { hospitalId } : {})
+      : { hospitalId: supportHospitalFilter }),
+  };
 
   if (status !== "all") {
     const normalizedStatus = status.toUpperCase() as BookingStatus;
@@ -32,10 +42,6 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Invalid status filter" }, { status: 400 });
     }
     where.status = normalizedStatus;
-  }
-
-  if (hospitalId) {
-    where.hospitalId = hospitalId;
   }
 
   if (from || to) {
@@ -84,7 +90,10 @@ export async function GET(req: NextRequest) {
     }),
     // For the hospital filter dropdown
     db.hospital.findMany({
-      where: { isActive: true },
+      where: {
+        isActive: true,
+        ...(ctx.isAdmin ? {} : { id: { in: assignedHospitalIds } }),
+      },
       select: { id: true, name: true },
       orderBy: { name: "asc" },
     }),
@@ -110,5 +119,6 @@ export async function GET(req: NextRequest) {
     total,
     hasMore: page * PAGE_SIZE < total,
     hospitals,
+    scope: ctx.isAdmin ? "platform" : "assigned",
   });
 }

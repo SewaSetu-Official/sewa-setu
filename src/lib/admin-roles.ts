@@ -29,6 +29,12 @@ export const TEAM_ASSIGNABLE_ROLES = [
   "STAFF",
 ] as const satisfies readonly HospitalRole[];
 
+export const MANAGER_ASSIGNABLE_ROLES = [
+  "RECEPTIONIST",
+  "DOCTOR",
+  "STAFF",
+] as const satisfies readonly HospitalRole[];
+
 export function isPlatformAdmin(role: string): boolean {
   return role === "PLATFORM_ADMIN";
 }
@@ -38,11 +44,13 @@ export function isPlatformStaff(role: string): boolean {
 }
 
 export function getAssignableHospitalRoles(actorRole: HospitalRole): readonly HospitalRole[] {
-  return actorRole === "OWNER" ? TEAM_ASSIGNABLE_ROLES : ACCESS_REQUEST_ROLES;
+  if (actorRole === "OWNER") return TEAM_ASSIGNABLE_ROLES;
+  if (actorRole === "MANAGER") return MANAGER_ASSIGNABLE_ROLES;
+  return [];
 }
 
 export function canManageHospitalMember(actorRole: HospitalRole, targetRole: HospitalRole): boolean {
   if (actorRole === "OWNER") return true;
-  if (actorRole === "MANAGER") return targetRole !== "OWNER";
+  if (actorRole === "MANAGER") return (MANAGER_ASSIGNABLE_ROLES as readonly HospitalRole[]).includes(targetRole);
   return false;
 }

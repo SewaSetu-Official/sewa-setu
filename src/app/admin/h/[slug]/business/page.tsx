@@ -1,20 +1,19 @@
 import { requireHospitalAccess } from "@/lib/admin-auth";
 import { redirect } from "next/navigation";
-import SettingsClient from "./SettingsClient";
+import BusinessClient from "./BusinessClient";
 
-export default async function SettingsPage({
+export default async function BusinessPage({
   params,
 }: {
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
 
-  let ctx;
   try {
-    ctx = await requireHospitalAccess(slug, "MANAGE_PUBLIC_PROFILE");
+    await requireHospitalAccess(slug, "VIEW_OWNER_BUSINESS");
   } catch {
     redirect("/admin/request-access");
   }
 
-  return <SettingsClient slug={slug} role={ctx.membership.role} />;
+  return <BusinessClient slug={slug} />;
 }

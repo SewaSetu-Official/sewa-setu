@@ -1,20 +1,19 @@
 import { requireHospitalAccess } from "@/lib/admin-auth";
 import { redirect } from "next/navigation";
-import SettingsClient from "./SettingsClient";
+import TasksClient from "./TasksClient";
 
-export default async function SettingsPage({
+export default async function TasksPage({
   params,
 }: {
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
 
-  let ctx;
   try {
-    ctx = await requireHospitalAccess(slug, "MANAGE_PUBLIC_PROFILE");
+    await requireHospitalAccess(slug, "VIEW_STAFF_TASKS");
   } catch {
     redirect("/admin/request-access");
   }
 
-  return <SettingsClient slug={slug} role={ctx.membership.role} />;
+  return <TasksClient slug={slug} />;
 }

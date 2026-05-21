@@ -15,6 +15,10 @@ function getCheckoutBaseUrl(req: Request) {
   return requestOrigin;
 }
 
+function normalizeSlotTime(value: string | null | undefined) {
+  return value?.replace(/\s*-\s*/g, " - ").trim() ?? null;
+}
+
 export async function POST(req: Request) {
   try {
     // ── AUTH CHECK ───────────────────────────────────────────────────
@@ -99,6 +103,25 @@ export async function POST(req: Request) {
     const sanitizedName = trimmedName.replace(/<[^>]*>/g, "").trim();
     const sanitizedEmail = buyerEmail.toLowerCase().trim();
     const sanitizedPhone = normalizedPhone;
+    const normalizedSlotTime = normalizeSlotTime(typeof slotTime === "string" ? slotTime : null);
+
+    if (slotId && bookingDate && normalizedSlotTime) {
+      const scheduledAt = new Date(bookingDate);
+
+      const existingBooking = await db.booking.findFirst({
+        where: {
+          availabilitySlotId: String(slotId),
+          scheduledAt,
+          slotTime: normalizedSlotTime,
+          status: { not: "CANCELLED" },
+        },
+        select: { id: true },
+      });
+
+      if (existingBooking) {
+        return NextResponse.json({ error: "That time slot is already booked. Please choose another." }, { status: 409 });
+      }
+    }
 
     // ── SERVER-SIDE PRICE LOOKUP ──────────────────────────────────────
     let itemName: string;
@@ -126,7 +149,7 @@ export async function POST(req: Request) {
       metadata.packageName = pkg.title;
       metadata.hospitalId = pkg.hospitalId;
       if (slotId) metadata.slotId = String(slotId);
-      if (slotTime) metadata.slotTime = String(slotTime);
+      if (normalizedSlotTime) metadata.slotTime = normalizedSlotTime;
     } else {
       const doctor = await db.doctor.findUnique({ where: { id: doctorId } });
       if (!doctor) return NextResponse.json({ error: "Doctor not found" }, { status: 404 });
@@ -138,7 +161,7 @@ export async function POST(req: Request) {
       metadata.doctorName = doctor.fullName;
       if (consultationMode) metadata.consultationMode = String(consultationMode);
       if (slotId) metadata.slotId = String(slotId);
-      if (slotTime) metadata.slotTime = String(slotTime);
+      if (normalizedSlotTime) metadata.slotTime = normalizedSlotTime;
       if (hospitalId) metadata.hospitalId = String(hospitalId);
     }
 

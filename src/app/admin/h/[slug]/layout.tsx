@@ -27,9 +27,11 @@ export default async function HospitalAdminLayout({
 
   if (!hospital) redirect("/admin");
 
-  // Pending confirmation count for sidebar badge
-  const pendingCount = await db.booking.count({
-    where: { hospitalId: hospital.id, status: "REQUESTED" },
+  // Role-aware booking badge for the sidebar.
+  const pendingCount = await getBookingBadgeCount({
+    hospitalId: hospital.id,
+    role: ctx.membership.role,
+    userId: ctx.user.id,
   });
 
   // Back link — platform admins go to platform dashboard
@@ -59,4 +61,41 @@ export default async function HospitalAdminLayout({
       {children}
     </HospitalAdminShell>
   );
+}
+
+async function getBookingBadgeCount({
+  hospitalId,
+  role,
+  userId,
+}: {
+  hospitalId: string;
+  role: string;
+  userId: string;
+}) {
+  if (role === "STAFF") return 0;
+
+  if (role === "DOCTOR") {
+    const doctorProfile = await db.doctor.findFirst({
+      where: {
+        userId,
+        hospitals: { some: { hospitalId } },
+      },
+      select: { id: true },
+    });
+
+    if (!doctorProfile) return 0;
+
+    return db.booking.count({
+      where: {
+        hospitalId,
+        doctorId: doctorProfile.id,
+        status: "CONFIRMED",
+        checkedInAt: { not: null },
+      },
+    });
+  }
+
+  return db.booking.count({
+    where: { hospitalId, status: "REQUESTED" },
+  });
 }

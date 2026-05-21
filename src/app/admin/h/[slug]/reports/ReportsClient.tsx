@@ -1,11 +1,26 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { BarChart2, TrendingUp, RefreshCw, AlertCircle, Stethoscope, Package } from "lucide-react";
+import { BarChart2, TrendingUp, RefreshCw, AlertCircle, Stethoscope, Package, RotateCcw, ReceiptText, Percent } from "lucide-react";
 
 type ReportsData = {
   range: number;
-  overview: { totalBookings: number; totalRevenue: number; rangeBookings: number; rangeRevenue: number };
+  overview: {
+    totalBookings: number;
+    totalRevenue: number;
+    totalRefunds: number;
+    netRevenue: number;
+    paidBookings: number;
+    rangeBookings: number;
+    rangeRevenue: number;
+    rangeRefunds: number;
+    rangeNetRevenue: number;
+    rangePaidBookings: number;
+    cancelledBookings: number;
+    refundedBookings: number;
+    cancellationRate: number;
+    refundRate: number;
+  };
   statusBreakdown: { status: string; count: number }[];
   dailyChart: { date: string; bookings: number; revenue: number }[];
   topDoctors: { doctorId: string; name: string; completedBookings: number }[];
@@ -57,6 +72,11 @@ export default function ReportsClient({ slug }: { slug: string }) {
   useEffect(() => { fetchReports(range); }, [range]); // eslint-disable-line
 
   const maxBookings = data ? Math.max(...data.dailyChart.map((d) => d.bookings), 1) : 1;
+  const peakDay = data?.dailyChart.reduce(
+    (best, day) => (day.bookings > best.bookings ? day : best),
+    { date: "", bookings: 0, revenue: 0 },
+  );
+  const chartLabelStep = range === "7" ? 1 : range === "30" ? 5 : 15;
 
   return (
     <div className="space-y-6 max-w-5xl">
@@ -101,13 +121,13 @@ export default function ReportsClient({ slug }: { slug: string }) {
       ) : !data ? null : (
         <div className="space-y-5">
 
-          {/* Overview cards */}
+          {/* Finance cards */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
             {[
-              { label: "All-time Bookings",  value: data.overview.totalBookings.toLocaleString(),   icon: <BarChart2 size={16} className="text-[#c8a96e]" /> },
-              { label: "All-time Revenue",   value: formatMoney(data.overview.totalRevenue),         icon: <TrendingUp size={16} className="text-[#c8a96e]" /> },
-              { label: `Bookings (${range}d)`, value: data.overview.rangeBookings.toLocaleString(), icon: <BarChart2 size={16} className="text-blue-400" /> },
-              { label: `Revenue (${range}d)`,  value: formatMoney(data.overview.rangeRevenue),       icon: <TrendingUp size={16} className="text-emerald-400" /> },
+              { label: `Gross Revenue (${range}d)`, value: formatMoney(data.overview.rangeRevenue), sub: `${data.overview.rangePaidBookings} paid bookings`, icon: <TrendingUp size={16} className="text-emerald-500" /> },
+              { label: `Refunds (${range}d)`, value: formatMoney(data.overview.rangeRefunds), sub: `${data.overview.refundedBookings} refunded`, icon: <RotateCcw size={16} className="text-amber-500" /> },
+              { label: `Net Revenue (${range}d)`, value: formatMoney(data.overview.rangeNetRevenue), sub: "Gross minus refunds", icon: <ReceiptText size={16} className="text-[#c8a96e]" /> },
+              { label: "All-time Net", value: formatMoney(data.overview.netRevenue), sub: `${data.overview.paidBookings} paid bookings`, icon: <TrendingUp size={16} className="text-[#c8a96e]" /> },
             ].map((card) => (
               <div key={card.label} className="bg-white rounded-2xl p-4 border border-gray-100">
                 <div className="flex items-center justify-between mb-2">
@@ -117,6 +137,27 @@ export default function ReportsClient({ slug }: { slug: string }) {
                   </div>
                 </div>
                 <p className="text-xl font-extrabold text-[#0f1e38]">{card.value}</p>
+                <p className="text-xs text-gray-400 mt-0.5">{card.sub}</p>
+              </div>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            {[
+              { label: `Bookings (${range}d)`, value: data.overview.rangeBookings.toLocaleString(), sub: `${data.overview.cancelledBookings} cancelled`, icon: <BarChart2 size={16} className="text-blue-400" /> },
+              { label: "Cancellation Rate", value: `${data.overview.cancellationRate}%`, sub: "Of bookings in range", icon: <Percent size={16} className="text-rose-400" /> },
+              { label: "Refund Rate", value: `${data.overview.refundRate}%`, sub: "Of paid bookings", icon: <Percent size={16} className="text-amber-500" /> },
+              { label: "All-time Bookings", value: data.overview.totalBookings.toLocaleString(), sub: "All statuses", icon: <BarChart2 size={16} className="text-[#c8a96e]" /> },
+            ].map((card) => (
+              <div key={card.label} className="bg-white rounded-2xl p-4 border border-gray-100">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">{card.label}</p>
+                  <div className="h-7 w-7 rounded-xl flex items-center justify-center" style={{ background: "#f7f4ef" }}>
+                    {card.icon}
+                  </div>
+                </div>
+                <p className="text-xl font-extrabold text-[#0f1e38]">{card.value}</p>
+                <p className="text-xs text-gray-400 mt-0.5">{card.sub}</p>
               </div>
             ))}
           </div>
@@ -199,27 +240,74 @@ export default function ReportsClient({ slug }: { slug: string }) {
 
           {/* Daily bookings chart */}
           {data.dailyChart.length > 0 && (
-            <div className="bg-white rounded-2xl border border-gray-100 p-4">
-              <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-4">
-                Daily Bookings — Last {range} days
-              </p>
-              <div className="flex items-end gap-1 h-28 pb-1 overflow-hidden">
-                {data.dailyChart.map((d) => (
-                  <div key={d.date} className="flex flex-col items-center gap-1 flex-1 min-w-0 group">
-                    <div className="relative">
-                      <div
-                        className="w-full max-w-[10px] mx-auto rounded-t-sm transition-all group-hover:opacity-80"
-                        style={{
-                          height: Math.max(4, Math.round((d.bookings / maxBookings) * 96)),
-                          background: "linear-gradient(180deg,#c8a96e,#a88b50)",
-                        }}
-                      />
-                      <div className="absolute -top-6 left-1/2 -translate-x-1/2 hidden group-hover:block bg-[#0f1e38] text-[#c8a96e] text-[10px] font-bold px-1.5 py-0.5 rounded whitespace-nowrap z-10">
-                        {d.bookings} · {formatDate(d.date)}
-                      </div>
-                    </div>
+            <div className="bg-white rounded-2xl border border-gray-100 p-5">
+              <div className="flex items-start justify-between gap-4 mb-5 flex-wrap">
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-widest text-gray-400">
+                    Daily Bookings - Last {range} days
+                  </p>
+                  <p className="text-xs text-gray-400 mt-1">
+                    Hover a bar to see bookings and revenue for that day.
+                  </p>
+                </div>
+                <div className="flex items-center gap-3 text-xs">
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Peak day</p>
+                    <p className="font-extrabold text-[#0f1e38]">
+                      {peakDay?.bookings ?? 0} on {peakDay?.date ? formatDate(peakDay.date) : "-"}
+                    </p>
                   </div>
-                ))}
+                  <div className="h-8 w-px bg-gray-100" />
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Scale</p>
+                    <p className="font-extrabold text-[#0f1e38]">{maxBookings} max</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="relative h-44">
+                <div className="absolute inset-x-0 top-0 h-px bg-gray-100" />
+                <div className="absolute inset-x-0 top-1/2 h-px bg-gray-100" />
+                <div className="absolute inset-x-0 bottom-8 h-px bg-[#d8dde7]" />
+
+                <div className="absolute inset-x-0 bottom-8 top-0 flex items-end gap-1.5">
+                  {data.dailyChart.map((d) => {
+                    const height = d.bookings === 0 ? 2 : Math.max(10, Math.round((d.bookings / maxBookings) * 112));
+                    return (
+                      <div key={d.date} className="relative flex h-full flex-1 min-w-0 items-end justify-center group">
+                        <div
+                          className="w-full max-w-[18px] rounded-t-md transition-all group-hover:brightness-95"
+                          style={{
+                            height,
+                            background: d.bookings === 0
+                              ? "#e5e7eb"
+                              : "linear-gradient(180deg,#c8a96e,#a88b50)",
+                            opacity: d.bookings === 0 ? 0.55 : 1,
+                          }}
+                        />
+                        {d.bookings > 0 && (
+                          <div className="absolute bottom-[calc(100%+8px)] left-1/2 -translate-x-1/2 hidden group-hover:block rounded-lg bg-[#0f1e38] px-2.5 py-2 text-[10px] font-bold text-white shadow-lg whitespace-nowrap z-10">
+                            <span className="block text-[#c8a96e]">{formatDate(d.date)}</span>
+                            <span className="block">{d.bookings} booking{d.bookings !== 1 ? "s" : ""}</span>
+                            <span className="block text-gray-300">{formatMoney(d.revenue)}</span>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <div className="absolute inset-x-0 bottom-0 flex gap-1.5">
+                  {data.dailyChart.map((d, index) => (
+                    <div key={d.date} className="flex-1 min-w-0 text-center">
+                      {(index === 0 || index === data.dailyChart.length - 1 || index % chartLabelStep === 0) && (
+                        <span className="text-[10px] font-semibold text-gray-400">
+                          {formatDate(d.date)}
+                        </span>
+                      )}
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
           )}

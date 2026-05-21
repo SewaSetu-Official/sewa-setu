@@ -11,9 +11,11 @@ import {
   RotateCcw,
   CalendarRange,
   Percent,
+  Download,
 } from "lucide-react";
 
 type Monthly = { label: string; revenue: number; bookings: number };
+type HospitalFilter = { id: string; name: string };
 
 type HospitalRow = {
   id: string; name: string; slug: string;
@@ -29,10 +31,12 @@ type RevenueData = {
   };
   monthly: Monthly[];
   hospitals: HospitalRow[];
+  filterHospitals: HospitalFilter[];
+  scope: "platform" | "assigned";
 };
 
 function fmt(cents: number) {
-  return `€${Math.round(cents / 100).toLocaleString()}`;
+  return `EUR ${Math.round(cents / 100).toLocaleString()}`;
 }
 
 function fmtCount(n: number) {
@@ -43,12 +47,20 @@ export default function PlatformRevenuePage() {
   const [data, setData] = useState<RevenueData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [hospitalFilter, setHospitalFilter] = useState("");
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
 
   const fetchData = useCallback(async () => {
     setLoading(true);
     setError("");
     try {
-      const res = await fetch("/api/admin/platform/revenue");
+      const params = new URLSearchParams({ status: statusFilter });
+      if (hospitalFilter) params.set("hospitalId", hospitalFilter);
+      if (fromDate) params.set("from", fromDate);
+      if (toDate) params.set("to", toDate);
+      const res = await fetch(`/api/admin/platform/revenue?${params}`);
       if (!res.ok) throw new Error("Failed");
       setData(await res.json());
     } catch {
@@ -56,7 +68,7 @@ export default function PlatformRevenuePage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [statusFilter, hospitalFilter, fromDate, toDate]);
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
@@ -69,21 +81,96 @@ export default function PlatformRevenuePage() {
   const maxRevenue = data ? Math.max(...data.monthly.map((m) => m.revenue), 1) : 1;
   const totalHospitalRevenue = data ? data.hospitals.reduce((s, h) => s + h.revenue, 0) || 1 : 1;
   const maxBookings = data ? Math.max(...data.monthly.map((m) => m.bookings), 1) : 1;
+  const hasFilters = statusFilter !== "all" || hospitalFilter || fromDate || toDate;
+
+  const exportCsv = () => {
+    const params = new URLSearchParams({ type: "revenue", status: statusFilter });
+    if (hospitalFilter) params.set("hospitalId", hospitalFilter);
+    if (fromDate) params.set("from", fromDate);
+    if (toDate) params.set("to", toDate);
+    window.location.href = `/api/admin/platform/exports?${params}`;
+  };
 
   return (
     <div className="space-y-6 w-full">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-xl font-extrabold text-[#0f1e38]">Revenue</h1>
-          <p className="text-sm text-gray-400 mt-0.5">Platform-wide financial overview</p>
+          <p className="text-sm text-gray-400 mt-0.5">
+            {data?.scope === "assigned" ? "Financial overview for assigned hospitals" : "Platform-wide financial overview"}
+          </p>
         </div>
-        <button onClick={fetchData}
-          className="flex items-center gap-2 px-3 h-9 rounded-xl text-xs font-semibold transition-all"
-          style={{ background: "#fff", border: "1.5px solid rgba(15,30,56,.1)", color: "#6b7a96" }}
-          onMouseEnter={(e) => { e.currentTarget.style.borderColor = "#c8a96e"; e.currentTarget.style.color = "#c8a96e"; }}
-          onMouseLeave={(e) => { e.currentTarget.style.borderColor = "rgba(15,30,56,.1)"; e.currentTarget.style.color = "#6b7a96"; }}>
-          <RefreshCw size={13} /> Refresh
-        </button>
+        <div className="flex gap-2">
+          <button onClick={exportCsv}
+            className="flex items-center gap-2 px-3 h-9 rounded-xl text-xs font-semibold transition-all"
+            style={{ background: "#0f1e38", color: "#c8a96e" }}>
+            <Download size={13} /> Export CSV
+          </button>
+          <button onClick={fetchData}
+            className="flex items-center gap-2 px-3 h-9 rounded-xl text-xs font-semibold transition-all"
+            style={{ background: "#fff", border: "1.5px solid rgba(15,30,56,.1)", color: "#6b7a96" }}
+            onMouseEnter={(e) => { e.currentTarget.style.borderColor = "#c8a96e"; e.currentTarget.style.color = "#c8a96e"; }}
+            onMouseLeave={(e) => { e.currentTarget.style.borderColor = "rgba(15,30,56,.1)"; e.currentTarget.style.color = "#6b7a96"; }}>
+            <RefreshCw size={13} /> Refresh
+          </button>
+        </div>
+      </div>
+
+      <div className="bg-white rounded-2xl border border-gray-100 p-4 space-y-3">
+        <div className="grid md:grid-cols-[1fr_auto_auto_auto] gap-2.5">
+          <select
+            value={hospitalFilter}
+            onChange={(e) => setHospitalFilter(e.target.value)}
+            className="h-10 rounded-xl px-3 text-xs font-semibold outline-none cursor-pointer border border-gray-100 bg-white"
+          >
+            <option value="">{data?.scope === "assigned" ? "Assigned hospitals" : "All hospitals"}</option>
+            {(data?.filterHospitals ?? []).map((h) => (
+              <option key={h.id} value={h.id}>{h.name}</option>
+            ))}
+          </select>
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="h-10 rounded-xl px-3 text-xs font-semibold outline-none cursor-pointer border border-gray-100 bg-white"
+          >
+            <option value="all">Confirmed + completed</option>
+            <option value="CONFIRMED">Confirmed only</option>
+            <option value="COMPLETED">Completed only</option>
+            <option value="refunded">Refunded only</option>
+            <option value="CANCELLED">Cancelled</option>
+          </select>
+          <input
+            type="date"
+            value={fromDate}
+            onChange={(e) => setFromDate(e.target.value)}
+            className="h-10 rounded-xl px-3 text-xs font-semibold outline-none border border-gray-100 bg-white"
+          />
+          <input
+            type="date"
+            value={toDate}
+            onChange={(e) => setToDate(e.target.value)}
+            className="h-10 rounded-xl px-3 text-xs font-semibold outline-none border border-gray-100 bg-white"
+          />
+        </div>
+
+        {hasFilters && (
+          <button
+            onClick={() => {
+              setStatusFilter("all");
+              setHospitalFilter("");
+              setFromDate("");
+              setToDate("");
+            }}
+            className="h-8 px-3 rounded-xl text-xs font-bold"
+            style={{
+              background: "rgba(239,68,68,.08)",
+              color: "#dc2626",
+              border: "1.5px solid rgba(239,68,68,.15)",
+            }}
+          >
+            Clear filters
+          </button>
+        )}
       </div>
 
       {error && (

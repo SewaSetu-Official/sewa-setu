@@ -1,13 +1,18 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import {
   AlertCircle,
+  BadgeCheck,
+  BarChart3,
   Package,
   Phone,
   RefreshCw,
+  ShieldCheck,
   Stethoscope,
   User,
+  Users,
 } from "lucide-react";
 
 type Appointment = {
@@ -21,6 +26,9 @@ type Appointment = {
   notes: string | null;
   cancellationReason: string | null;
   checkedInAt: string | null;
+  clinicalNotes: string | null;
+  clinicalOutcome: string | null;
+  followUpInstructions: string | null;
   patient: { fullName: string; phone: string | null; gender: string | null; disability: string | null } | null;
   doctor: { fullName: string } | null;
   package: { title: string } | null;
@@ -29,10 +37,34 @@ type Appointment = {
 type Stats = {
   role: string;
   doctorName: string | null;
+  hospital: {
+    name: string | null;
+    verified: boolean;
+    isActive: boolean;
+    emergencyAvailable: boolean;
+  };
   today: { total: number; pending: number; completed: number; cancelled: number; revenue: number };
-  month: { revenue: number };
+  month: { revenue: number; bookings: number };
   totalBookings: number;
   pendingConfirmations: number;
+  operations: {
+    activeDoctors: number;
+    activePackages: number;
+    pendingTeamRequests: number;
+    teamMembers: number;
+  };
+  tasks: {
+    open: number;
+    highPriority: number;
+    dueToday: number;
+    assigned: {
+      id: string;
+      title: string;
+      priority: "LOW" | "NORMAL" | "HIGH";
+      status: "PENDING" | "IN_PROGRESS" | "DONE" | "CANCELLED";
+      dueAt: string | null;
+    }[];
+  };
   todayAppointments: Appointment[];
 };
 
@@ -80,6 +112,17 @@ function modeLabel(mode: string) {
   return mode === "ONLINE" ? "Online" : "In person";
 }
 
+function formatTaskDue(value: string | null) {
+  if (!value) return "No due date";
+  return new Date(value).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+}
+
+const TASK_PRIORITY_STYLE = {
+  LOW: { background: "#ecfdf5", color: "#047857" },
+  NORMAL: { background: "#eff6ff", color: "#1d4ed8" },
+  HIGH: { background: "#fff7ed", color: "#c2410c" },
+} satisfies Record<string, React.CSSProperties>;
+
 type SummaryTone = "blue" | "amber" | "green" | "slate";
 
 function SummaryTile({ label, value, tone }: { label: string; value: number | string; tone: SummaryTone }) {
@@ -100,33 +143,87 @@ function SummaryTile({ label, value, tone }: { label: string; value: number | st
   );
 }
 
+function OwnerMetric({
+  icon,
+  label,
+  value,
+  sub,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: number | string;
+  sub: string;
+}) {
+  return (
+    <div className="rounded-xl border border-gray-100 bg-white px-4 py-3">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-[11px] font-bold uppercase tracking-wide text-slate-400">{label}</p>
+          <p className="mt-1 text-2xl font-extrabold text-[#0f172a]">{value}</p>
+          <p className="mt-0.5 text-xs font-medium text-slate-400">{sub}</p>
+        </div>
+        <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl" style={{ background: "#f7f4ef", color: "#a8874f" }}>
+          {icon}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AlertItem({ tone, title, body }: { tone: "amber" | "green" | "red"; title: string; body: string }) {
+  const color = {
+    amber: { bg: "#fff7ed", border: "rgba(194,65,12,.18)", text: "#c2410c" },
+    green: { bg: "#ecfdf5", border: "rgba(4,120,87,.16)", text: "#047857" },
+    red: { bg: "#fff1f2", border: "rgba(190,18,60,.16)", text: "#be123c" },
+  }[tone];
+
+  return (
+    <div className="rounded-xl border px-3 py-3" style={{ background: color.bg, borderColor: color.border }}>
+      <p className="text-xs font-extrabold" style={{ color: color.text }}>{title}</p>
+      <p className="mt-1 text-xs font-medium text-slate-500">{body}</p>
+    </div>
+  );
+}
+
 function AppointmentRow({
   appt,
   actionLoading,
   cancelTarget,
   cancelReason,
+  completeTarget,
+  completeForm,
   onAction,
   onSetCancel,
+  onSetComplete,
   onCancelReasonChange,
+  onCompleteFormChange,
   onCancelAbort,
+  onCompleteAbort,
   role,
 }: {
   appt: Appointment;
   actionLoading: string | null;
   cancelTarget: string | null;
   cancelReason: string;
+  completeTarget: string | null;
+  completeForm: { clinicalOutcome: string; clinicalNotes: string; followUpInstructions: string };
   onAction: (id: string, action: string, reason?: string) => void;
   onSetCancel: (id: string) => void;
+  onSetComplete: (id: string) => void;
   onCancelReasonChange: (value: string) => void;
+  onCompleteFormChange: (value: { clinicalOutcome: string; clinicalNotes: string; followUpInstructions: string }) => void;
   onCancelAbort: () => void;
+  onCompleteAbort: () => void;
   role: string;
 }) {
   const status = STATUS_CONFIG[appt.status] ?? STATUS_CONFIG.CONFIRMED;
   const isActioning = Boolean(actionLoading?.startsWith(appt.id));
   const isCancelTarget = cancelTarget === appt.id;
+  const isCompleteTarget = completeTarget === appt.id;
   const isTerminal = appt.status === "COMPLETED" || appt.status === "CANCELLED";
   const awaitingDoctor = appt.status === "CONFIRMED" && Boolean(appt.checkedInAt);
   const isDoctor = role === "DOCTOR";
+  const canComplete = role === "OWNER" || role === "MANAGER" || role === "DOCTOR";
 
   return (
     <div className="rounded-2xl border bg-white" style={{ borderColor: status.border }}>
@@ -162,9 +259,10 @@ function AppointmentRow({
             {appt.amountPaid != null && <span className="font-bold text-[#0f172a]">{formatMoney(appt.amountPaid, appt.currency)}</span>}
           </div>
           {appt.cancellationReason && <p className="mt-2 text-xs font-semibold text-rose-700">Reason: {appt.cancellationReason}</p>}
+          {appt.clinicalOutcome && <p className="mt-2 text-xs font-semibold text-emerald-700">Outcome: {appt.clinicalOutcome}</p>}
         </div>
 
-        {!isTerminal && !isCancelTarget && (
+        {!isTerminal && !isCancelTarget && !isCompleteTarget && (
           <div className="flex flex-wrap justify-start gap-2 lg:justify-end">
             {!isDoctor && appt.status === "REQUESTED" && (
               <button
@@ -186,13 +284,13 @@ function AppointmentRow({
                     <User size={13} /> {appt.checkedInAt ? "Checked in" : "Check in"}
                   </button>
                 )}
-                {(!isDoctor || appt.checkedInAt) && (
+                {appt.checkedInAt && canComplete && (
                   <button
-                    onClick={() => onAction(appt.id, "COMPLETE")}
+                    onClick={() => onSetComplete(appt.id)}
                     disabled={isActioning}
                     className="h-9 rounded-lg border border-emerald-200 bg-emerald-50 px-3 text-xs font-bold text-emerald-800 disabled:opacity-50"
                   >
-                    Complete
+                    Complete with notes
                   </button>
                 )}
               </>
@@ -232,6 +330,45 @@ function AppointmentRow({
           </div>
         </div>
       )}
+
+      {isCompleteTarget && (
+        <div className="border-t border-emerald-100 bg-emerald-50/40 px-4 py-3">
+          <div className="grid gap-3 md:grid-cols-2">
+            <input
+              value={completeForm.clinicalOutcome}
+              onChange={(event) => onCompleteFormChange({ ...completeForm, clinicalOutcome: event.target.value })}
+              placeholder="Outcome, e.g. stable, reviewed, referred"
+              className="h-10 rounded-xl border border-emerald-200 bg-white px-3 text-sm text-[#0f172a] outline-none md:col-span-2"
+            />
+            <textarea
+              value={completeForm.clinicalNotes}
+              onChange={(event) => onCompleteFormChange({ ...completeForm, clinicalNotes: event.target.value })}
+              placeholder="Clinical notes"
+              rows={3}
+              className="resize-none rounded-xl border border-emerald-200 bg-white px-3 py-2 text-sm text-[#0f172a] outline-none"
+            />
+            <textarea
+              value={completeForm.followUpInstructions}
+              onChange={(event) => onCompleteFormChange({ ...completeForm, followUpInstructions: event.target.value })}
+              placeholder="Follow-up instructions"
+              rows={3}
+              className="resize-none rounded-xl border border-emerald-200 bg-white px-3 py-2 text-sm text-[#0f172a] outline-none"
+            />
+          </div>
+          <div className="mt-2 flex gap-2">
+            <button
+              onClick={() => onAction(appt.id, "COMPLETE")}
+              disabled={isActioning}
+              className="h-9 rounded-lg bg-emerald-700 px-4 text-xs font-bold text-white disabled:opacity-45"
+            >
+              Save and complete
+            </button>
+            <button onClick={onCompleteAbort} className="h-9 rounded-lg bg-white px-4 text-xs font-bold text-slate-600">
+              Back
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -254,6 +391,7 @@ function CompletedAppointmentRow({ appt }: { appt: Appointment }) {
             </span>
           </div>
           <p className="mt-1 truncate text-xs font-medium text-slate-500">{careItem}</p>
+          {appt.clinicalOutcome && <p className="mt-1 truncate text-xs font-bold text-emerald-700">{appt.clinicalOutcome}</p>}
           <div className="mt-1 flex items-center justify-between gap-2">
             {appt.patient?.phone ? (
               <a href={`tel:${appt.patient.phone}`} className="truncate text-xs font-bold text-[#0f172a] no-underline">
@@ -298,12 +436,51 @@ function Section({
   );
 }
 
+function RoleWorkflowCard({
+  title,
+  body,
+  actions,
+}: {
+  title: string;
+  body: string;
+  actions: { label: string; href: string }[];
+}) {
+  return (
+    <section className="rounded-2xl border border-gray-100 bg-white p-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h2 className="text-sm font-extrabold text-[#0f172a]">{title}</h2>
+          <p className="mt-1 max-w-2xl text-xs font-semibold text-slate-400">{body}</p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {actions.map((action) => (
+            <Link
+              key={action.href}
+              href={action.href}
+              className="inline-flex h-9 items-center rounded-xl px-3 text-xs font-extrabold no-underline"
+              style={{ background: "#0f1e38", color: "#c8a96e" }}
+            >
+              {action.label}
+            </Link>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 export default function DashboardClient({ slug }: { slug: string }) {
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [cancelTarget, setCancelTarget] = useState<string | null>(null);
   const [cancelReason, setCancelReason] = useState("");
+  const [completeTarget, setCompleteTarget] = useState<string | null>(null);
+  const [completeForm, setCompleteForm] = useState({
+    clinicalOutcome: "",
+    clinicalNotes: "",
+    followUpInstructions: "",
+  });
   const [error, setError] = useState("");
 
   const fetchStats = useCallback(async () => {
@@ -319,7 +496,11 @@ export default function DashboardClient({ slug }: { slug: string }) {
   }, [slug]);
 
   useEffect(() => {
-    void fetchStats();
+    const timeoutId = window.setTimeout(() => {
+      void fetchStats();
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
   }, [fetchStats]);
 
   const handleAction = async (bookingId: string, action: string, reason?: string) => {
@@ -329,7 +510,12 @@ export default function DashboardClient({ slug }: { slug: string }) {
       const res = await fetch(`/api/admin/h/${slug}/bookings`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ bookingId, action, reason }),
+        body: JSON.stringify({
+          bookingId,
+          action,
+          reason,
+          ...(action === "COMPLETE" ? completeForm : {}),
+        }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -341,6 +527,8 @@ export default function DashboardClient({ slug }: { slug: string }) {
       }
       setCancelTarget(null);
       setCancelReason("");
+      setCompleteTarget(null);
+      setCompleteForm({ clinicalOutcome: "", clinicalNotes: "", followUpInstructions: "" });
       await fetchStats();
     } catch {
       setError("Network error. Please try again.");
@@ -359,15 +547,19 @@ export default function DashboardClient({ slug }: { slug: string }) {
 
   const queues = useMemo(() => {
     const isDoctor = stats?.role === "DOCTOR";
+    const isReceptionist = stats?.role === "RECEPTIONIST";
     const needsAction = sortedAppointments.filter((appt) =>
       isDoctor
         ? appt.status === "CONFIRMED" && Boolean(appt.checkedInAt)
-        : appt.status === "REQUESTED" || (appt.status === "CONFIRMED" && appt.checkedInAt),
+        : isReceptionist
+          ? appt.status === "REQUESTED"
+          : appt.status === "REQUESTED" || (appt.status === "CONFIRMED" && appt.checkedInAt),
     );
     const upcoming = sortedAppointments.filter((appt) => appt.status === "CONFIRMED" && !appt.checkedInAt);
+    const checkedIn = sortedAppointments.filter((appt) => appt.status === "CONFIRMED" && Boolean(appt.checkedInAt));
     const completed = sortedAppointments.filter((appt) => appt.status === "COMPLETED");
     const cancelled = sortedAppointments.filter((appt) => appt.status === "CANCELLED");
-    return { needsAction, upcoming, completed, cancelled };
+    return { needsAction, upcoming, checkedIn, completed, cancelled };
   }, [sortedAppointments, stats?.role]);
 
   if (loading) {
@@ -388,6 +580,11 @@ export default function DashboardClient({ slug }: { slug: string }) {
   }
 
   const isDoctor = stats.role === "DOCTOR";
+  const isOwner = stats.role === "OWNER";
+  const isManager = stats.role === "MANAGER";
+  const isReceptionist = stats.role === "RECEPTIONIST";
+  const isStaff = stats.role === "STAFF";
+  const isBusinessAdmin = isOwner || isManager;
   const summaryTiles: { label: string; value: number | string; tone: SummaryTone }[] = isDoctor
     ? [
         { label: "Checked in", value: queues.needsAction.length, tone: queues.needsAction.length ? "amber" : "slate" },
@@ -395,7 +592,28 @@ export default function DashboardClient({ slug }: { slug: string }) {
         { label: "Completed", value: stats.today.completed, tone: "green" },
         { label: "Scheduled", value: stats.today.total, tone: "slate" },
       ]
-    : [
+    : isBusinessAdmin
+      ? [
+          { label: "Month revenue", value: formatMoney(stats.month.revenue, "eur"), tone: "slate" },
+          { label: "Month bookings", value: stats.month.bookings, tone: "blue" },
+          { label: "Needs action", value: queues.needsAction.length, tone: queues.needsAction.length ? "amber" : "slate" },
+          { label: "Today revenue", value: formatMoney(stats.today.revenue, "eur"), tone: "green" },
+        ]
+    : isStaff
+      ? [
+          { label: "Access", value: "Limited", tone: "slate" },
+          { label: "Open tasks", value: stats.tasks.open, tone: stats.tasks.open ? "blue" : "slate" },
+          { label: "Due today", value: stats.tasks.dueToday, tone: stats.tasks.dueToday ? "amber" : "slate" },
+          { label: "High priority", value: stats.tasks.highPriority, tone: stats.tasks.highPriority ? "amber" : "slate" },
+        ]
+      : isReceptionist
+        ? [
+          { label: "Pending requests", value: queues.needsAction.length, tone: queues.needsAction.length ? "amber" : "slate" },
+          { label: "Arrivals", value: queues.upcoming.length, tone: "blue" },
+          { label: "Checked in", value: queues.checkedIn.length, tone: queues.checkedIn.length ? "green" : "slate" },
+          { label: "Cancelled", value: stats.today.cancelled, tone: stats.today.cancelled ? "amber" : "slate" },
+        ]
+      : [
         { label: "Needs action", value: queues.needsAction.length, tone: queues.needsAction.length ? "amber" : "slate" },
         { label: "Upcoming", value: queues.upcoming.length, tone: "blue" },
         { label: "Completed", value: stats.today.completed, tone: "green" },
@@ -407,10 +625,10 @@ export default function DashboardClient({ slug }: { slug: string }) {
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#c8a96e]">
-            {isDoctor ? "Doctor workspace" : "Reception desk"}
+            {isDoctor ? "Doctor workspace" : isOwner ? "Owner command center" : isManager ? "Manager operations" : isReceptionist ? "Reception desk" : "Staff workspace"}
           </p>
           <h1 className="mt-1 text-2xl font-extrabold text-[#0f172a]">
-            {isDoctor ? "My Appointments" : "Today's Operations"}
+            {isDoctor ? "My Appointments" : isBusinessAdmin ? stats.hospital.name ?? "Hospital Overview" : isStaff ? "Limited Support Access" : "Today's Operations"}
           </h1>
           <p className="mt-1 text-sm font-medium text-slate-500">{todayLabel()}</p>
           {isDoctor && stats.doctorName && (
@@ -437,11 +655,187 @@ export default function DashboardClient({ slug }: { slug: string }) {
         ))}
       </div>
 
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(360px,0.48fr)]">
+      {isStaff && (
+        <section className="rounded-2xl border border-gray-100 bg-white p-5">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <div className="flex items-center gap-2">
+                <ShieldCheck size={18} className="text-[#c8a96e]" />
+                <h2 className="text-lg font-extrabold text-[#0f172a]">Assigned Support Work</h2>
+              </div>
+              <p className="mt-1 max-w-2xl text-sm font-medium text-slate-500">
+                Staff access stays limited to non-clinical assigned tasks. Booking, business, team, and settings data remain hidden.
+              </p>
+            </div>
+            <Link
+              href={`/admin/h/${slug}/tasks`}
+              className="inline-flex h-10 items-center rounded-xl px-4 text-sm font-extrabold no-underline"
+              style={{ background: "#0f1e38", color: "#c8a96e" }}
+            >
+              Open task queue
+            </Link>
+          </div>
+
+          <div className="mt-4 space-y-2.5">
+            {stats.tasks.assigned.length === 0 ? (
+              <div className="rounded-xl bg-[#f8fafc] px-4 py-8 text-center text-sm font-semibold text-slate-300">
+                No open tasks assigned right now
+              </div>
+            ) : (
+              stats.tasks.assigned.map((task) => (
+                <div key={task.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-gray-100 px-4 py-3">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-extrabold text-[#0f172a]">{task.title}</p>
+                    <p className="mt-0.5 text-xs font-semibold text-slate-400">
+                      {task.status === "IN_PROGRESS" ? "In progress" : "Pending"} / Due {formatTaskDue(task.dueAt)}
+                    </p>
+                  </div>
+                  <span className="rounded-full px-2.5 py-1 text-[10px] font-bold" style={TASK_PRIORITY_STYLE[task.priority]}>
+                    {task.priority}
+                  </span>
+                </div>
+              ))
+            )}
+          </div>
+        </section>
+      )}
+
+      {!isStaff && isReceptionist && (
+        <RoleWorkflowCard
+          title="Front Desk Workflow"
+          body="Handle patient flow from one place: confirm requests, reschedule doctor appointments, cancel with a reason, and check in arrivals. Clinical completion stays with doctors or management."
+          actions={[
+            { label: "Open bookings", href: `/admin/h/${slug}/bookings` },
+            { label: "View schedules", href: `/admin/h/${slug}/availability` },
+          ]}
+        />
+      )}
+
+      {!isStaff && isDoctor && (
+        <RoleWorkflowCard
+          title="Doctor Workflow"
+          body="Your dashboard and schedule are scoped to your linked doctor profile. Complete appointments only after the front desk has checked in the patient."
+          actions={[
+            { label: "My schedule", href: `/admin/h/${slug}/availability` },
+            { label: "My bookings", href: `/admin/h/${slug}/bookings` },
+          ]}
+        />
+      )}
+
+      {!isStaff && isOwner && (
+        <RoleWorkflowCard
+          title="Owner Authority"
+          body="You hold the hospital's business authority: ownership, billing visibility, public profile readiness, team authority, reports, and high-risk exports."
+          actions={[
+            { label: "Business reports", href: `/admin/h/${slug}/business` },
+            { label: "Owner settings", href: `/admin/h/${slug}/settings` },
+            { label: "Team authority", href: `/admin/h/${slug}/team` },
+          ]}
+        />
+      )}
+
+      {!isStaff && isManager && (
+        <RoleWorkflowCard
+          title="Manager Operations"
+          body="Run day-to-day hospital operations: booking queues, doctors, schedules, packages, reviews, reports, and non-owner team workflows. Ownership, billing, and legal controls stay with owners."
+          actions={[
+            { label: "Booking queue", href: `/admin/h/${slug}/bookings` },
+            { label: "Schedules", href: `/admin/h/${slug}/availability` },
+            { label: "Reports", href: `/admin/h/${slug}/reports` },
+          ]}
+        />
+      )}
+
+      {!isStaff && isBusinessAdmin && (
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+          <OwnerMetric
+            icon={<Stethoscope size={16} />}
+            label="Doctors"
+            value={stats.operations.activeDoctors}
+            sub="Linked to this hospital"
+          />
+          <OwnerMetric
+            icon={<Package size={16} />}
+            label="Active Packages"
+            value={stats.operations.activePackages}
+            sub="Visible service catalog"
+          />
+          <OwnerMetric
+            icon={<Users size={16} />}
+            label="Team"
+            value={stats.operations.teamMembers}
+            sub={`${stats.operations.pendingTeamRequests} pending request${stats.operations.pendingTeamRequests === 1 ? "" : "s"}`}
+          />
+          <OwnerMetric
+            icon={<BarChart3 size={16} />}
+            label="All Bookings"
+            value={stats.totalBookings}
+            sub={`${stats.pendingConfirmations} awaiting confirmation`}
+          />
+        </div>
+      )}
+
+      {!isStaff && isBusinessAdmin && (
+        <section className="rounded-2xl border border-gray-100 bg-white p-4">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 className="text-sm font-extrabold text-[#0f172a]">
+                {isOwner ? "Owner Signals" : "Operational Signals"}
+              </h2>
+              <p className="mt-0.5 text-xs font-medium text-slate-400">
+                {isOwner
+                  ? "Quick business, authority, and readiness checks for this hospital."
+                  : "Quick operational checks for requests, access, readiness, and active status."}
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold"
+                style={{
+                  background: stats.hospital.verified ? "#ecfdf5" : "#fff7ed",
+                  color: stats.hospital.verified ? "#047857" : "#c2410c",
+                }}>
+                <BadgeCheck size={12} /> {stats.hospital.verified ? "Verified" : "Verification pending"}
+              </span>
+              <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold"
+                style={{
+                  background: stats.hospital.isActive ? "#ecfdf5" : "#fff1f2",
+                  color: stats.hospital.isActive ? "#047857" : "#be123c",
+                }}>
+                <ShieldCheck size={12} /> {stats.hospital.isActive ? "Active" : "Inactive"}
+              </span>
+            </div>
+          </div>
+          <div className="grid gap-3 md:grid-cols-3">
+            <AlertItem
+              tone={stats.pendingConfirmations > 0 ? "amber" : "green"}
+              title={stats.pendingConfirmations > 0 ? "Confirmations waiting" : "Booking queue clear"}
+              body={stats.pendingConfirmations > 0 ? `${stats.pendingConfirmations} booking request${stats.pendingConfirmations === 1 ? "" : "s"} still need confirmation.` : "No unconfirmed booking requests right now."}
+            />
+            <AlertItem
+              tone={stats.operations.pendingTeamRequests > 0 ? "amber" : "green"}
+              title={stats.operations.pendingTeamRequests > 0 ? "Team requests pending" : "Team access settled"}
+              body={stats.operations.pendingTeamRequests > 0 ? `${stats.operations.pendingTeamRequests} access request${stats.operations.pendingTeamRequests === 1 ? "" : "s"} need review.` : "No pending team access requests."}
+            />
+            <AlertItem
+              tone={stats.hospital.emergencyAvailable ? "green" : "amber"}
+              title={stats.hospital.emergencyAvailable ? "Emergency flag enabled" : "Emergency flag off"}
+              body={stats.hospital.emergencyAvailable ? "Emergency availability is visible on the listing." : "Emergency availability is not shown on the listing."}
+            />
+          </div>
+        </section>
+      )}
+
+      {!isStaff && <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(360px,0.48fr)]">
         <div className="space-y-4">
           <Section
-            title="Needs Action"
-            description={isDoctor ? "Checked-in patients ready for you to complete after care is finished." : "Confirm new requests, then complete checked-in appointments after care is finished."}
+            title={isReceptionist ? "Pending Requests" : "Needs Action"}
+            description={
+              isDoctor
+                ? "Checked-in patients ready for you to complete after care is finished."
+                : isReceptionist
+                  ? "Confirm new booking requests or cancel them with a clear reason."
+                  : "Confirm new requests, then complete checked-in appointments after care is finished."
+            }
             empty={queues.needsAction.length === 0}
           >
             {queues.needsAction.map((appt) => (
@@ -451,19 +845,27 @@ export default function DashboardClient({ slug }: { slug: string }) {
                 actionLoading={actionLoading}
                 cancelTarget={cancelTarget}
                 cancelReason={cancelReason}
+                completeTarget={completeTarget}
+                completeForm={completeForm}
                 onAction={handleAction}
                 onSetCancel={setCancelTarget}
+                onSetComplete={setCompleteTarget}
                 onCancelReasonChange={setCancelReason}
+                onCompleteFormChange={setCompleteForm}
                 onCancelAbort={() => {
                   setCancelTarget(null);
                   setCancelReason("");
+                }}
+                onCompleteAbort={() => {
+                  setCompleteTarget(null);
+                  setCompleteForm({ clinicalOutcome: "", clinicalNotes: "", followUpInstructions: "" });
                 }}
                 role={stats.role}
               />
             ))}
           </Section>
 
-          <Section title={isDoctor ? "My Upcoming Patients" : "Upcoming Queue"} description="Confirmed patients who have not checked in yet." empty={queues.upcoming.length === 0}>
+          <Section title={isDoctor ? "My Upcoming Patients" : isReceptionist ? "Arrivals To Check In" : "Upcoming Queue"} description="Confirmed patients who have not checked in yet." empty={queues.upcoming.length === 0}>
             {queues.upcoming.map((appt) => (
               <AppointmentRow
                 key={appt.id}
@@ -471,17 +873,55 @@ export default function DashboardClient({ slug }: { slug: string }) {
                 actionLoading={actionLoading}
                 cancelTarget={cancelTarget}
                 cancelReason={cancelReason}
+                completeTarget={completeTarget}
+                completeForm={completeForm}
                 onAction={handleAction}
                 onSetCancel={setCancelTarget}
+                onSetComplete={setCompleteTarget}
                 onCancelReasonChange={setCancelReason}
+                onCompleteFormChange={setCompleteForm}
                 onCancelAbort={() => {
                   setCancelTarget(null);
                   setCancelReason("");
+                }}
+                onCompleteAbort={() => {
+                  setCompleteTarget(null);
+                  setCompleteForm({ clinicalOutcome: "", clinicalNotes: "", followUpInstructions: "" });
                 }}
                 role={stats.role}
               />
             ))}
           </Section>
+
+          {isReceptionist && (
+            <Section title="Checked In" description="Patients already checked in and waiting for the doctor or care team." empty={queues.checkedIn.length === 0}>
+              {queues.checkedIn.map((appt) => (
+                <AppointmentRow
+                  key={appt.id}
+                  appt={appt}
+                  actionLoading={actionLoading}
+                  cancelTarget={cancelTarget}
+                  cancelReason={cancelReason}
+                  completeTarget={completeTarget}
+                  completeForm={completeForm}
+                  onAction={handleAction}
+                  onSetCancel={setCancelTarget}
+                  onSetComplete={setCompleteTarget}
+                  onCancelReasonChange={setCancelReason}
+                  onCompleteFormChange={setCompleteForm}
+                  onCancelAbort={() => {
+                    setCancelTarget(null);
+                    setCancelReason("");
+                  }}
+                  onCompleteAbort={() => {
+                    setCompleteTarget(null);
+                    setCompleteForm({ clinicalOutcome: "", clinicalNotes: "", followUpInstructions: "" });
+                  }}
+                  role={stats.role}
+                />
+              ))}
+            </Section>
+          )}
         </div>
 
         <Section title="Completed Today" description="Appointments already marked complete." empty={queues.completed.length === 0}>
@@ -491,7 +931,7 @@ export default function DashboardClient({ slug }: { slug: string }) {
           ))}
           </div>
         </Section>
-      </div>
+      </div>}
     </div>
   );
 }

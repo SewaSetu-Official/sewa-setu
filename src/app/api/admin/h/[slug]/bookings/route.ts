@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireHospitalAccess, writeAuditLog } from "@/lib/admin-auth";
+import { buildRollingOccurrences, formatDate } from "@/lib/availability";
 import { hasPermission, type Permission } from "@/lib/admin-permissions";
 import { db } from "@/lib/db";
 import type { BookingStatus } from "@prisma/client";
@@ -7,17 +8,33 @@ import type { BookingStatus } from "@prisma/client";
 export const dynamic = "force-dynamic";
 
 const BOOKING_STATUSES: BookingStatus[] = ["DRAFT", "REQUESTED", "CONFIRMED", "CANCELLED", "COMPLETED"];
-const VALID_ACTIONS = ["CONFIRM", "COMPLETE", "CANCEL", "CHECKIN"] as const;
+const VALID_ACTIONS = ["CONFIRM", "COMPLETE", "CANCEL", "CHECKIN", "RESCHEDULE"] as const;
 type BookingAction = (typeof VALID_ACTIONS)[number];
 const ACTION_PERMISSIONS = {
   CONFIRM: "CONFIRM_BOOKING",
   COMPLETE: "COMPLETE_BOOKING",
   CANCEL: "CANCEL_BOOKING",
   CHECKIN: "CHECKIN_BOOKING",
+  RESCHEDULE: "RESCHEDULE_BOOKING",
 } satisfies Record<BookingAction, Permission>;
 
 function isBookingAction(action: string): action is BookingAction {
   return (VALID_ACTIONS as readonly string[]).includes(action);
+}
+
+function getAppointmentDateTime(scheduledAt: Date, slotTime: string | null) {
+  if (!slotTime) return scheduledAt;
+  const start = slotTime.split("-")[0]?.trim();
+  const [hour, minute = 0] = start.split(":").map(Number);
+  const at = new Date(scheduledAt);
+  if (Number.isInteger(hour) && Number.isInteger(minute)) {
+    at.setHours(hour, minute, 0, 0);
+  }
+  return at;
+}
+
+function normalizeSlotTime(value: string | null | undefined) {
+  return value?.replace(/\s*-\s*/g, " - ").trim() ?? null;
 }
 
 // GET /api/admin/h/[slug]/bookings — paginated booking list with filters
@@ -43,6 +60,7 @@ export async function GET(
 
   const hospitalId = ctx.membership.hospitalId;
   const isDoctorRole = ctx.membership.role === "DOCTOR";
+  const canViewClinicalFields = hasPermission(ctx.membership.role, "COMPLETE_BOOKING");
   const doctorProfile = isDoctorRole
     ? await db.doctor.findFirst({
         where: {
@@ -106,8 +124,17 @@ export async function GET(
   return NextResponse.json({
     role: ctx.membership.role,
     doctorName: doctorProfile?.fullName ?? null,
+    permissions: {
+      canConfirm: hasPermission(ctx.membership.role, "CONFIRM_BOOKING"),
+      canCancel: hasPermission(ctx.membership.role, "CANCEL_BOOKING"),
+      canComplete: hasPermission(ctx.membership.role, "COMPLETE_BOOKING"),
+      canCheckIn: hasPermission(ctx.membership.role, "CHECKIN_BOOKING"),
+      canReschedule: hasPermission(ctx.membership.role, "RESCHEDULE_BOOKING"),
+    },
     bookings: bookings.map((b) => ({
       id: b.id,
+      doctorId: b.doctorId ?? null,
+      availabilitySlotId: b.availabilitySlotId ?? null,
       status: b.status,
       scheduledAt: b.scheduledAt.toISOString(),
       createdAt: b.createdAt.toISOString(),
@@ -120,6 +147,9 @@ export async function GET(
       confirmedAt: b.confirmedAt?.toISOString() ?? null,
       completedAt: b.completedAt?.toISOString() ?? null,
       checkedInAt: b.checkedInAt?.toISOString() ?? null,
+      clinicalNotes: canViewClinicalFields ? (b as { clinicalNotes?: string | null }).clinicalNotes ?? null : null,
+      clinicalOutcome: canViewClinicalFields ? (b as { clinicalOutcome?: string | null }).clinicalOutcome ?? null : null,
+      followUpInstructions: canViewClinicalFields ? (b as { followUpInstructions?: string | null }).followUpInstructions ?? null : null,
       cancelledAt: b.cancelledAt?.toISOString() ?? null,
       refundedAt: b.refundedAt?.toISOString() ?? null,
       stripeRefundId: b.stripeRefundId ?? null,
@@ -152,7 +182,17 @@ export async function PATCH(
     return NextResponse.json({ error: msg }, { status: msg === "FORBIDDEN" ? 403 : 401 });
   }
 
-  let body: { bookingId?: string; action?: string; reason?: string };
+  let body: {
+    bookingId?: string;
+    action?: string;
+    reason?: string;
+    scheduledAt?: string;
+    slotTime?: string;
+    availabilitySlotId?: string | null;
+    clinicalNotes?: string;
+    clinicalOutcome?: string;
+    followUpInstructions?: string;
+  };
   try { body = await req.json(); }
   catch { return NextResponse.json({ error: "Invalid JSON" }, { status: 400 }); }
 
@@ -173,6 +213,9 @@ export async function PATCH(
 
   if (action === "CANCEL" && !reason?.trim()) {
     return NextResponse.json({ error: "Cancellation reason is required" }, { status: 400 });
+  }
+  if (action === "RESCHEDULE" && (!body.scheduledAt || !body.slotTime || !body.availabilitySlotId)) {
+    return NextResponse.json({ error: "scheduledAt, slotTime and availabilitySlotId are required" }, { status: 400 });
   }
 
   const booking = await db.booking.findFirst({
@@ -205,6 +248,7 @@ export async function PATCH(
     COMPLETE: ["CONFIRMED"],
     CANCEL:   ["REQUESTED", "CONFIRMED"],
     CHECKIN:  ["CONFIRMED"],
+    RESCHEDULE: ["REQUESTED", "CONFIRMED"],
   };
 
   if (!VALID_TRANSITIONS[action].includes(booking.status)) {
@@ -212,9 +256,97 @@ export async function PATCH(
       error: `Cannot ${action.toLowerCase()} a booking with status ${booking.status}`,
     }, { status: 400 });
   }
+  if (action === "CHECKIN" && booking.checkedInAt) {
+    return NextResponse.json({ error: "Booking is already checked in" }, { status: 400 });
+  }
+  if (action === "COMPLETE" && !booking.checkedInAt) {
+    return NextResponse.json({ error: "Check in the patient before completing this booking" }, { status: 400 });
+  }
+  if (action === "RESCHEDULE" && booking.checkedInAt) {
+    return NextResponse.json({ error: "Checked-in bookings cannot be rescheduled" }, { status: 400 });
+  }
 
   const now = new Date();
   const updateData: Record<string, unknown> = {};
+
+  if (action === "RESCHEDULE") {
+    if (!booking.doctorId) {
+      return NextResponse.json({ error: "Only doctor bookings can be rescheduled here" }, { status: 400 });
+    }
+    const newAvailabilitySlotId = body.availabilitySlotId;
+    if (!newAvailabilitySlotId) {
+      return NextResponse.json({ error: "availabilitySlotId is required" }, { status: 400 });
+    }
+    const newSlotTime = normalizeSlotTime(body.slotTime);
+    if (!newSlotTime) {
+      return NextResponse.json({ error: "slotTime is required" }, { status: 400 });
+    }
+
+    const newDate = new Date(`${body.scheduledAt}T00:00:00`);
+    if (Number.isNaN(newDate.getTime())) {
+      return NextResponse.json({ error: "Invalid reschedule date" }, { status: 400 });
+    }
+    newDate.setHours(0, 0, 0, 0);
+
+    const slot = await db.availabilitySlot.findFirst({
+      where: {
+        id: newAvailabilitySlotId,
+        doctorId: booking.doctorId,
+        hospitalId: ctx.membership.hospitalId,
+        isActive: true,
+      },
+      select: {
+        id: true,
+        doctorId: true,
+        hospitalId: true,
+        mode: true,
+        dayOfWeek: true,
+        startTime: true,
+        endTime: true,
+        slotDurationMinutes: true,
+        isActive: true,
+      },
+    });
+
+    if (!slot) {
+      return NextResponse.json({ error: "Selected slot is not active for this doctor" }, { status: 400 });
+    }
+
+    const occurrences = buildRollingOccurrences([slot], newDate, 1).occurrencesByDate[formatDate(newDate)] ?? [];
+    const selectedOccurrence = occurrences.find((occurrence) =>
+      occurrence.windowId === newAvailabilitySlotId &&
+      `${occurrence.startTime} - ${occurrence.endTime}` === newSlotTime,
+    );
+
+    if (!selectedOccurrence) {
+      return NextResponse.json({ error: "Selected time is not part of this availability window" }, { status: 400 });
+    }
+    if (getAppointmentDateTime(newDate, newSlotTime).getTime() <= Date.now()) {
+      return NextResponse.json({ error: "Cannot reschedule to a past or expired time slot" }, { status: 400 });
+    }
+
+    const existingBookingForSlot = await db.booking.findFirst({
+      where: {
+        id: { not: booking.id },
+        hospitalId: ctx.membership.hospitalId,
+        availabilitySlotId: newAvailabilitySlotId,
+        scheduledAt: newDate,
+        slotTime: newSlotTime,
+        status: { not: "CANCELLED" },
+      },
+      select: { id: true },
+    });
+
+    if (existingBookingForSlot) {
+      return NextResponse.json({ error: "That time slot is already booked. Please choose another." }, { status: 409 });
+    }
+
+    updateData.scheduledAt = newDate;
+    updateData.slotTime = newSlotTime;
+    updateData.availabilitySlotId = newAvailabilitySlotId;
+    updateData.mode = slot.mode;
+    updateData.rescheduleCount = { increment: 1 };
+  }
 
   switch (action) {
     case "CONFIRM":
@@ -224,6 +356,9 @@ export async function PATCH(
     case "COMPLETE":
       updateData.status = "COMPLETED";
       updateData.completedAt = now;
+      updateData.clinicalNotes = body.clinicalNotes?.trim() || null;
+      updateData.clinicalOutcome = body.clinicalOutcome?.trim() || null;
+      updateData.followUpInstructions = body.followUpInstructions?.trim() || null;
       break;
     case "CANCEL":
       updateData.status = "CANCELLED";
@@ -234,12 +369,27 @@ export async function PATCH(
     case "CHECKIN":
       updateData.checkedInAt = now;
       break;
+    case "RESCHEDULE":
+      break;
   }
 
-  const updated = await db.booking.update({
-    where: { id: bookingId },
-    data: updateData as never,
-  });
+  let updated;
+  try {
+    updated = await db.booking.update({
+      where: { id: bookingId },
+      data: updateData as never,
+    });
+  } catch (err: unknown) {
+    if (
+      typeof err === "object" &&
+      err !== null &&
+      "code" in err &&
+      (err as { code: string }).code === "P2002"
+    ) {
+      return NextResponse.json({ error: "That time slot is already booked. Please choose another." }, { status: 409 });
+    }
+    throw err;
+  }
 
   // Stripe refund — only on CANCEL for Stripe-paid bookings
   let refundId: string | null = null;
@@ -283,9 +433,17 @@ export async function PATCH(
     action: `BOOKING_${action}`,
     entity: "Booking",
     entityId: bookingId,
-    before: { status: booking.status },
+    before: {
+      status: booking.status,
+      scheduledAt: booking.scheduledAt.toISOString(),
+      slotTime: booking.slotTime,
+      availabilitySlotId: booking.availabilitySlotId,
+    },
     after: {
       status: updated.status,
+      scheduledAt: updated.scheduledAt.toISOString(),
+      slotTime: updated.slotTime,
+      availabilitySlotId: updated.availabilitySlotId,
       ...(reason ? { reason } : {}),
       ...(refundId ? { stripeRefundId: refundId } : {}),
       ...(refundError ? { refundError } : {}),
@@ -295,6 +453,8 @@ export async function PATCH(
   return NextResponse.json({
     success: true,
     status: updated.status,
+    scheduledAt: updated.scheduledAt.toISOString(),
+    slotTime: updated.slotTime,
     refunded: !!refundId,
     refundError: refundError ?? undefined,
   });
