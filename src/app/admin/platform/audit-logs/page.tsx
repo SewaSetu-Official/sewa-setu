@@ -144,6 +144,14 @@ const ACTION_CONFIG: Record<string, { bg: string; color: string }> = {
   INQUIRY_ONBOARDED: { bg: "rgba(16,185,129,.1)", color: "#065f46" },
   INQUIRY_TRIAGED: { bg: "rgba(245,158,11,.1)", color: "#b45309" },
   INQUIRY_NOTES_UPDATED: { bg: "rgba(14,165,233,.1)", color: "#0284c7" },
+  SUPPORT_ASSIGNED: { bg: "rgba(16,185,129,.1)", color: "#065f46" },
+  SUPPORT_UNASSIGNED: { bg: "rgba(239,68,68,.08)", color: "#dc2626" },
+  PLATFORM_REVENUE_EXPORTED: { bg: "rgba(200,169,110,.15)", color: "#a88b50" },
+  HOSPITAL_ONBOARDING_CREATED: { bg: "rgba(99,102,241,.1)", color: "#4338ca" },
+  HOSPITAL_ONBOARDING_UPDATED: { bg: "rgba(245,158,11,.1)", color: "#b45309" },
+  HOSPITAL_ONBOARDING_NOTE_ADDED: { bg: "rgba(14,165,233,.1)", color: "#0284c7" },
+  HOSPITAL_SHELL_CREATED_FROM_ONBOARDING: { bg: "rgba(16,185,129,.1)", color: "#065f46" },
+  HOSPITAL_ONBOARDING_PUBLISHED: { bg: "rgba(16,185,129,.12)", color: "#047857" },
 };
 
 function getStyle(action: string) {
@@ -166,6 +174,9 @@ const ENTITY_FILTERS = [
   { value: "HospitalPackage", label: "Packages" },
   { value: "Review", label: "Reviews" },
   { value: "AvailabilitySlot", label: "Slots" },
+  { value: "SupportAssignment", label: "Support" },
+  { value: "HospitalOnboarding", label: "Onboarding" },
+  { value: "PlatformRevenue", label: "Revenue" },
 ];
 
 function timeAgo(iso: string) {
