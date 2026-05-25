@@ -175,7 +175,7 @@ const ENTITY_FILTERS = [
   { value: "Review", label: "Reviews" },
   { value: "AvailabilitySlot", label: "Slots" },
   { value: "SupportAssignment", label: "Support" },
-  { value: "HospitalOnboarding", label: "Onboarding" },
+  { value: "HospitalOnboarding", label: "Hospital Setup" },
   { value: "PlatformRevenue", label: "Revenue" },
 ];
 
@@ -280,15 +280,15 @@ export default function PlatformAuditLogsPage() {
         </button>
       </div>
 
-      <div className="bg-white rounded-2xl border border-gray-100 p-4 space-y-3">
-        <div className="grid md:grid-cols-[1fr_auto] gap-2.5">
-          <div className="flex items-center gap-2 h-10 rounded-xl px-3 bg-[#f7f4ef] border border-gray-100">
-            <Search size={13} className="text-gray-400 flex-shrink-0" />
+      <div className="admin-control-panel space-y-3">
+        <div className="admin-control-row">
+          <div className="admin-search-control">
+            <Search size={14} className="admin-search-icon" />
             <input
               value={searchInput}
               onChange={(e) => handleSearch(e.target.value)}
               placeholder="Search actor name or email..."
-              className="flex-1 text-sm outline-none bg-transparent text-[#0f1e38] placeholder-gray-400"
+              className="admin-search-input"
             />
           </div>
           <select
@@ -297,7 +297,7 @@ export default function PlatformAuditLogsPage() {
               setHospitalFilter(e.target.value);
               setPage(1);
             }}
-            className="h-10 rounded-xl px-3 text-xs font-semibold outline-none cursor-pointer border border-gray-100 bg-white"
+            className="admin-select-control"
           >
             <option value="">All hospitals</option>
             {hospitals.map((h) => (
@@ -308,7 +308,7 @@ export default function PlatformAuditLogsPage() {
           </select>
         </div>
 
-        <div className="flex gap-1.5 flex-wrap">
+        <div className="admin-filter-row">
           {ENTITY_FILTERS.map((f) => (
             <button
               key={f.value}
@@ -316,15 +316,7 @@ export default function PlatformAuditLogsPage() {
                 setEntityFilter(f.value);
                 setPage(1);
               }}
-              className="h-8 px-3 rounded-xl text-xs font-semibold transition-all"
-              style={{
-                background: entityFilter === f.value ? "#0f1e38" : "#fff",
-                color: entityFilter === f.value ? "#c8a96e" : "#6b7a96",
-                border:
-                  entityFilter === f.value
-                    ? "none"
-                    : "1.5px solid rgba(15,30,56,.09)",
-              }}
+              className={`admin-filter-pill ${entityFilter === f.value ? "admin-filter-pill-active" : ""}`}
             >
               {f.label}
             </button>

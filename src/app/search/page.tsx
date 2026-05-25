@@ -280,7 +280,7 @@ export default function SearchPage() {
 
                 {/* Price Range */}
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-widest text-gold mb-2">Price Range (NPR)</label>
+                  <label className="block text-xs font-bold uppercase tracking-widest text-gold mb-2">Price Range (EUR)</label>
                   <div className="flex gap-2">
                     <input
                       type="number"

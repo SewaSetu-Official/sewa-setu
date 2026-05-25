@@ -24,6 +24,7 @@ type HospitalRow = {
 };
 
 type RevenueData = {
+  warning?: "database_unavailable";
   kpis: {
     allTimeRevenue: number; thisMonthRevenue: number;
     totalRefunds: number; refundedCount: number;
@@ -116,12 +117,12 @@ export default function PlatformRevenuePage() {
         </div>
       </div>
 
-      <div className="bg-white rounded-2xl border border-gray-100 p-4 space-y-3">
-        <div className="grid md:grid-cols-[1fr_auto_auto_auto] gap-2.5">
+      <div className="admin-control-panel space-y-3">
+        <div className="admin-control-row">
           <select
             value={hospitalFilter}
             onChange={(e) => setHospitalFilter(e.target.value)}
-            className="h-10 rounded-xl px-3 text-xs font-semibold outline-none cursor-pointer border border-gray-100 bg-white"
+            className="admin-select-control"
           >
             <option value="">{data?.scope === "assigned" ? "Assigned hospitals" : "All hospitals"}</option>
             {(data?.filterHospitals ?? []).map((h) => (
@@ -131,7 +132,7 @@ export default function PlatformRevenuePage() {
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="h-10 rounded-xl px-3 text-xs font-semibold outline-none cursor-pointer border border-gray-100 bg-white"
+            className="admin-select-control"
           >
             <option value="all">Confirmed + completed</option>
             <option value="CONFIRMED">Confirmed only</option>
@@ -143,13 +144,13 @@ export default function PlatformRevenuePage() {
             type="date"
             value={fromDate}
             onChange={(e) => setFromDate(e.target.value)}
-            className="h-10 rounded-xl px-3 text-xs font-semibold outline-none border border-gray-100 bg-white"
+            className="admin-date-control"
           />
           <input
             type="date"
             value={toDate}
             onChange={(e) => setToDate(e.target.value)}
-            className="h-10 rounded-xl px-3 text-xs font-semibold outline-none border border-gray-100 bg-white"
+            className="admin-date-control"
           />
         </div>
 
@@ -161,12 +162,7 @@ export default function PlatformRevenuePage() {
               setFromDate("");
               setToDate("");
             }}
-            className="h-8 px-3 rounded-xl text-xs font-bold"
-            style={{
-              background: "rgba(239,68,68,.08)",
-              color: "#dc2626",
-              border: "1.5px solid rgba(239,68,68,.15)",
-            }}
+            className="admin-clear-filter"
           >
             Clear filters
           </button>
@@ -177,6 +173,13 @@ export default function PlatformRevenuePage() {
         <div className="p-3 rounded-xl text-sm font-semibold text-red-600 flex items-center gap-2"
           style={{ background: "#fef2f2", border: "1px solid rgba(220,38,38,.2)" }}>
           <AlertCircle size={14} /> {error}
+        </div>
+      )}
+
+      {data?.warning === "database_unavailable" && (
+        <div className="p-3 rounded-xl text-sm font-semibold text-amber-700 flex items-center gap-2"
+          style={{ background: "#fffbeb", border: "1px solid rgba(217,119,6,.2)" }}>
+          <AlertCircle size={14} /> Database is temporarily unavailable. Showing empty revenue data until Neon reconnects.
         </div>
       )}
 

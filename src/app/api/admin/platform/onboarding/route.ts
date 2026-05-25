@@ -71,15 +71,15 @@ function statusTimestamps(status: HospitalOnboardingStatus) {
 }
 
 async function markChecklist(onboardingId: string, title: string, userId: string) {
-  const item = await db.hospitalOnboardingChecklistItem.findFirst({
+  await db.hospitalOnboardingChecklistItem.updateMany({
     where: { onboardingId, title },
-    select: { id: true },
-  });
-  if (!item) return;
-
-  await db.hospitalOnboardingChecklistItem.update({
-    where: { id: item.id },
     data: { isCompleted: true, completedAt: new Date(), completedById: userId },
+  });
+}
+
+function queueAuditLog(entry: Parameters<typeof writeAuditLog>[0]) {
+  void writeAuditLog(entry).catch((error) => {
+    console.warn("Failed to write onboarding audit log", error);
   });
 }
 
@@ -175,6 +175,18 @@ export async function GET(req: NextRequest) {
             openingHours: true,
             emergencyAvailable: true,
             servicesSummary: true,
+            location: {
+              select: {
+                country: true,
+                province: true,
+                district: true,
+                city: true,
+                area: true,
+                addressLine: true,
+                lat: true,
+                lng: true,
+              },
+            },
             departments: {
               where: { isActive: true },
               select: { id: true, name: true, overview: true, sortOrder: true },
@@ -191,6 +203,11 @@ export async function GET(req: NextRequest) {
                     feeMin: true,
                     feeMax: true,
                     currency: true,
+                    media: {
+                      select: { id: true, url: true, altText: true, isPrimary: true },
+                      orderBy: [{ isPrimary: "desc" }, { createdAt: "desc" }],
+                      take: 1,
+                    },
                     departments: {
                       where: { isActive: true, department: { isActive: true } },
                       select: { departmentId: true },
@@ -291,20 +308,61 @@ export async function POST(req: NextRequest) {
   if (!ctx.isAdmin) return NextResponse.json({ error: "FORBIDDEN" }, { status: 403 });
 
   const body: {
+    source?: "inquiry" | "direct";
     partnerInquiryId?: string;
     hospitalId?: string;
     assignedToUserId?: string;
     internalNotes?: string;
+    directContact?: {
+      hospitalName?: string;
+      type?: HospitalType;
+      contactName?: string;
+      email?: string;
+      phone?: string;
+      city?: string;
+    };
   } = await req.json();
 
-  if (!body.partnerInquiryId && !body.hospitalId) {
+  const directContact = body.source === "direct" ? body.directContact : undefined;
+  const directHospitalName = directContact?.hospitalName?.trim();
+  const directContactName = directContact?.contactName?.trim();
+  const directEmail = directContact?.email?.trim();
+  const directPhone = directContact?.phone?.trim();
+  const directCity = directContact?.city?.trim();
+  const directType = directContact?.type && ["HOSPITAL", "CLINIC", "LAB"].includes(directContact.type)
+    ? directContact.type
+    : "HOSPITAL";
+
+  if (body.source === "direct" && (!directHospitalName || !directContactName || !directEmail || !directPhone || !directCity)) {
+    return NextResponse.json({ error: "Hospital name, contact, email, phone, and city are required for direct contact setup" }, { status: 400 });
+  }
+
+  if (!body.partnerInquiryId && !body.hospitalId && body.source !== "direct") {
     return NextResponse.json({ error: "Select an inquiry or hospital" }, { status: 400 });
   }
 
   const onboarding = await db.$transaction(async (tx) => {
+    let partnerInquiryId = body.partnerInquiryId || null;
+
+    if (body.source === "direct") {
+      const inquiry = await tx.partnerInquiry.create({
+        data: {
+          hospitalName: directHospitalName!,
+          type: directType,
+          contactName: directContactName!,
+          email: directEmail!,
+          phone: directPhone!,
+          city: directCity!,
+          status: "CONTACTED",
+          message: body.internalNotes?.trim() || "Direct contact created by platform team.",
+        },
+      });
+      partnerInquiryId = inquiry.id;
+    }
+
     const created = await tx.hospitalOnboarding.create({
       data: {
-        partnerInquiryId: body.partnerInquiryId || null,
+        partnerInquiryId,
         hospitalId: body.hospitalId || null,
         assignedToUserId: body.assignedToUserId || null,
         createdById: ctx.user.id,
@@ -329,13 +387,13 @@ export async function POST(req: NextRequest) {
     return created;
   });
 
-  await writeAuditLog({
+  queueAuditLog({
     actorUserId: ctx.user.id,
     action: "HOSPITAL_ONBOARDING_CREATED",
     entity: "HospitalOnboarding",
     entityId: onboarding.id,
     hospitalId: onboarding.hospitalId ?? undefined,
-    after: { partnerInquiryId: onboarding.partnerInquiryId, hospitalId: onboarding.hospitalId },
+    after: { source: body.source ?? "inquiry", partnerInquiryId: onboarding.partnerInquiryId, hospitalId: onboarding.hospitalId },
   });
 
   return NextResponse.json({ success: true, id: onboarding.id }, { status: 201 });
@@ -368,6 +426,14 @@ export async function PATCH(req: NextRequest) {
     openingHours?: string | null;
     emergencyAvailable?: boolean;
     servicesSummary?: string | null;
+    country?: string | null;
+    province?: string | null;
+    district?: string | null;
+    city?: string | null;
+    area?: string | null;
+    addressLine?: string | null;
+    lat?: number | null;
+    lng?: number | null;
     name?: string;
     overview?: string | null;
     sortOrder?: number;
@@ -379,6 +445,7 @@ export async function PATCH(req: NextRequest) {
     feeMin?: number | null;
     feeMax?: number | null;
     currency?: string | null;
+    photoUrl?: string | null;
     doctorId?: string;
     dayOfWeek?: number;
     mode?: "ONLINE" | "PHYSICAL";
@@ -409,7 +476,7 @@ export async function PATCH(req: NextRequest) {
 
   if (body.action === "UPDATE") {
     const before = await db.hospitalOnboarding.findUnique({ where: { id: body.onboardingId } });
-    if (!before) return NextResponse.json({ error: "Onboarding not found" }, { status: 404 });
+    if (!before) return NextResponse.json({ error: "Hospital setup case not found" }, { status: 404 });
 
     const nextStatus = body.status && Object.values(HospitalOnboardingStatus).includes(body.status)
       ? body.status
@@ -436,7 +503,7 @@ export async function PATCH(req: NextRequest) {
       });
     }
 
-    await writeAuditLog({
+    queueAuditLog({
       actorUserId: ctx.user.id,
       hospitalId: updated.hospitalId ?? undefined,
       action: "HOSPITAL_ONBOARDING_UPDATED",
@@ -461,6 +528,18 @@ export async function PATCH(req: NextRequest) {
       openingHours: body.openingHours?.trim() || null,
       emergencyAvailable: Boolean(body.emergencyAvailable),
       servicesSummary: body.servicesSummary?.trim() || null,
+      location: {
+        update: {
+          country: body.country?.trim() || "NP",
+          province: body.province?.trim() || null,
+          district: body.district?.trim() || body.city?.trim() || "Unknown",
+          city: body.city?.trim() || body.district?.trim() || "Unknown",
+          area: body.area?.trim() || null,
+          addressLine: body.addressLine?.trim() || null,
+          lat: typeof body.lat === "number" && Number.isFinite(body.lat) ? body.lat : null,
+          lng: typeof body.lng === "number" && Number.isFinite(body.lng) ? body.lng : null,
+        },
+      },
     };
 
     const hospital = await db.hospital.update({
@@ -469,7 +548,7 @@ export async function PATCH(req: NextRequest) {
     });
 
     await markChecklist(body.onboardingId, "Hospital basic info added", ctx.user.id);
-    await writeAuditLog({
+    queueAuditLog({
       actorUserId: ctx.user.id,
       hospitalId,
       action: "ONBOARDING_PROFILE_SAVED",
@@ -509,7 +588,7 @@ export async function PATCH(req: NextRequest) {
     });
 
     await markChecklist(body.onboardingId, "Departments added", ctx.user.id);
-    await writeAuditLog({
+    queueAuditLog({
       actorUserId: ctx.user.id,
       hospitalId,
       action: "ONBOARDING_DEPARTMENT_ADDED",
@@ -542,7 +621,7 @@ export async function PATCH(req: NextRequest) {
       },
     });
 
-    await writeAuditLog({
+    queueAuditLog({
       actorUserId: ctx.user.id,
       hospitalId,
       action: "ONBOARDING_DEPARTMENT_UPDATED",
@@ -569,7 +648,7 @@ export async function PATCH(req: NextRequest) {
       data: { isActive: false },
     });
 
-    await writeAuditLog({
+    queueAuditLog({
       actorUserId: ctx.user.id,
       hospitalId,
       action: "ONBOARDING_DEPARTMENT_DELETED",
@@ -597,7 +676,7 @@ export async function PATCH(req: NextRequest) {
           experienceYears: body.experienceYears === null || body.experienceYears === undefined ? null : Number(body.experienceYears),
           feeMin: body.feeMin === null || body.feeMin === undefined ? null : Number(body.feeMin),
           feeMax: body.feeMax === null || body.feeMax === undefined ? null : Number(body.feeMax),
-          currency: body.currency?.trim() || "NPR",
+          currency: body.currency?.trim() || "EUR",
           verified: false,
           dataOrigin: "ONBOARDING",
         },
@@ -617,11 +696,24 @@ export async function PATCH(req: NextRequest) {
         });
       }
 
+      const photoUrl = body.photoUrl?.trim();
+      if (photoUrl) {
+        await tx.doctorMedia.create({
+          data: {
+            doctorId: created.id,
+            url: photoUrl,
+            altText: `${fullName} photo`,
+            isPrimary: true,
+            dataOrigin: "ONBOARDING",
+          },
+        });
+      }
+
       return created;
     });
 
     await markChecklist(body.onboardingId, "Doctors added", ctx.user.id);
-    await writeAuditLog({
+    queueAuditLog({
       actorUserId: ctx.user.id,
       hospitalId,
       action: "ONBOARDING_DOCTOR_ADDED",
@@ -658,7 +750,7 @@ export async function PATCH(req: NextRequest) {
           experienceYears: body.experienceYears === null || body.experienceYears === undefined ? null : Number(body.experienceYears),
           feeMin: body.feeMin === null || body.feeMin === undefined ? null : Number(body.feeMin),
           feeMax: body.feeMax === null || body.feeMax === undefined ? null : Number(body.feeMax),
-          currency: body.currency?.trim() || "NPR",
+          currency: body.currency?.trim() || "EUR",
         },
       });
 
@@ -680,10 +772,27 @@ export async function PATCH(req: NextRequest) {
         });
       }
 
+      const photoUrl = body.photoUrl?.trim();
+      if (photoUrl) {
+        await tx.doctorMedia.updateMany({
+          where: { doctorId },
+          data: { isPrimary: false },
+        });
+        await tx.doctorMedia.create({
+          data: {
+            doctorId,
+            url: photoUrl,
+            altText: `${fullName} photo`,
+            isPrimary: true,
+            dataOrigin: "ONBOARDING",
+          },
+        });
+      }
+
       return updated;
     });
 
-    await writeAuditLog({
+    queueAuditLog({
       actorUserId: ctx.user.id,
       hospitalId,
       action: "ONBOARDING_DOCTOR_UPDATED",
@@ -717,7 +826,7 @@ export async function PATCH(req: NextRequest) {
       await tx.doctorHospital.delete({ where: { doctorId_hospitalId: { doctorId, hospitalId } } });
     });
 
-    await writeAuditLog({
+    queueAuditLog({
       actorUserId: ctx.user.id,
       hospitalId,
       action: "ONBOARDING_DOCTOR_DELETED",
@@ -776,7 +885,7 @@ export async function PATCH(req: NextRequest) {
       });
 
       await markChecklist(body.onboardingId, "Schedules configured", ctx.user.id);
-      await writeAuditLog({
+      queueAuditLog({
         actorUserId: ctx.user.id,
         hospitalId,
         action: "ONBOARDING_SCHEDULE_ADDED",
@@ -828,7 +937,7 @@ export async function PATCH(req: NextRequest) {
       data: { doctorId, mode, dayOfWeek, startTime, endTime, slotDurationMinutes },
     });
 
-    await writeAuditLog({
+    queueAuditLog({
       actorUserId: ctx.user.id,
       hospitalId,
       action: "ONBOARDING_SCHEDULE_UPDATED",
@@ -853,7 +962,7 @@ export async function PATCH(req: NextRequest) {
 
     await db.availabilitySlot.update({ where: { id: slotId }, data: { isActive: false } });
 
-    await writeAuditLog({
+    queueAuditLog({
       actorUserId: ctx.user.id,
       hospitalId,
       action: "ONBOARDING_SCHEDULE_DELETED",
@@ -879,13 +988,13 @@ export async function PATCH(req: NextRequest) {
         title,
         description: body.description?.trim() || null,
         price: body.price === null || body.price === undefined ? null : Number(body.price),
-        currency: body.currency?.trim() || "NPR",
+        currency: body.currency?.trim() || "EUR",
         dataOrigin: "ONBOARDING",
       },
     });
 
     await markChecklist(body.onboardingId, "Packages configured", ctx.user.id);
-    await writeAuditLog({
+    queueAuditLog({
       actorUserId: ctx.user.id,
       hospitalId,
       action: "ONBOARDING_PACKAGE_ADDED",
@@ -916,11 +1025,11 @@ export async function PATCH(req: NextRequest) {
         title,
         description: body.description?.trim() || null,
         price: body.price === null || body.price === undefined ? null : Number(body.price),
-        currency: body.currency?.trim() || "NPR",
+        currency: body.currency?.trim() || "EUR",
       },
     });
 
-    await writeAuditLog({
+    queueAuditLog({
       actorUserId: ctx.user.id,
       hospitalId,
       action: "ONBOARDING_PACKAGE_UPDATED",
@@ -945,7 +1054,7 @@ export async function PATCH(req: NextRequest) {
 
     await db.hospitalPackage.update({ where: { id: packageId }, data: { isActive: false } });
 
-    await writeAuditLog({
+    queueAuditLog({
       actorUserId: ctx.user.id,
       hospitalId,
       action: "ONBOARDING_PACKAGE_DELETED",
@@ -982,7 +1091,7 @@ export async function PATCH(req: NextRequest) {
     });
 
     await markChecklist(body.onboardingId, "Hospital media added", ctx.user.id);
-    await writeAuditLog({
+    queueAuditLog({
       actorUserId: ctx.user.id,
       hospitalId,
       action: "ONBOARDING_MEDIA_ADDED",
@@ -1022,7 +1131,7 @@ export async function PATCH(req: NextRequest) {
       });
     });
 
-    await writeAuditLog({
+    queueAuditLog({
       actorUserId: ctx.user.id,
       hospitalId,
       action: "ONBOARDING_MEDIA_UPDATED",
@@ -1047,7 +1156,7 @@ export async function PATCH(req: NextRequest) {
 
     await db.hospitalMedia.delete({ where: { id: mediaId } });
 
-    await writeAuditLog({
+    queueAuditLog({
       actorUserId: ctx.user.id,
       hospitalId,
       action: "ONBOARDING_MEDIA_DELETED",
@@ -1065,14 +1174,14 @@ export async function PATCH(req: NextRequest) {
     catch (error) { return NextResponse.json({ error: error instanceof Error ? error.message : "Missing hospital" }, { status: 400 }); }
 
     const email = body.ownerEmail?.trim().toLowerCase();
-    if (!email) return NextResponse.json({ error: "Owner email is required" }, { status: 400 });
+    if (!email) return NextResponse.json({ error: "Main hospital admin email is required" }, { status: 400 });
 
     const owner = await db.user.findUnique({
       where: { email },
       select: { id: true, fullName: true, email: true },
     });
     if (!owner) {
-      return NextResponse.json({ error: "Owner user must sign up before assignment" }, { status: 404 });
+      return NextResponse.json({ error: "This user must sign up before they can become the main hospital admin" }, { status: 404 });
     }
 
     const membership = await db.hospitalMembership.upsert({
@@ -1098,7 +1207,7 @@ export async function PATCH(req: NextRequest) {
     });
 
     await markChecklist(body.onboardingId, "Owner account linked", ctx.user.id);
-    await writeAuditLog({
+    queueAuditLog({
       actorUserId: ctx.user.id,
       hospitalId,
       action: "ONBOARDING_OWNER_ASSIGNED",
@@ -1122,7 +1231,7 @@ export async function PATCH(req: NextRequest) {
       },
     });
 
-    await writeAuditLog({
+    queueAuditLog({
       actorUserId: ctx.user.id,
       hospitalId: access.hospitalId ?? undefined,
       action: "HOSPITAL_ONBOARDING_NOTE_ADDED",
@@ -1176,9 +1285,9 @@ export async function PATCH(req: NextRequest) {
       where: { id: body.onboardingId },
       include: { partnerInquiry: true },
     });
-    if (!onboarding) return NextResponse.json({ error: "Onboarding not found" }, { status: 404 });
-    if (onboarding.hospitalId) return NextResponse.json({ error: "Hospital shell already linked" }, { status: 409 });
-    if (!onboarding.partnerInquiry) return NextResponse.json({ error: "No inquiry linked to create shell from" }, { status: 400 });
+    if (!onboarding) return NextResponse.json({ error: "Hospital setup case not found" }, { status: 404 });
+    if (onboarding.hospitalId) return NextResponse.json({ error: "Hospital record already linked" }, { status: 409 });
+    if (!onboarding.partnerInquiry) return NextResponse.json({ error: "No inquiry linked to create the hospital record from" }, { status: 400 });
 
     const inquiry = onboarding.partnerInquiry;
     const slug = await createUniqueHospitalSlug(inquiry.hospitalName);
@@ -1214,7 +1323,7 @@ export async function PATCH(req: NextRequest) {
       return created;
     });
 
-    await writeAuditLog({
+    queueAuditLog({
       actorUserId: ctx.user.id,
       hospitalId: hospital.id,
       action: "HOSPITAL_SHELL_CREATED_FROM_ONBOARDING",
@@ -1233,11 +1342,11 @@ export async function PATCH(req: NextRequest) {
       where: { id: body.onboardingId },
       include: { checklist: true },
     });
-    if (!onboarding?.hospitalId) return NextResponse.json({ error: "Link a hospital before publishing" }, { status: 400 });
+    if (!onboarding?.hospitalId) return NextResponse.json({ error: "Create the hospital record before making it live" }, { status: 400 });
 
     const missingRequired = onboarding.checklist.filter((item) => item.isRequired && !item.isCompleted);
     if (missingRequired.length > 0) {
-      return NextResponse.json({ error: "Complete required checklist items before publishing" }, { status: 400 });
+      return NextResponse.json({ error: "Complete required launch checklist items before making the hospital live" }, { status: 400 });
     }
 
     const now = new Date();
@@ -1268,7 +1377,7 @@ export async function PATCH(req: NextRequest) {
         : []),
     ]);
 
-    await writeAuditLog({
+    queueAuditLog({
       actorUserId: ctx.user.id,
       hospitalId: onboarding.hospitalId,
       action: "HOSPITAL_ONBOARDING_PUBLISHED",

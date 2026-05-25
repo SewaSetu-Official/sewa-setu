@@ -95,8 +95,8 @@ export default function PlatformInquiriesPage() {
   };
 
   const handleAction = async (id: string, status: string) => {
-    if (status === "ONBOARDED" && !window.confirm("Approve onboarding and create the hospital with an initial OWNER membership?")) return;
-    if (status === "REJECTED" && !window.confirm("Reject this onboarding inquiry?")) return;
+    if (status === "ONBOARDED" && !window.confirm("Approve setup and create the hospital with a main hospital admin?")) return;
+    if (status === "REJECTED" && !window.confirm("Reject this hospital setup inquiry?")) return;
 
     setActionLoading(id + status);
     try {
@@ -136,7 +136,7 @@ export default function PlatformInquiriesPage() {
         <div>
           <h1 className="text-xl font-extrabold text-[#0f1e38]">Partner Inquiries</h1>
           <p className="text-sm text-gray-400 mt-0.5">
-            {total} inquir{total !== 1 ? "ies" : "y"} {scope === "assigned" ? "in assigned support scope" : "in onboarding pipeline"}
+            {total} inquir{total !== 1 ? "ies" : "y"} {scope === "assigned" ? "in assigned support scope" : "waiting for hospital setup"}
           </p>
         </div>
         <button
@@ -152,24 +152,23 @@ export default function PlatformInquiriesPage() {
         </button>
       </div>
 
-      <div className="bg-white rounded-2xl border border-gray-100 p-4 space-y-3">
-        <div className="grid md:grid-cols-[1fr_auto] gap-2.5">
-          <div className="flex items-center gap-2 h-10 rounded-xl px-3 bg-[#f7f4ef] border border-gray-100">
-            <Search size={13} className="text-gray-400 flex-shrink-0" />
+      <div className="admin-control-panel space-y-3">
+        <div className="admin-control-row">
+          <div className="admin-search-control">
+            <Search size={14} className="admin-search-icon" />
             <input
               value={searchInput}
               onChange={(e) => handleSearchInput(e.target.value)}
               placeholder="Search hospital, contact, email, city..."
-              className="flex-1 text-sm outline-none bg-transparent text-[#0f1e38] placeholder-gray-400"
+              className="admin-search-input"
             />
           </div>
-          <p className="h-10 px-3 rounded-xl text-xs font-semibold flex items-center"
-            style={{ color: "#6b7a96", background: "#f7f4ef" }}>
+          <p className="admin-page-indicator ml-auto">
             Page {page}
           </p>
         </div>
 
-        <div className="flex gap-1.5 flex-wrap">
+        <div className="admin-filter-row">
           {FILTERS.map((f) => (
             <button
               key={f.value}
@@ -177,15 +176,7 @@ export default function PlatformInquiriesPage() {
                 setFilter(f.value);
                 setPage(1);
               }}
-              className="h-8 px-3 rounded-xl text-xs font-semibold transition-all"
-              style={{
-                background: filter === f.value ? "#0f1e38" : "#fff",
-                color: filter === f.value ? "#c8a96e" : "#6b7a96",
-                border:
-                  filter === f.value
-                    ? "none"
-                    : "1.5px solid rgba(15,30,56,.09)",
-              }}
+              className={`admin-filter-pill ${filter === f.value ? "admin-filter-pill-active" : ""}`}
             >
               {f.label}
             </button>

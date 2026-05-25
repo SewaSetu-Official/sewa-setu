@@ -58,13 +58,13 @@ async function loadFeaturedHospitals(): Promise<{
       area: hospital.location.area,
       image: hospital.media[0]?.url || null,
       fromPrice: hospital.packages[0]?.price ?? null,
-      currency: hospital.packages[0]?.currency ?? "NPR",
+      currency: hospital.packages[0]?.currency ?? "EUR",
       emergencyAvailable: hospital.emergencyAvailable,
     }));
 
     return { featuredHospitals, featuredHospitalsUnavailable: false };
   } catch (error) {
-    console.error("Failed to load featured hospitals on home page.", error);
+    console.warn("Featured hospitals unavailable on home page:", error instanceof Error ? error.message : error);
     return { featuredHospitals: [], featuredHospitalsUnavailable: true };
   }
 }

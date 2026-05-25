@@ -15,8 +15,8 @@ type Pkg = {
 };
 
 function formatMoney(cents: number, currency: string) {
-  const sym = (currency ?? "EUR").toLowerCase() === "eur" ? "€" : currency.toUpperCase();
-  return `${sym}${Math.round(cents / 100)}`;
+  void currency;
+  return "€" + Math.round(cents / 100).toLocaleString();
 }
 
 const EMPTY_FORM = { title: "", description: "", price: "", currency: "EUR" };
@@ -217,7 +217,6 @@ export default function PackagesClient({ slug }: { slug: string }) {
                     style={{ background: "#f7f4ef", border: "1.5px solid rgba(15,30,56,.1)" }}
                   >
                     <option value="EUR">EUR</option>
-                    <option value="NPR">NPR</option>
                     <option value="USD">USD</option>
                   </select>
                 </div>

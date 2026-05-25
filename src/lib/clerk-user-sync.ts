@@ -56,7 +56,7 @@ export async function ensureClerkUserInDb(clerkId: string) {
       },
     });
   } catch (error) {
-    console.error("Failed to sync Clerk user to Prisma:", error instanceof Error ? error.message : error);
+    console.warn("Clerk user sync skipped because Prisma is unavailable:", error instanceof Error ? error.message : error);
     return null;
   }
 }

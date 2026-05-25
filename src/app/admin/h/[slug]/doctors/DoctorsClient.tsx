@@ -47,8 +47,8 @@ type Doctor = {
 };
 
 function formatMoney(cents: number, currency: string) {
-  const sym = (currency ?? "EUR").toLowerCase() === "eur" ? "EUR " : `${currency.toUpperCase()} `;
-  return `${sym}${Math.round(cents / 100).toLocaleString()}`;
+  void currency;
+  return "€" + Math.round(cents / 100).toLocaleString();
 }
 
 function getModes(doctor: Doctor) {
@@ -196,8 +196,8 @@ export default function DoctorsClient({ slug, canManage }: { slug: string; canMa
         <div>
           <h1 className="text-xl font-extrabold text-[#0f1e38]">{isDoctor ? "My Doctor Profile" : "Doctors"}</h1>
           <p className="text-sm text-gray-400 mt-0.5">
-            {doctors.length} doctor{doctors.length !== 1 ? "s" : ""} · {departments.length} department
-            {departments.length !== 1 ? "s" : ""} · {verified} verified · {withSlots} with active slots
+            {doctors.length} doctor{doctors.length !== 1 ? "s" : ""} Â· {departments.length} department
+            {departments.length !== 1 ? "s" : ""} Â· {verified} verified Â· {withSlots} with active slots
           </p>
           {isDoctor && doctorName && (
             <p className="text-xs font-semibold text-[#a88b50] mt-1">Profile linked for {doctorName}</p>
@@ -220,21 +220,21 @@ export default function DoctorsClient({ slug, canManage }: { slug: string; canMa
         </button>
       </div>
 
-      {!isDoctor && <div className="bg-white rounded-2xl border border-gray-100 p-4 space-y-3">
-        <div className="grid gap-2.5 lg:grid-cols-[1fr_220px_160px_160px_150px]">
-          <div className="flex items-center gap-2 h-10 rounded-xl px-3 bg-[#f7f4ef] border border-gray-100">
-            <Search size={13} className="text-gray-400 flex-shrink-0" />
+      {!isDoctor && <div className="admin-control-panel space-y-3">
+        <div className="admin-control-row">
+          <div className="admin-search-control">
+            <Search size={14} className="admin-search-icon" />
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search by name, department, or specialty..."
-              className="flex-1 text-sm outline-none bg-transparent text-[#0f1e38] placeholder-gray-400"
+              className="admin-search-input"
             />
           </div>
           <select
             value={departmentFilter}
             onChange={(e) => setDepartmentFilter(e.target.value)}
-            className="h-10 rounded-xl px-3 text-xs font-semibold outline-none border border-gray-100 bg-white text-[#0f1e38]"
+            className="admin-select-control"
           >
             <option value="all">All departments</option>
             {departments.map((department) => (
@@ -247,7 +247,7 @@ export default function DoctorsClient({ slug, canManage }: { slug: string; canMa
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="h-10 rounded-xl px-3 text-xs font-semibold outline-none border border-gray-100 bg-white text-[#0f1e38]"
+            className="admin-select-control"
           >
             <option value="all">All statuses</option>
             <option value="verified">Verified</option>
@@ -256,7 +256,7 @@ export default function DoctorsClient({ slug, canManage }: { slug: string; canMa
           <select
             value={slotFilter}
             onChange={(e) => setSlotFilter(e.target.value)}
-            className="h-10 rounded-xl px-3 text-xs font-semibold outline-none border border-gray-100 bg-white text-[#0f1e38]"
+            className="admin-select-control"
           >
             <option value="all">All slots</option>
             <option value="with-slots">With active slots</option>
@@ -265,7 +265,7 @@ export default function DoctorsClient({ slug, canManage }: { slug: string; canMa
           <select
             value={modeFilter}
             onChange={(e) => setModeFilter(e.target.value)}
-            className="h-10 rounded-xl px-3 text-xs font-semibold outline-none border border-gray-100 bg-white text-[#0f1e38]"
+            className="admin-select-control"
           >
             <option value="all">All modes</option>
             <option value="ONLINE">Online</option>
@@ -282,8 +282,7 @@ export default function DoctorsClient({ slug, canManage }: { slug: string; canMa
               setSlotFilter("all");
               setModeFilter("all");
             }}
-            className="inline-flex items-center gap-1.5 h-8 px-3 rounded-xl text-xs font-bold"
-            style={{ background: "rgba(239,68,68,.08)", color: "#dc2626", border: "1px solid rgba(239,68,68,.2)" }}
+            className="admin-clear-filter inline-flex items-center gap-1.5"
           >
             <Filter size={12} /> Clear filters
           </button>

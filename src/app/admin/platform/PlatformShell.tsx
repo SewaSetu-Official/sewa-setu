@@ -20,7 +20,7 @@ const NAV: NavItem[] = [
   { label: "Users",      href: "/admin/platform/users",      icon: <Users size={17} />, adminOnly: true },
   { label: "Support",    href: "/admin/platform/support",    icon: <UserCheck size={17} />, adminOnly: true },
   { label: "Inquiries",  href: "/admin/platform/inquiries",  icon: <Inbox size={17} /> },
-  { label: "Onboarding", href: "/admin/platform/onboarding", icon: <ClipboardList size={17} /> },
+  { label: "Setup",      href: "/admin/platform/onboarding", icon: <ClipboardList size={17} /> },
   { label: "Bookings",   href: "/admin/platform/bookings",   icon: <CalendarDays size={17} /> },
   { label: "Revenue",    href: "/admin/platform/revenue",    icon: <TrendingUp size={17} /> },
   { label: "Audit Logs", href: "/admin/platform/audit-logs", icon: <ShieldCheck size={17} /> },
@@ -121,6 +121,9 @@ export default function PlatformShell({
   const pathname = usePathname();
   const router = useRouter();
   const isAdmin = isPlatformAdmin(user.role);
+  const currentPageLabel = pathname === "/admin/platform/onboarding"
+    ? "Hospital Setup"
+    : pathname.split("/").pop()?.replace(/-/g, " ") ?? "Dashboard";
   const allowedSupportPath =
     pathname === "/admin/platform/dashboard" ||
     pathname === "/admin/platform/hospitals" ||
@@ -162,7 +165,7 @@ export default function PlatformShell({
             <span className="text-gray-400 font-medium hidden sm:block">Platform</span>
             <ChevronRight size={13} className="text-gray-300 hidden sm:block" />
             <span className="font-bold text-[#0f1e38] capitalize">
-              {pathname.split("/").pop()?.replace(/-/g, " ") ?? "Dashboard"}
+              {currentPageLabel}
             </span>
           </div>
         </header>

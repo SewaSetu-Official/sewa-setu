@@ -114,7 +114,7 @@ export async function getHospitalBySlug(slug: string): Promise<ApiHospitalDetail
     id: p.id,
     name: p.title,
     price: p.price ?? 0,
-    currency: p.currency ?? "NPR",
+    currency: p.currency ?? "EUR",
     description: p.description ?? "",
     features: p.description
       ? p.description.split("\n").map((l) => l.trim()).filter(Boolean)

@@ -1,9 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import {
   AlertCircle,
   Building2,
+  ChevronRight,
   RefreshCw,
   ShieldCheck,
   UserCheck,
@@ -161,26 +163,11 @@ export default function PlatformSupportPage() {
         </div>
       ) : (
         <>
-          <section className="overflow-hidden rounded-2xl border border-gray-100 bg-white">
-            <div className="flex flex-wrap items-start justify-between gap-4 px-5 py-4" style={{ background: "linear-gradient(135deg,#0f1e38,#192d52)" }}>
-              <div className="flex items-start gap-3">
-                <div className="flex h-11 w-11 items-center justify-center rounded-xl" style={{ background: "rgba(200,169,110,.14)", color: "#c8a96e" }}>
-                  <ShieldCheck size={19} />
-                </div>
-                <div>
-                  <p className="text-base font-extrabold text-white">Scoped Support Coverage</p>
-                  <p className="mt-1 max-w-2xl text-xs font-semibold text-white/55">
-                    Support users only see assigned hospitals. Use this page to keep coverage clear and auditable.
-                  </p>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
-                <Stat label="Support users" value={stats.supportUsers} />
-                <Stat label="Unassigned" value={stats.unassignedSupport} />
-                <Stat label="Uncovered hospitals" value={stats.uncoveredHospitals} />
-                <Stat label="Assignments" value={stats.activeAssignments} />
-              </div>
-            </div>
+          <section className="grid gap-3 md:grid-cols-4">
+            <Stat label="Support users" value={stats.supportUsers} />
+            <Stat label="Unassigned" value={stats.unassignedSupport} />
+            <Stat label="Uncovered hospitals" value={stats.uncoveredHospitals} />
+            <Stat label="Assignments" value={stats.activeAssignments} />
           </section>
 
           <div className="grid gap-5 xl:grid-cols-[minmax(0,1.1fr)_minmax(360px,0.9fr)]">
@@ -191,7 +178,31 @@ export default function PlatformSupportPage() {
               </div>
 
               {supportUsers.length === 0 ? (
-                <EmptyState title="No platform support users" body="Promote a user to Platform Support before assigning hospitals." />
+                <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
+                  <div className="flex flex-wrap items-start justify-between gap-4">
+                    <div className="max-w-xl">
+                      <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#f7f4ef] text-[#c8a96e]">
+                        <ShieldCheck size={22} />
+                      </div>
+                      <h3 className="mt-4 text-lg font-extrabold text-[#0f172a]">No platform support users yet</h3>
+                      <p className="mt-2 text-sm font-semibold leading-relaxed text-slate-500">
+                        Support assignments only work after an existing user is promoted to Platform Support. Once promoted, that person appears here and can be scoped to specific hospitals.
+                      </p>
+                    </div>
+                    <Link
+                      href="/admin/platform/users"
+                      className="inline-flex h-10 items-center gap-2 rounded-xl px-4 text-sm font-extrabold no-underline"
+                      style={{ background: "#0f1e38", color: "#c8a96e" }}
+                    >
+                      Open users <ChevronRight size={14} />
+                    </Link>
+                  </div>
+                  <div className="mt-5 grid gap-3 md:grid-cols-3">
+                    <SetupStep index="1" title="User signs in" body="The person must exist as a user first, usually after logging in once." />
+                    <SetupStep index="2" title="Promote role" body="Go to Users and change their platform role to Platform Support." />
+                    <SetupStep index="3" title="Assign hospitals" body="Return here and give them access only to the hospitals they support." />
+                  </div>
+                </div>
               ) : (
                 supportUsers.map((user) => {
                   const availableHospitals = hospitals.filter((hospital) =>
@@ -234,8 +245,7 @@ export default function PlatformSupportPage() {
                         <select
                           value={selectedHospitalId}
                           onChange={(event) => setSelectedHospitalByUser((current) => ({ ...current, [user.id]: event.target.value }))}
-                          className="h-10 rounded-xl px-3 text-xs font-semibold outline-none"
-                          style={{ background: "#f7f4ef", border: "1.5px solid rgba(15,30,56,.1)", color: "#6b7a96" }}
+                          className="admin-select-control w-full"
                         >
                           <option value="">Assign hospital...</option>
                           {availableHospitals.map((hospital) => (
@@ -316,19 +326,21 @@ export default function PlatformSupportPage() {
 
 function Stat({ label, value }: { label: string; value: number }) {
   return (
-    <div className="min-w-28 rounded-xl px-3 py-2 text-right" style={{ background: "rgba(255,255,255,.08)", border: "1px solid rgba(255,255,255,.1)" }}>
-      <p className="text-lg font-extrabold text-[#c8a96e]">{value}</p>
-      <p className="text-[9px] font-bold uppercase tracking-widest text-white/40">{label}</p>
+    <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
+      <p className="text-[10px] font-bold uppercase tracking-widest text-[#8a9ab5]">{label}</p>
+      <p className="mt-2 text-2xl font-extrabold text-[#0f1e38]">{value}</p>
     </div>
   );
 }
 
-function EmptyState({ title, body }: { title: string; body: string }) {
+function SetupStep({ index, title, body }: { index: string; title: string; body: string }) {
   return (
-    <div className="rounded-2xl border border-gray-100 bg-white p-10 text-center">
-      <ShieldCheck size={26} className="mx-auto text-gray-200" />
-      <p className="mt-3 text-sm font-bold text-slate-500">{title}</p>
-      <p className="mt-1 text-xs font-semibold text-slate-400">{body}</p>
+    <div className="rounded-2xl bg-[#f7f4ef] p-4">
+      <div className="flex h-7 w-7 items-center justify-center rounded-full bg-white text-xs font-extrabold text-[#c8a96e]">
+        {index}
+      </div>
+      <p className="mt-3 text-sm font-extrabold text-[#0f172a]">{title}</p>
+      <p className="mt-1 text-xs font-semibold leading-relaxed text-slate-500">{body}</p>
     </div>
   );
 }

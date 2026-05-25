@@ -57,3 +57,6 @@ next-env.d.ts
 # local browser test artifacts
 /.playwright-mcp/
 /owner-dashboard-*.png
+
+# local uploaded media
+/public/uploads/

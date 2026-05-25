@@ -14,7 +14,9 @@ import {
   Stethoscope,
   Wifi,
   MapPin,
+  Clock3,
 } from "lucide-react";
+import { formatMoneyCents } from "@/lib/money";
 
 type Hospital = { id: string; name: string };
 type PlatformScope = "platform" | "assigned";
@@ -80,13 +82,7 @@ const STATUS_FILTERS = [
 ];
 
 function fmt(cents: number, currency: string) {
-  const sym =
-    currency === "eur"
-      ? "€"
-      : currency === "usd"
-        ? "$"
-        : `${currency.toUpperCase()} `;
-  return `${sym}${Math.round(cents / 100).toLocaleString()}`;
+  return formatMoneyCents(cents, currency);
 }
 
 function fmtDate(iso: string) {
@@ -105,6 +101,22 @@ function fmtDateTime(iso: string) {
     hour: "2-digit",
     minute: "2-digit",
   });
+}
+
+function fmtTime(iso: string) {
+  return new Date(iso).toLocaleTimeString("en-GB", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function fmtSlot(booking: Booking) {
+  if (booking.slotTime) return booking.slotTime.replace("-", " - ");
+  return fmtTime(booking.scheduledAt);
+}
+
+function bookingCode(id: string) {
+  return id.slice(0, 10).toUpperCase();
 }
 
 export default function PlatformBookingsPage() {
@@ -178,18 +190,18 @@ export default function PlatformBookingsPage() {
 
   const hasFilters =
     search || statusFilter !== "all" || hospitalFilter || fromDate || toDate;
-
   return (
-    <div className="space-y-6 w-full">
-      <div className="flex items-center justify-between gap-4">
+    <div className="space-y-5 w-full">
+      <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-xl font-extrabold text-[#0f1e38]">All Bookings</h1>
-          <p className="text-sm text-gray-400 mt-0.5">
+          <p className="text-[11px] font-extrabold uppercase tracking-[0.18em] text-[#8a9ab5]">Platform operations</p>
+          <h1 className="mt-1 text-2xl font-extrabold tracking-tight text-[#0f1e38]">Bookings</h1>
+          <p className="mt-1 text-sm font-semibold text-[#8a9ab5]">
             {total.toLocaleString()} booking{total !== 1 ? "s" : ""} across{" "}
             {scope === "assigned" ? "assigned hospitals" : "all hospitals"}
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap justify-end gap-2">
           {hasFilters && (
             <button
               onClick={() => {
@@ -201,39 +213,29 @@ export default function PlatformBookingsPage() {
                 setToDate("");
                 setPage(1);
               }}
-              className="h-9 px-3 rounded-xl text-xs font-bold"
-              style={{
-                background: "rgba(239,68,68,.08)",
-                color: "#dc2626",
-                border: "1.5px solid rgba(239,68,68,.15)",
-              }}
+              className="admin-clear-filter"
             >
               Clear filters
             </button>
           )}
           <button
             onClick={() => fetchBookings()}
-            className="flex items-center gap-2 h-9 px-3 rounded-xl text-xs font-semibold transition-all"
-            style={{
-              background: "#fff",
-              border: "1.5px solid rgba(15,30,56,.1)",
-              color: "#6b7a96",
-            }}
+            className="inline-flex h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-xs font-extrabold text-[#5f6f8d] transition hover:border-[#c8a96e] hover:text-[#9c7939]"
           >
             <RefreshCw size={13} /> Refresh
           </button>
         </div>
       </div>
 
-      <div className="bg-white rounded-2xl border border-gray-100 p-4 space-y-3">
-        <div className="grid md:grid-cols-[1fr_auto_auto_auto] gap-2.5">
-          <div className="flex items-center gap-2 h-10 rounded-xl px-3 bg-[#f7f4ef] border border-gray-100">
-            <Search size={13} className="text-gray-400 flex-shrink-0" />
+      <div className="admin-control-panel space-y-3">
+        <div className="admin-control-row">
+          <div className="admin-search-control">
+            <Search size={14} className="admin-search-icon" />
             <input
               value={searchInput}
               onChange={(e) => handleSearch(e.target.value)}
               placeholder="Search booking ID, hospital, doctor..."
-              className="flex-1 text-sm outline-none bg-transparent text-[#0f1e38] placeholder-gray-400"
+              className="admin-search-input"
             />
           </div>
           <select
@@ -242,7 +244,7 @@ export default function PlatformBookingsPage() {
               setHospitalFilter(e.target.value);
               setPage(1);
             }}
-            className="h-10 rounded-xl px-3 text-xs font-semibold outline-none cursor-pointer border border-gray-100 bg-white"
+            className="admin-select-control"
           >
             <option value="">{scope === "assigned" ? "Assigned hospitals" : "All hospitals"}</option>
             {hospitals.map((h) => (
@@ -258,7 +260,7 @@ export default function PlatformBookingsPage() {
               setFromDate(e.target.value);
               setPage(1);
             }}
-            className="h-10 rounded-xl px-3 text-xs font-semibold outline-none border border-gray-100 bg-white"
+            className="admin-date-control"
           />
           <input
             type="date"
@@ -267,11 +269,11 @@ export default function PlatformBookingsPage() {
               setToDate(e.target.value);
               setPage(1);
             }}
-            className="h-10 rounded-xl px-3 text-xs font-semibold outline-none border border-gray-100 bg-white"
+            className="admin-date-control"
           />
         </div>
 
-        <div className="flex gap-1.5 flex-wrap">
+        <div className="admin-filter-row">
           {STATUS_FILTERS.map((f) => (
             <button
               key={f.value}
@@ -279,15 +281,7 @@ export default function PlatformBookingsPage() {
                 setStatusFilter(f.value);
                 setPage(1);
               }}
-              className="h-8 px-3 rounded-xl text-xs font-semibold transition-all"
-              style={{
-                background: statusFilter === f.value ? "#0f1e38" : "#fff",
-                color: statusFilter === f.value ? "#c8a96e" : "#6b7a96",
-                border:
-                  statusFilter === f.value
-                    ? "none"
-                    : "1.5px solid rgba(15,30,56,.09)",
-              }}
+              className={`admin-filter-pill ${statusFilter === f.value ? "admin-filter-pill-active" : ""}`}
             >
               {f.label}
             </button>
@@ -325,35 +319,42 @@ export default function PlatformBookingsPage() {
           </p>
         </div>
       ) : (
-        <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+        <div className="overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-[0_14px_40px_rgba(15,30,56,0.05)]">
+          <div className="flex items-center justify-between gap-3 border-b border-slate-100 px-4 py-3">
+            <div>
+              <h2 className="text-sm font-extrabold text-[#0f1e38]">Booking ledger</h2>
+              <p className="text-xs font-semibold text-[#8a9ab5]">Newest platform bookings with payment and care context.</p>
+            </div>
+            <span className="admin-page-indicator">Page {page}</span>
+          </div>
           <div className="w-full overflow-x-auto">
-            <table className="w-full min-w-[1040px] text-sm">
+            <table className="w-full min-w-[1080px] text-sm">
               <colgroup>
-                <col className="w-[15%]" />
-                <col className="w-[17%]" />
-                <col className="w-[26%]" />
-                <col className="w-[14%]" />
-                <col className="w-[12%]" />
                 <col className="w-[16%]" />
+                <col className="w-[18%]" />
+                <col className="w-[27%]" />
+                <col className="w-[15%]" />
+                <col className="w-[10%]" />
+                <col className="w-[14%]" />
               </colgroup>
-              <thead style={{ background: "#f7f4ef" }}>
+              <thead className="bg-[#f7f4ef]">
                 <tr>
-                  <th className="text-left px-4 py-3 text-[11px] font-bold uppercase tracking-widest text-gray-400">
+                  <th className="text-left px-5 py-3 text-[11px] font-extrabold uppercase tracking-[0.16em] text-[#8a9ab5]">
                     Schedule
                   </th>
-                  <th className="text-left px-4 py-3 text-[11px] font-bold uppercase tracking-widest text-gray-400">
+                  <th className="text-left px-5 py-3 text-[11px] font-extrabold uppercase tracking-[0.16em] text-[#8a9ab5]">
                     Booking
                   </th>
-                  <th className="text-left px-4 py-3 text-[11px] font-bold uppercase tracking-widest text-gray-400">
+                  <th className="text-left px-5 py-3 text-[11px] font-extrabold uppercase tracking-[0.16em] text-[#8a9ab5]">
                     Hospital / Doctor
                   </th>
-                  <th className="text-left px-4 py-3 text-[11px] font-bold uppercase tracking-widest text-gray-400">
+                  <th className="text-left px-5 py-3 text-[11px] font-extrabold uppercase tracking-[0.16em] text-[#8a9ab5]">
                     Status
                   </th>
-                  <th className="text-right px-4 py-3 text-[11px] font-bold uppercase tracking-widest text-gray-400">
+                  <th className="text-right px-5 py-3 text-[11px] font-extrabold uppercase tracking-[0.16em] text-[#8a9ab5]">
                     Amount
                   </th>
-                  <th className="text-right px-4 py-3 text-[11px] font-bold uppercase tracking-widest text-gray-400">
+                  <th className="text-right px-5 py-3 text-[11px] font-extrabold uppercase tracking-[0.16em] text-[#8a9ab5]">
                     Actions
                   </th>
                 </tr>
@@ -365,55 +366,55 @@ export default function PlatformBookingsPage() {
 
                   return (
                     <Fragment key={b.id}>
-                      <tr className="border-t border-gray-100 hover:bg-[#fcfbf8]">
-                        <td className="px-4 py-3.5 align-top break-words">
-                          <p className="text-xs font-semibold text-[#0f1e38]">
+                      <tr className="border-b border-[#e5e7eb] hover:bg-[#fcfbf8]">
+                        <td className="px-5 py-4 align-top break-words">
+                          <p className="text-sm font-extrabold text-[#0f1e38]">
                             {fmtDate(b.scheduledAt)}
                           </p>
-                          <p className="text-[11px] text-gray-400">
-                            {b.slotTime ?? "No slot"}
+                          <p className="mt-1 inline-flex items-center gap-1.5 rounded-full bg-[#f7f4ef] px-2 py-0.5 text-[11px] font-extrabold text-[#5f6f8d]">
+                            <Clock3 size={11} />
+                            {fmtSlot(b)}
                           </p>
-                          <p className="text-[10px] text-gray-300">
+                          <p className="mt-1 text-[10px] font-semibold text-[#b6c1d1]">
                             Booked {fmtDate(b.createdAt)}
                           </p>
                         </td>
 
-                        <td className="px-4 py-3.5 align-top break-words">
+                        <td className="px-5 py-4 align-top break-words">
                           <div className="flex items-start gap-2">
                             <div
-                              className="h-8 w-8 rounded-lg flex items-center justify-center"
-                              style={{ background: "rgba(15,30,56,.05)" }}
+                              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#f7f4ef]"
                             >
                               <User size={14} className="text-[#6b7a96]" />
                             </div>
-                            <div>
-                              <p className="text-xs font-bold text-[#0f1e38]">
+                            <div className="min-w-0">
+                              <p className="text-sm font-extrabold text-[#0f1e38]">
                                 Patient restricted
                               </p>
-                              <p className="text-[11px] text-gray-400">
-                                {b.id.slice(0, 10)}
+                              <p className="mt-0.5 font-mono text-[11px] font-bold text-[#8a9ab5]">
+                                {bookingCode(b.id)}
                               </p>
                             </div>
                           </div>
                         </td>
 
-                        <td className="px-4 py-3.5 align-top break-words">
-                          <p className="text-xs font-semibold text-[#0f1e38] flex items-center gap-1.5">
-                            <Building2 size={12} className="text-gray-400" />
-                            {b.hospital?.name ?? "No hospital"}
+                        <td className="px-5 py-4 align-top break-words">
+                          <p className="flex items-center gap-1.5 text-sm font-extrabold text-[#0f1e38]">
+                            <Building2 size={13} className="text-[#8a9ab5]" />
+                            <span className="max-w-[280px] truncate">{b.hospital?.name ?? "No hospital"}</span>
                           </p>
-                          <p className="text-[11px] text-gray-500 mt-0.5 flex items-center gap-1.5">
-                            <Stethoscope size={11} className="text-gray-400" />
+                          <p className="mt-1 flex items-center gap-1.5 text-xs font-semibold text-[#6b7a96]">
+                            <Stethoscope size={12} className="text-[#8a9ab5]" />
                             {b.doctor ?? "No doctor"}
                           </p>
-                          <p className="text-[11px] text-gray-400">
+                          <p className="mt-0.5 text-[11px] font-semibold text-[#a2afc4]">
                             {b.package ?? "No package"}
                           </p>
                         </td>
 
-                        <td className="px-4 py-3.5 align-top break-words">
+                        <td className="px-5 py-4 align-top break-words">
                           <span
-                            className="flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full w-fit"
+                            className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-extrabold"
                             style={{ background: st.bg, color: st.color }}
                           >
                             <span
@@ -422,7 +423,7 @@ export default function PlatformBookingsPage() {
                             />
                             {st.label}
                           </span>
-                          <div className="flex items-center gap-1 mt-1.5 text-[11px] text-gray-400 font-medium">
+                          <div className="mt-2 flex items-center gap-1 text-[11px] font-bold text-[#8a9ab5]">
                             {b.mode === "ONLINE" ? (
                               <Wifi size={10} className="text-blue-400" />
                             ) : (
@@ -431,31 +432,26 @@ export default function PlatformBookingsPage() {
                             {b.mode === "ONLINE" ? "Online" : "Physical"}
                           </div>
                           {b.refunded && (
-                            <div className="flex items-center gap-1 mt-1 text-[11px] font-semibold" style={{ color: "#059669" }}>
+                            <div className="mt-1 flex items-center gap-1 text-[11px] font-bold text-emerald-700">
                               <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 inline-block" />
                               Refunded
                             </div>
                           )}
                         </td>
 
-                        <td className="px-4 py-3.5 text-right align-top break-words">
-                          <p className="text-sm font-extrabold text-[#0f1e38]">
+                        <td className="px-5 py-4 text-right align-top break-words">
+                          <p className="inline-flex items-center justify-end gap-1.5 text-sm font-extrabold text-[#0f1e38]">
                             {b.amountPaid != null ? fmt(b.amountPaid, b.currency) : "-"}
                           </p>
                         </td>
 
-                        <td className="px-4 py-3.5 text-right align-top break-words">
+                        <td className="px-5 py-4 text-right align-top break-words">
                           <div className="inline-flex items-center gap-2">
                             <button
                               onClick={() =>
                                 setExpandedId((prev) => (prev === b.id ? null : b.id))
                               }
-                              className="h-8 px-3 rounded-xl text-xs font-semibold border"
-                              style={{
-                                borderColor: "rgba(15,30,56,.12)",
-                                color: "#0f1e38",
-                                background: "#fff",
-                              }}
+                              className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 text-xs font-extrabold text-[#0f1e38] transition hover:border-[#c8a96e]"
                             >
                               Details
                               <ChevronDown
@@ -468,16 +464,16 @@ export default function PlatformBookingsPage() {
                       </tr>
 
                       {isExpanded && (
-                        <tr className="border-t border-gray-100 bg-[#fcfbf8]">
-                          <td colSpan={6} className="px-4 py-4">
-                            <div className="grid md:grid-cols-3 gap-3">
+                        <tr className="bg-[#fcfbf8]">
+                          <td colSpan={6} className="px-5 py-4">
+                            <div className="grid gap-3 md:grid-cols-4">
                               {[
                                 { label: "Booking ID", value: b.id },
                                 {
                                   label: "Scheduled",
                                   value:
                                     fmtDate(b.scheduledAt) +
-                                    (b.slotTime ? ` ${b.slotTime}` : ""),
+                                    ` ${fmtSlot(b)}`,
                                 },
                                 { label: "Created", value: fmtDateTime(b.createdAt) },
                                 { label: "Patient data", value: "Restricted" },
@@ -497,16 +493,12 @@ export default function PlatformBookingsPage() {
                               ].map((item) => (
                                 <div
                                   key={item.label}
-                                  className="p-3 rounded-xl"
-                                  style={{
-                                    background: "#fff",
-                                    border: "1px solid rgba(15,30,56,.08)",
-                                  }}
+                                  className="rounded-xl border border-slate-100 bg-white p-3"
                                 >
-                                  <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1">
+                                  <p className="mb-1 text-[10px] font-extrabold uppercase tracking-[0.16em] text-[#8a9ab5]">
                                     {item.label}
                                   </p>
-                                  <p className="text-xs font-semibold text-[#0f1e38] break-all">
+                                  <p className="break-all text-xs font-bold text-[#0f1e38]">
                                     {item.value}
                                   </p>
                                 </div>
@@ -515,20 +507,16 @@ export default function PlatformBookingsPage() {
 
                             {b.status === "CANCELLED" && (
                               <div
-                                className="mt-3 p-3 rounded-xl"
-                                style={{
-                                  background: "rgba(239,68,68,.04)",
-                                  border: "1px solid rgba(239,68,68,.14)",
-                                }}
+                                className="mt-3 rounded-xl border border-red-100 bg-red-50 p-3"
                               >
-                                <p className="text-[10px] font-bold uppercase tracking-widest text-red-400 mb-1">
+                                <p className="mb-1 text-[10px] font-extrabold uppercase tracking-[0.16em] text-red-500">
                                   Cancellation reason
                                 </p>
-                                <p className="text-sm text-[#0f1e38]">
+                                <p className="text-sm font-semibold text-[#0f1e38]">
                                   {b.cancellationReason ?? "No reason provided"}
                                 </p>
                                 {b.cancelledAt && (
-                                  <p className="text-[10px] mt-1 text-gray-500">
+                                  <p className="mt-1 text-[10px] font-semibold text-[#8a9ab5]">
                                     Cancelled at {fmtDateTime(b.cancelledAt)}
                                   </p>
                                 )}
@@ -549,7 +537,7 @@ export default function PlatformBookingsPage() {
       {total > 20 && (
         <div className="flex items-center justify-between pt-2">
           <p className="text-xs font-semibold" style={{ color: "#8a9ab5" }}>
-            Showing {(page - 1) * 20 + 1}–{Math.min(page * 20, total)} of{" "}
+            Showing {(page - 1) * 20 + 1}-{Math.min(page * 20, total)} of{" "}
             {total.toLocaleString()}
           </p>
           <div className="flex gap-2">

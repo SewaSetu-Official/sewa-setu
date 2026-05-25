@@ -22,6 +22,46 @@ function parseCreatedAtRange(from: string, to: string): Prisma.DateTimeFilter | 
   };
 }
 
+function isDatabaseUnavailable(error: unknown) {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    error.code === "P1001"
+  );
+}
+
+function emptyRevenuePayload(scope: "platform" | "assigned") {
+  const now = new Date();
+  const monthly: { label: string; revenue: number; bookings: number }[] = [];
+
+  for (let i = 11; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    monthly.push({
+      label: d.toLocaleDateString("en-GB", { month: "short", year: "2-digit" }),
+      revenue: 0,
+      bookings: 0,
+    });
+  }
+
+  return {
+    warning: "database_unavailable",
+    kpis: {
+      allTimeRevenue: 0,
+      thisMonthRevenue: 0,
+      totalRefunds: 0,
+      refundedCount: 0,
+      totalBookings: 0,
+      cancelledBookings: 0,
+      cancellationRate: 0,
+    },
+    monthly,
+    hospitals: [],
+    filterHospitals: [],
+    scope,
+  };
+}
+
 export async function GET(req: Request) {
   let ctx;
   try { ctx = await requirePlatformStaff({ apiMode: true }); }
@@ -71,6 +111,7 @@ export async function GET(req: Request) {
     revenueWhere.status = normalizedStatus;
   }
 
+  try {
   const [allTimeRevenue, thisMonthRevenue, allTimeRefunds, totalBookings, cancelledBookings, filterHospitals] =
     await Promise.all([
       db.booking.aggregate({
@@ -187,4 +228,11 @@ export async function GET(req: Request) {
     filterHospitals,
     scope: ctx.isAdmin ? "platform" : "assigned",
   });
+  } catch (error) {
+    if (isDatabaseUnavailable(error)) {
+      console.warn("Platform revenue unavailable: database connection failed", error);
+      return NextResponse.json(emptyRevenuePayload(ctx.isAdmin ? "platform" : "assigned"));
+    }
+    throw error;
+  }
 }
