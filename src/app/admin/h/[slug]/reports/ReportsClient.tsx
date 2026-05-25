@@ -87,15 +87,10 @@ export default function ReportsClient({ slug }: { slug: string }) {
           <h1 className="text-xl font-extrabold text-[#0f1e38]">Reports</h1>
           <p className="text-sm text-gray-400 mt-0.5">Business intelligence overview</p>
         </div>
-        <div className="flex gap-2">
+        <div className="admin-control-row-nowrap">
           {RANGES.map((r) => (
             <button key={r.value} onClick={() => setRange(r.value)}
-              className="h-8 px-3 rounded-xl text-xs font-semibold transition-all"
-              style={{
-                background: range === r.value ? "#0f1e38" : "#fff",
-                color: range === r.value ? "#c8a96e" : "#6b7a96",
-                border: range === r.value ? "none" : "1.5px solid rgba(15,30,56,.1)",
-              }}>
+              className={`admin-filter-pill ${range === r.value ? "admin-filter-pill-active" : ""}`}>
               {r.label}
             </button>
           ))}

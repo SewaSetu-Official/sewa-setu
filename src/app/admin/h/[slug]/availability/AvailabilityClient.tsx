@@ -474,21 +474,21 @@ export default function AvailabilityClient({
       </div>
 
       {!isDoctorRole && (
-      <div className="bg-white rounded-2xl border border-gray-100 px-4 py-3">
-        <div className="grid gap-2 lg:grid-cols-[minmax(220px,1fr)_190px_240px_140px_140px]">
-          <div className="flex items-center gap-2 h-9 rounded-lg px-3 bg-[#f7f4ef] border border-gray-100 min-w-0">
-            <Search size={13} className="text-gray-400 flex-shrink-0" />
+      <div className="admin-control-panel">
+        <div className="admin-control-row">
+          <div className="admin-search-control">
+            <Search size={14} className="admin-search-icon" />
             <input
               value={search}
               onChange={(event) => setSearch(event.target.value)}
               placeholder="Search doctor or patient..."
-              className="flex-1 min-w-0 text-sm outline-none bg-transparent text-[#0f1e38] placeholder-gray-400"
+              className="admin-search-input"
             />
           </div>
           <select
             value={departmentFilter}
             onChange={(event) => setDepartmentFilter(event.target.value)}
-            className="h-9 rounded-lg px-3 text-xs font-semibold outline-none border border-gray-100 bg-white text-[#0f1e38] min-w-0"
+            className="admin-select-control min-w-0"
           >
             <option value="all">All departments</option>
             {departments.map((department) => (
@@ -509,7 +509,7 @@ export default function AvailabilityClient({
               setViewMode("single");
               setSelectedDoctorId(next);
             }}
-            className="h-9 rounded-lg px-3 text-xs font-semibold outline-none border border-gray-100 bg-white text-[#0f1e38] min-w-0"
+            className="admin-select-control min-w-0"
           >
             <option value="all">All doctors</option>
             {doctorOptions.map((doctor) => (
@@ -521,7 +521,7 @@ export default function AvailabilityClient({
           <select
             value={modeFilter}
             onChange={(event) => setModeFilter(event.target.value)}
-            className="h-9 rounded-lg px-3 text-xs font-semibold outline-none border border-gray-100 bg-white text-[#0f1e38]"
+            className="admin-select-control"
           >
             <option value="all">All modes</option>
             <option value="PHYSICAL">Physical</option>
@@ -530,7 +530,7 @@ export default function AvailabilityClient({
           <select
             value={slotFilter}
             onChange={(event) => setSlotFilter(event.target.value)}
-            className="h-9 rounded-lg px-3 text-xs font-semibold outline-none border border-gray-100 bg-white text-[#0f1e38]"
+            className="admin-select-control"
           >
             <option value="all">All slots</option>
             <option value="available">Available</option>

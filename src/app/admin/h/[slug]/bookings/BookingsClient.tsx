@@ -87,14 +87,6 @@ const STATUS_CONFIG: Record<string, { label: string; bg: string; color: string; 
   CANCELLED: { label: "Cancelled", bg: "#fee2e2", color: "#991b1b", dot: "#ef4444", border: "#fca5a5" },
 };
 
-const ACTIVE_TAB_STYLE: Record<string, { bg: string; color: string; border: string }> = {
-  all:       { bg: "#1a3059",  color: "#c8a96e", border: "transparent" },
-  requested: { bg: "#fef3c7",  color: "#92620a", border: "#fcd34d" },
-  confirmed: { bg: "#dbeafe",  color: "#1e40af", border: "#93c5fd" },
-  completed: { bg: "#d1fae5",  color: "#065f46", border: "#6ee7b7" },
-  cancelled: { bg: "#fee2e2",  color: "#991b1b", border: "#fca5a5" },
-};
-
 function formatSlotTime(t: string) {
   const start = t.split("-")[0].trim();
   const [h, m = 0] = start.split(":").map(Number);
@@ -104,8 +96,8 @@ function formatSlotTime(t: string) {
 }
 
 function formatMoney(cents: number, currency: string) {
-  const sym = currency.toLowerCase() === "eur" ? "€" : `${currency.toUpperCase()} `;
-  return `${sym}${Math.round(cents / 100).toLocaleString()}`;
+  void currency;
+  return "€" + Math.round(cents / 100).toLocaleString();
 }
 
 function formatDate(iso: string) {
@@ -343,7 +335,7 @@ export default function BookingsClient({ slug }: { slug: string }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20, width: "100%" }}>
 
-      {/* ── Header ── */}
+      {/* â”€â”€ Header â”€â”€ */}
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16 }}>
         <div>
           <h1 style={{ fontSize: 20, fontWeight: 600, color: "#0f1e38", letterSpacing: "-0.02em", margin: 0 }}>
@@ -356,7 +348,7 @@ export default function BookingsClient({ slug }: { slug: string }) {
                 : isDoctor
                   ? `${data.total.toLocaleString()} patient appointment${data.total !== 1 ? "s" : ""}`
                   : `${data.total.toLocaleString()} booking${data.total !== 1 ? "s" : ""}`
-              : "Loading…"}
+              : "Loadingâ€¦"}
           </p>
         </div>
         <button
@@ -375,33 +367,17 @@ export default function BookingsClient({ slug }: { slug: string }) {
         </button>
       </div>
 
-      {/* ── Toolbar — single row ── */}
-      <div style={{
-        background: "#fff", borderRadius: 12,
-        border: "0.5px solid rgba(15,30,56,.08)",
-        padding: "8px 10px",
-        display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap",
-      }}>
+      {/* â”€â”€ Toolbar â€” single row â”€â”€ */}
+      <div className="admin-control-panel admin-control-row">
         {/* Status tabs */}
         <div style={{ display: "flex", gap: 3, flexShrink: 0 }}>
           {STATUS_TABS.map((tab) => {
             const active = status === tab.value;
-            const activeStyle = ACTIVE_TAB_STYLE[tab.value];
             return (
               <button
                 key={tab.value}
                 onClick={() => handleStatusTab(tab.value)}
-                style={{
-                  display: "inline-flex", alignItems: "center", gap: 5,
-                  padding: "0 11px", height: 30, borderRadius: 7,
-                  background: active ? activeStyle.bg : "transparent",
-                  color: active ? activeStyle.color : "#6b7a96",
-                  border: active ? `0.5px solid ${activeStyle.border}` : "0.5px solid transparent",
-                  fontSize: 12, fontWeight: active ? 600 : 400, cursor: "pointer",
-                  transition: "all .12s", letterSpacing: "0.01em", whiteSpace: "nowrap",
-                }}
-                onMouseEnter={e => { if (!active) e.currentTarget.style.background = "#f4f3f0"; }}
-                onMouseLeave={e => { if (!active) e.currentTarget.style.background = "transparent"; }}
+                className={`admin-filter-pill ${active ? "admin-filter-pill-active" : ""}`}
               >
                 <span style={{
                   width: 5, height: 5, borderRadius: "50%",
@@ -417,22 +393,13 @@ export default function BookingsClient({ slug }: { slug: string }) {
         <div style={{ width: 1, height: 20, background: "rgba(15,30,56,.08)", flexShrink: 0 }} />
 
         {/* Search */}
-        <div style={{
-          flex: 1, minWidth: 180,
-          display: "flex", alignItems: "center", gap: 7,
-          height: 30, borderRadius: 7, padding: "0 10px",
-          background: "#f4f3f0", border: "0.5px solid rgba(15,30,56,.1)",
-        }}>
-          <Search size={12} style={{ color: "#9ca3af", flexShrink: 0 }} />
+        <div className="admin-search-control">
+          <Search size={14} className="admin-search-icon" />
           <input
             value={searchInput}
             onChange={e => handleSearchInput(e.target.value)}
-            placeholder="Search patient or booking ID…"
-            style={{
-              flex: 1, fontSize: 12.5, outline: "none",
-              background: "transparent", color: "#0f1e38", border: "none",
-              fontFamily: "inherit",
-            }}
+            placeholder="Search patient or booking ID..."
+            className="admin-search-input"
           />
           {searchInput && (
             <button onClick={() => { setSearchInput(""); setSearch(""); setPage(1); }}
@@ -446,17 +413,13 @@ export default function BookingsClient({ slug }: { slug: string }) {
         <div style={{ width: 1, height: 20, background: "rgba(15,30,56,.08)", flexShrink: 0 }} />
 
         {/* Date */}
-        <div style={{
-          display: "flex", alignItems: "center", gap: 7, flexShrink: 0,
-          height: 30, borderRadius: 7, padding: "0 10px",
-          background: "#f4f3f0", border: "0.5px solid rgba(15,30,56,.1)",
-        }}>
-          <CalendarDays size={12} style={{ color: "#9ca3af", flexShrink: 0 }} />
+        <div className="admin-search-control admin-search-control-compact">
+          <CalendarDays size={14} className="admin-search-icon" />
           <input
             type="date"
             value={date}
             onChange={e => handleDate(e.target.value)}
-            style={{ fontSize: 12.5, outline: "none", background: "transparent", color: "#0f1e38", border: "none", fontFamily: "inherit" }}
+            className="admin-search-input min-w-[120px]"
           />
           {date && (
             <button onClick={() => handleDate("")}
@@ -471,12 +434,7 @@ export default function BookingsClient({ slug }: { slug: string }) {
             <div style={{ width: 1, height: 20, background: "rgba(15,30,56,.08)", flexShrink: 0 }} />
             <button
               onClick={() => { setDate(""); setSearch(""); setSearchInput(""); setPage(1); }}
-              style={{
-                display: "inline-flex", alignItems: "center", gap: 5,
-                height: 30, padding: "0 10px", borderRadius: 7,
-                background: "#fff0f0", border: "0.5px solid #fca5a5",
-                color: "#dc2626", fontSize: 12, fontWeight: 500, cursor: "pointer", flexShrink: 0,
-              }}
+              className="admin-clear-filter inline-flex items-center gap-1.5"
             >
               <SlidersHorizontal size={11} /> Clear
             </button>
@@ -484,7 +442,7 @@ export default function BookingsClient({ slug }: { slug: string }) {
         )}
       </div>
 
-      {/* ── Error ── */}
+      {/* â”€â”€ Error â”€â”€ */}
       {error && (
         <div style={{
           display: "flex", alignItems: "center", gap: 9,
@@ -496,7 +454,7 @@ export default function BookingsClient({ slug }: { slug: string }) {
         </div>
       )}
 
-      {/* ── Content ── */}
+      {/* â”€â”€ Content â”€â”€ */}
       {loading ? (
         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: 240 }}>
           <div style={{
@@ -556,7 +514,7 @@ export default function BookingsClient({ slug }: { slug: string }) {
                             {formatDate(booking.scheduledAt)}
                           </p>
                           <p style={{ margin: "0 0 7px", color: "#6b7280", fontWeight: 400, fontSize: 12 }}>
-                            {booking.slotTime ? formatSlotTime(booking.slotTime) : "—"}
+                            {booking.slotTime ? formatSlotTime(booking.slotTime) : "â€”"}
                           </p>
                           <span style={{
                             display: "inline-block",
@@ -619,7 +577,7 @@ export default function BookingsClient({ slug }: { slug: string }) {
                           <StatusBadge status={booking.status} />
                           {booking.checkedInAt && (
                             <p style={{ margin: "5px 0 0", fontSize: 11, color: "#059669", fontWeight: 500 }}>
-                              ✓ Checked in
+                              âœ“ Checked in
                             </p>
                           )}
                         </td>
@@ -627,7 +585,7 @@ export default function BookingsClient({ slug }: { slug: string }) {
                         {/* Payment */}
                         <td style={{ padding: "14px 18px", verticalAlign: "top", textAlign: "right" }}>
                           <p style={{ margin: "0 0 4px", fontWeight: 600, color: "#0f1e38", fontSize: 13 }}>
-                            {booking.amountPaid != null ? formatMoney(booking.amountPaid, booking.currency) : "—"}
+                            {booking.amountPaid != null ? formatMoney(booking.amountPaid, booking.currency) : "â€”"}
                           </p>
                           {booking.refundedAt && (
                             <span style={{
@@ -646,7 +604,7 @@ export default function BookingsClient({ slug }: { slug: string }) {
                                 disabled={isActioning}
                                 variant="primary"
                               >
-                                {actionLoading === booking.id + "CONFIRM" ? "…" : "Confirm"}
+                                {actionLoading === booking.id + "CONFIRM" ? "â€¦" : "Confirm"}
                               </ActionBtn>
                             )}
 
@@ -714,7 +672,7 @@ export default function BookingsClient({ slug }: { slug: string }) {
                         </td>
                       </tr>
 
-                      {/* ── Expanded row ── */}
+                      {/* â”€â”€ Expanded row â”€â”€ */}
                       {isExpanded && (
                         <tr style={{ background: "#faf9f7", borderBottom: "0.5px solid rgba(15,30,56,.05)" }}>
                           <td colSpan={6} style={{ padding: "0 18px 18px" }}>
@@ -725,7 +683,7 @@ export default function BookingsClient({ slug }: { slug: string }) {
                               gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
                               gap: 14,
                             }}>
-                              {/* Left — Booking details */}
+                              {/* Left â€” Booking details */}
                               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
                                 <div style={{
                                   gridColumn: "1 / -1",
@@ -756,8 +714,8 @@ export default function BookingsClient({ slug }: { slug: string }) {
                                 {[
                                   { label: "Booking ID", value: booking.id, mono: true },
                                   { label: "Created", value: formatDateTime(booking.createdAt) },
-                                  { label: "Confirmed at", value: booking.confirmedAt ? formatDateTime(booking.confirmedAt) : "—" },
-                                  { label: "Completed at", value: booking.completedAt ? formatDateTime(booking.completedAt) : "—" },
+                                  { label: "Confirmed at", value: booking.confirmedAt ? formatDateTime(booking.confirmedAt) : "â€”" },
+                                  { label: "Completed at", value: booking.completedAt ? formatDateTime(booking.completedAt) : "â€”" },
                                 ].map(item => (
                                   <div key={item.label} style={{
                                     background: "#fff", borderRadius: 8,
@@ -802,7 +760,7 @@ export default function BookingsClient({ slug }: { slug: string }) {
                                 )}
                               </div>
 
-                              {/* Right — booking action panel */}
+                              {/* Right â€” booking action panel */}
                               <div style={{
                                 background: isCancelTarget ? "#fff8f8" : completeTarget === booking.id ? "#f0fdf4" : rescheduleTarget === booking.id ? "#f8fbff" : "#fff",
                                 borderRadius: 10,
@@ -818,7 +776,7 @@ export default function BookingsClient({ slug }: { slug: string }) {
                                     <textarea
                                       value={cancelReason}
                                       onChange={e => setCancelReason(e.target.value)}
-                                      placeholder="Provide a reason for cancellation…"
+                                      placeholder="Provide a reason for cancellationâ€¦"
                                       rows={3}
                                       style={{
                                         width: "100%", boxSizing: "border-box",
@@ -835,7 +793,7 @@ export default function BookingsClient({ slug }: { slug: string }) {
                                         disabled={!cancelReason.trim() || isActioning}
                                         variant="danger-solid"
                                       >
-                                        {isActioning ? "…" : "Confirm cancellation"}
+                                        {isActioning ? "â€¦" : "Confirm cancellation"}
                                       </ActionBtn>
                                       <ActionBtn onClick={() => { setCancelTarget(null); setCancelReason(""); }} variant="ghost">
                                         Dismiss
@@ -1000,11 +958,11 @@ export default function BookingsClient({ slug }: { slug: string }) {
         </div>
       )}
 
-      {/* ── Pagination ── */}
+      {/* â”€â”€ Pagination â”€â”€ */}
       {data && data.total > 20 && (
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <p style={{ fontSize: 12, color: "#9ca3af", margin: 0 }}>
-            Showing {(page - 1) * 20 + 1}–{Math.min(page * 20, data.total)} of {data.total.toLocaleString()}
+            Showing {(page - 1) * 20 + 1}â€“{Math.min(page * 20, data.total)} of {data.total.toLocaleString()}
           </p>
           <div style={{ display: "flex", gap: 7, alignItems: "center" }}>
             <PageBtn onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}>
@@ -1028,7 +986,7 @@ export default function BookingsClient({ slug }: { slug: string }) {
   );
 }
 
-/* ── Small reusable button components ── */
+/* â”€â”€ Small reusable button components â”€â”€ */
 
 type ActionBtnVariant = "primary" | "success" | "success-outline" | "danger" | "danger-solid" | "ghost";
 

@@ -108,7 +108,7 @@ export async function GET(req: Request) {
     area: h.location.area,
     image: h.media[0]?.url || null,
     fromPrice: h.packages[0]?.price ?? null,
-    currency: h.packages[0]?.currency ?? "NPR",
+    currency: h.packages[0]?.currency ?? "EUR",
     emergencyAvailable: h.emergencyAvailable,
   }));
 

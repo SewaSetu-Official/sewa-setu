@@ -35,7 +35,7 @@ export function cleanEducation(raw?: string | null) {
 
   // Truncate at scraper-injected biography / section-header markers
   const breakIdx = s.search(
-    /\b(Professional Summary|Academic Background|Areas of Expertise|Profile\s*:|At Grande|Consultant\s*[–\-]|Memberships?(\s*&|\s*:)|\bTrainings?\s*(&|and)\s*Certifications?|Languages\s*Spoken|\b(He|She)\s+(is|was|has|completed|serves)\b)/i
+    /\b(Professional Summary|Academic Background|Areas of Expertise|Profile\s*:|At Grande|Consultant\s*[â€“\-]|Memberships?(\s*&|\s*:)|\bTrainings?\s*(&|and)\s*Certifications?|Languages\s*Spoken|\b(He|She)\s+(is|was|has|completed|serves)\b)/i
   );
   if (breakIdx > 0) {
     s = s.slice(0, breakIdx).trim();
@@ -72,16 +72,14 @@ function withDrPrefix(name: string) {
 
 /**
  * We store cents (Stripe-friendly) but we display whole euros only.
- * Since seed uses 500/600/.../1000, this becomes €5..€10.
+ * Since seed uses 500/600/.../1000, this becomes â‚¬5..â‚¬10.
  */
 function formatFeeWholeEUR(amountCents?: number | null, currency?: string | null) {
-  if (amountCents == null) return "—";
+  void currency;
+  if (amountCents == null) return "-";
 
-  const cur = (currency ?? "eur").toLowerCase();
-  const symbol = cur === "eur" ? "€" : cur === "usd" ? "$" : `${cur.toUpperCase()} `;
-
-  const whole = Math.round(amountCents / 100); // safe for 500..1000
-  return `${symbol}${whole}`;
+  const whole = Math.round(amountCents / 100);
+  return `€${whole}`;
 }
 
 export function DoctorCard({ doctor, slots = [], departmentName, onSelectSlotAction }: Props) {

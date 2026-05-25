@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { AlertCircle, CheckCircle2, ClipboardList, Clock3, Plus, RefreshCw, Trash2 } from "lucide-react";
+import { AlertCircle, CheckCircle2, ClipboardList, Clock3, Plus, RefreshCw, Search, Trash2 } from "lucide-react";
 
 type TaskStatus = "PENDING" | "IN_PROGRESS" | "DONE" | "CANCELLED";
 type TaskPriority = "LOW" | "NORMAL" | "HIGH";
@@ -213,19 +213,21 @@ export default function TasksClient({ slug }: { slug: string }) {
         <Summary label="Due Today" value={summary.dueToday} icon={<ClipboardList size={16} />} />
       </div>
 
-      <div className="grid gap-2 rounded-2xl border border-gray-100 bg-white p-3 md:grid-cols-[minmax(0,1fr)_160px_160px]">
-        <input
-          value={search}
-          onChange={(event) => setSearch(event.target.value)}
-          placeholder="Search tasks, descriptions, or assignees"
-          className="h-10 rounded-xl px-3 text-sm outline-none"
-          style={{ background: "#f7f4ef", border: "1.5px solid rgba(15,30,56,.08)" }}
-        />
+      <div className="admin-control-panel">
+        <div className="admin-control-row">
+        <div className="admin-search-control">
+          <Search size={14} className="admin-search-icon" />
+          <input
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Search tasks, descriptions, or assignees"
+            className="admin-search-input"
+          />
+        </div>
         <select
           value={statusFilter}
           onChange={(event) => setStatusFilter(event.target.value as "open" | TaskStatus | "all")}
-          className="h-10 rounded-xl px-3 text-sm font-semibold outline-none"
-          style={{ background: "#f7f4ef", border: "1.5px solid rgba(15,30,56,.08)" }}
+          className="admin-select-control"
         >
           <option value="open">Open</option>
           <option value="all">All statuses</option>
@@ -237,14 +239,14 @@ export default function TasksClient({ slug }: { slug: string }) {
         <select
           value={priorityFilter}
           onChange={(event) => setPriorityFilter(event.target.value as "all" | TaskPriority)}
-          className="h-10 rounded-xl px-3 text-sm font-semibold outline-none"
-          style={{ background: "#f7f4ef", border: "1.5px solid rgba(15,30,56,.08)" }}
+          className="admin-select-control"
         >
           <option value="all">All priorities</option>
           <option value="HIGH">High</option>
           <option value="NORMAL">Normal</option>
           <option value="LOW">Low</option>
         </select>
+        </div>
       </div>
 
       <div className="grid gap-5 xl:grid-cols-[360px_minmax(0,1fr)]">

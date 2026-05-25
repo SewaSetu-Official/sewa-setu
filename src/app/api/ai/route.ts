@@ -693,7 +693,7 @@ export async function PUT(req: Request) {
         hospitalName: booking.hospital.name,
         serviceName: snapshotServiceName,
         price: snapshotPrice,
-        currency: snapshotPrice > 0 ? "NPR" : "EUR",
+        currency: "EUR",
         patientName: patient.fullName,
         status: booking.status,
         departmentId,

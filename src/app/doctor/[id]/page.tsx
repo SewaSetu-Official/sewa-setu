@@ -40,11 +40,11 @@ type DoctorData = {
 };
 
 function formatFee(min?: number | null, max?: number | null, currency?: string) {
-  const sym = (currency ?? "eur").toLowerCase() === "eur" ? "€" : "$";
+  void currency;
   if (min == null) return null;
   const minW = Math.round(min / 100);
   const maxW = max != null ? Math.round(max / 100) : null;
-  return maxW && maxW !== minW ? `${sym}${minW} – ${sym}${maxW}` : `${sym}${minW}`;
+  return maxW && maxW !== minW ? "€" + minW + " - €" + maxW : "€" + minW;
 }
 
 function withDr(name: string) {
@@ -106,7 +106,7 @@ export default function DoctorProfilePage() {
   return (
     <div className="min-h-screen" style={{ background: "#f0ece4" }}>
 
-      {/* ── HERO ── */}
+      {/* â”€â”€ HERO â”€â”€ */}
       <div style={{ background: "linear-gradient(160deg,#0a1628 0%,#0f1e38 65%,#162540 100%)" }} className="relative overflow-hidden">
         {/* subtle texture */}
         <div className="absolute inset-0 opacity-[0.03] pointer-events-none" style={{
@@ -145,7 +145,7 @@ export default function DoctorProfilePage() {
                 {doctor.verified && (
                   <span className="text-[11px] font-bold px-2.5 py-1 rounded-full"
                     style={{ background: "rgba(34,197,94,.12)", color: "#4ade80", border: "1px solid rgba(74,222,128,.18)" }}>
-                    ✓ Verified
+                    âœ“ Verified
                   </span>
                 )}
                 {doctor.consultationModes.includes("ONLINE") && (
@@ -185,13 +185,13 @@ export default function DoctorProfilePage() {
               {primaryHospital && (
                 <p className="flex items-center gap-1.5 text-sm mt-3" style={{ color: "rgba(255,255,255,.35)" }}>
                   <MapPin size={11} />
-                  {primaryHospital.positionTitle ? `${primaryHospital.positionTitle} · ` : ""}
+                  {primaryHospital.positionTitle ? `${primaryHospital.positionTitle} Â· ` : ""}
                   {primaryHospital.name}, {primaryHospital.city}
                 </p>
               )}
             </div>
 
-            {/* Close — inline at the right end of the hero row */}
+            {/* Close â€” inline at the right end of the hero row */}
             <button
               onClick={() => router.back()}
               onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(200,169,110,.18)"; e.currentTarget.style.borderColor = "rgba(200,169,110,.5)"; e.currentTarget.style.color = "#c8a96e"; }}
@@ -206,14 +206,14 @@ export default function DoctorProfilePage() {
         </div>
       </div>
 
-      {/* ── STAT CARDS (overlapping hero) ── */}
+      {/* â”€â”€ STAT CARDS (overlapping hero) â”€â”€ */}
       <div className="max-w-5xl mx-auto px-6 -mt-14 relative z-10">
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {[
-            { label: "Experience", value: doctor.experienceYears != null ? `${doctor.experienceYears}+` : "—", sub: "Years" },
+            { label: "Experience", value: doctor.experienceYears != null ? `${doctor.experienceYears}+` : "â€”", sub: "Years" },
             { label: "Hospitals", value: doctor.hospitals.length, sub: "Affiliated" },
-            { label: "Consultation", value: fee ?? "—", sub: "Fee", gold: true },
-            { label: "Availability", value: hasSchedule ? `${activeDays.length}` : "—", sub: "Days/Week" },
+            { label: "Consultation", value: fee ?? "â€”", sub: "Fee", gold: true },
+            { label: "Availability", value: hasSchedule ? `${activeDays.length}` : "â€”", sub: "Days/Week" },
           ].map((s) => (
             <div key={s.label} className="bg-white rounded-2xl px-4 py-4 shadow-lg text-center"
               style={{ border: "1px solid rgba(200,169,110,.12)" }}>
@@ -225,9 +225,9 @@ export default function DoctorProfilePage() {
         </div>
       </div>
 
-      {/* ── CONTENT ── */}
+      {/* â”€â”€ CONTENT â”€â”€ */}
       <div className="max-w-5xl mx-auto px-6 pt-5 pb-20">
-        {/* ── TOP ROW: Education+Works At | Book ── */}
+        {/* â”€â”€ TOP ROW: Education+Works At | Book â”€â”€ */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 mb-5">
 
           {/* Left: Bio + Education + Works At */}
@@ -268,7 +268,7 @@ export default function DoctorProfilePage() {
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-bold group-hover:text-[#c8a96e] transition-colors truncate" style={{ color: "#0f1e38" }}>{h.name}</p>
-                          <p className="text-xs text-gray-400 truncate">{h.city}{h.positionTitle ? ` · ${h.positionTitle}` : ""}</p>
+                          <p className="text-xs text-gray-400 truncate">{h.city}{h.positionTitle ? ` Â· ${h.positionTitle}` : ""}</p>
                         </div>
                         <ArrowLeft size={12} className="rotate-180 text-gray-300 group-hover:text-[#c8a96e] transition-all flex-shrink-0" />
                       </Link>
@@ -338,7 +338,7 @@ export default function DoctorProfilePage() {
                     <div>
                       <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Consultation</p>
                       <p className="text-sm font-semibold" style={{ color: "#0f1e38" }}>
-                        {doctor.consultationModes.map((m) => m === "ONLINE" ? "Online" : "In-Person").join(" · ")}
+                        {doctor.consultationModes.map((m) => m === "ONLINE" ? "Online" : "In-Person").join(" Â· ")}
                       </p>
                     </div>
                   </div>
@@ -348,7 +348,7 @@ export default function DoctorProfilePage() {
           </div>
         </div>
 
-        {/* ── FULL WIDTH: Schedule ── */}
+        {/* â”€â”€ FULL WIDTH: Schedule â”€â”€ */}
         {hasSchedule && (
           <div className="bg-white rounded-3xl p-6 shadow-sm" style={{ border: "1px solid rgba(200,169,110,.1)" }}>
             <p className="text-[10px] font-black uppercase tracking-widest mb-5" style={{ color: "#c8a96e" }}>Weekly Schedule</p>
@@ -370,7 +370,7 @@ export default function DoctorProfilePage() {
                             border: `1px solid ${isOnline ? "rgba(59,130,246,.15)" : "rgba(200,169,110,.18)"}`,
                           }}>
                           <p className="text-xs font-bold leading-tight" style={{ color: isOnline ? "#2563eb" : "#a88b50" }}>
-                            {s.startTime}–{s.endTime}
+                            {s.startTime}â€“{s.endTime}
                           </p>
                           <p className="text-[10px] mt-0.5 opacity-55" style={{ color: isOnline ? "#2563eb" : "#a88b50" }}>
                             {isOnline ? "Online" : "In-Person"}

@@ -85,9 +85,9 @@ function formatSlotTime(t: string | null) {
 }
 
 function formatMoney(cents: number | null, currency = "eur") {
+  void currency;
   if (cents == null) return "";
-  const symbol = currency.toLowerCase() === "eur" ? "€" : `${currency.toUpperCase()} `;
-  return `${symbol}${Math.round(cents / 100).toLocaleString()}`;
+  return "€" + Math.round(cents / 100).toLocaleString();
 }
 
 function appointmentTimeValue(appt: Appointment) {

@@ -26,9 +26,9 @@ function nextOccurrenceDateStr(dayOfWeek: number): string {
 
 /** Display fee stored in cents as a whole-number currency string (e.g. "€50"). */
 function formatFee(feeMin: number | null | undefined, currency: string | null | undefined): string {
-  if (feeMin == null) return "—";
-  const sym = (currency ?? "eur").toLowerCase() === "eur" ? "€" : (currency ?? "");
-  return `${sym}${Math.round(feeMin / 100)}`;
+  void currency;
+  if (feeMin == null) return "-";
+  return "�" + Math.round(feeMin / 100);
 }
 
 function normalizeSlotTime(value: string | null | undefined) {
