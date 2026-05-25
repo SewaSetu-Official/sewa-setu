@@ -157,3 +157,155 @@
 .admin-content td {
   vertical-align: top;
 }
+
+.admin-control-panel {
+  background: #fff;
+  border: 1px solid rgba(15, 30, 56, 0.09);
+  border-radius: 16px;
+  box-shadow: 0 14px 40px rgba(15, 30, 56, 0.05);
+  padding: 12px;
+}
+
+.admin-control-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.admin-control-row-nowrap {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  overflow-x: auto;
+}
+
+.admin-search-control {
+  display: flex;
+  min-width: 280px;
+  flex: 1 1 320px;
+  height: 40px;
+  align-items: center;
+  gap: 8px;
+  border-radius: 12px;
+  border: 1px solid rgba(15, 30, 56, 0.09);
+  background: var(--cream-warm);
+  padding: 0 12px;
+}
+
+.admin-search-control-compact {
+  min-width: 0;
+  flex: 0 0 auto;
+}
+
+.admin-search-icon {
+  flex-shrink: 0;
+  color: #8a9ab5;
+}
+
+.admin-search-input {
+  min-width: 0;
+  flex: 1;
+  height: 100%;
+  border: 0 !important;
+  background: transparent;
+  color: var(--navy);
+  font-size: 14px;
+  font-weight: 600;
+  outline: none;
+  box-shadow: none !important;
+}
+
+.admin-search-input::placeholder {
+  color: #9aa7bd;
+}
+
+.admin-select-control,
+.admin-date-control,
+.admin-page-indicator {
+  height: 40px;
+  border-radius: 12px;
+  border: 1px solid rgba(15, 30, 56, 0.12);
+  background: #fff;
+  color: #5f6f8d;
+  font-size: 12px;
+  font-weight: 800;
+  outline: none;
+}
+
+.admin-select-control,
+.admin-date-control {
+  cursor: pointer;
+  padding: 0 12px;
+}
+
+.admin-page-indicator {
+  display: inline-flex;
+  align-items: center;
+  background: var(--cream-warm);
+  padding: 0 12px;
+}
+
+.admin-filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.admin-filter-pill {
+  display: inline-flex;
+  height: 40px;
+  cursor: pointer;
+  align-items: center;
+  gap: 8px;
+  border-radius: 12px;
+  border: 1px solid rgba(15, 30, 56, 0.12);
+  background: #fff;
+  padding: 0 12px;
+  color: #5f6f8d;
+  font-size: 12px;
+  font-weight: 800;
+  transition: border-color 0.2s ease, color 0.2s ease, background 0.2s ease;
+}
+
+.admin-filter-pill:hover {
+  border-color: rgba(200, 169, 110, 0.8);
+  color: #9c7939;
+}
+
+.admin-filter-pill-active {
+  border-color: var(--navy);
+  background: var(--navy);
+  color: var(--gold);
+}
+
+.admin-filter-pill-active:hover {
+  color: var(--gold);
+}
+
+.admin-filter-count {
+  border-radius: 999px;
+  background: #eef2f7;
+  padding: 2px 7px;
+  color: #8a9ab5;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.admin-filter-pill-active .admin-filter-count {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+}
+
+.admin-clear-filter {
+  height: 40px;
+  border-radius: 12px;
+  border: 1px solid rgba(239, 68, 68, 0.15);
+  background: rgba(239, 68, 68, 0.08);
+  padding: 0 12px;
+  color: #dc2626;
+  font-size: 12px;
+  font-weight: 800;
+}

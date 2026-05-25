@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import type { Prisma } from "@prisma/client";
 import { requirePlatformAdmin, writeAuditLog } from "@/lib/admin-auth";
 import { db } from "@/lib/db";
 
@@ -14,29 +15,76 @@ export async function GET(req: Request) {
   void actor;
 
   const { searchParams } = new URL(req.url);
-  const search    = searchParams.get("search") ?? "";
-  const filter    = searchParams.get("filter") ?? "all"; // all | pending | banned
-  const page      = Math.max(1, parseInt(searchParams.get("page") ?? "1", 10));
-  const pageSize  = 20;
+  const search     = searchParams.get("search") ?? "";
+  const filter     = searchParams.get("filter") ?? "all"; // all | pending | banned
+  const userType   = searchParams.get("userType") ?? "all"; // all | standard | platform_support | platform_admin | hospital_admin
+  const sort       = searchParams.get("sort") ?? "newest";
+  const page       = Math.max(1, parseInt(searchParams.get("page") ?? "1", 10));
+  const pageSize   = 20;
 
-  const where: Record<string, unknown> = {};
+  const searchWhere: Prisma.UserWhereInput = {};
   if (search) {
-    where.OR = [
+    searchWhere.OR = [
       { fullName: { contains: search, mode: "insensitive" } },
       { email: { contains: search, mode: "insensitive" } },
     ];
   }
+  const accessWhere: Prisma.UserWhereInput = {};
   if (filter === "pending") {
-    where.memberships = { some: { status: "PENDING" } };
+    accessWhere.memberships = { some: { status: "PENDING" } };
   }
   if (filter === "banned") {
-    where.bannedAt = { not: null };
+    accessWhere.bannedAt = { not: null };
   }
 
-  const [total, users] = await Promise.all([
-    db.user.count({ where: where as never }),
+  const hospitalAdminWhere: Prisma.UserWhereInput = {
+    memberships: { some: { role: { in: ["OWNER", "MANAGER"] } } },
+  };
+  const roleWhere: Prisma.UserWhereInput = {};
+  if (userType === "standard") {
+    roleWhere.AND = [
+      { role: "USER" },
+      { NOT: hospitalAdminWhere },
+    ];
+  }
+  if (userType === "platform_support") roleWhere.role = "PLATFORM_SUPPORT";
+  if (userType === "platform_admin") roleWhere.role = "PLATFORM_ADMIN";
+  if (userType === "hospital_admin") Object.assign(roleWhere, hospitalAdminWhere);
+
+  const compactWhere = (...parts: Prisma.UserWhereInput[]): Prisma.UserWhereInput => {
+    const active = parts.filter((part) => Object.keys(part).length > 0);
+    if (active.length === 0) return {};
+    if (active.length === 1) return active[0];
+    return { AND: active };
+  };
+
+  const where = compactWhere(searchWhere, accessWhere, roleWhere);
+  const accessCountBase = compactWhere(searchWhere, roleWhere);
+  const roleCountBase = compactWhere(searchWhere, accessWhere);
+  const orderBy: Prisma.UserOrderByWithRelationInput[] =
+    sort === "oldest" ? [{ createdAt: "asc" }]
+    : sort === "name_asc" ? [{ fullName: "asc" }]
+    : sort === "name_desc" ? [{ fullName: "desc" }]
+    : sort === "role" ? [{ role: "asc" }, { fullName: "asc" }]
+    : sort === "bookings_desc" ? [{ bookings: { _count: "desc" } }, { fullName: "asc" }]
+    : [{ createdAt: "desc" }];
+
+  const [total, counts, roleCounts, users, supportAssignableHospitals] = await Promise.all([
+    db.user.count({ where }),
+    Promise.all([
+      db.user.count({ where: accessCountBase }),
+      db.user.count({ where: compactWhere(accessCountBase, { memberships: { some: { status: "PENDING" } } }) }),
+      db.user.count({ where: compactWhere(accessCountBase, { bannedAt: { not: null } }) }),
+    ]),
+    Promise.all([
+      db.user.count({ where: roleCountBase }),
+      db.user.count({ where: compactWhere(roleCountBase, { AND: [{ role: "USER" }, { NOT: hospitalAdminWhere }] }) }),
+      db.user.count({ where: compactWhere(roleCountBase, { role: "PLATFORM_SUPPORT" }) }),
+      db.user.count({ where: compactWhere(roleCountBase, { role: "PLATFORM_ADMIN" }) }),
+      db.user.count({ where: compactWhere(roleCountBase, hospitalAdminWhere) }),
+    ]),
     db.user.findMany({
-      where: where as never,
+      where,
       include: {
         memberships: {
           include: { hospital: { select: { name: true, slug: true } } },
@@ -49,9 +97,14 @@ export async function GET(req: Request) {
         },
         _count: { select: { bookings: true } },
       },
-      orderBy: { createdAt: "desc" },
+      orderBy,
       skip: (page - 1) * pageSize,
       take: pageSize,
+    }),
+    db.hospital.findMany({
+      where: { isActive: true },
+      select: { id: true, name: true },
+      orderBy: { name: "asc" },
     }),
   ]);
 
@@ -80,13 +133,21 @@ export async function GET(req: Request) {
       })),
     })),
     total,
+    counts: {
+      all: counts[0],
+      pending: counts[1],
+      banned: counts[2],
+    },
+    roleCounts: {
+      all: roleCounts[0],
+      standard: roleCounts[1],
+      platformSupport: roleCounts[2],
+      platformAdmin: roleCounts[3],
+      hospitalAdmin: roleCounts[4],
+    },
     page,
     hasMore: page * pageSize < total,
-    supportAssignableHospitals: await db.hospital.findMany({
-      where: { isActive: true },
-      select: { id: true, name: true },
-      orderBy: { name: "asc" },
-    }),
+    supportAssignableHospitals,
     currentUserId: actor.id,
   });
 }

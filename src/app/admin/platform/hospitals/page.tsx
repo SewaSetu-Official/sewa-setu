@@ -190,11 +190,11 @@ export default function PlatformHospitalsPage() {
         </div>
       </section>
 
-      <div className="flex items-center gap-2 h-10 rounded-xl px-3 bg-white border border-gray-100 max-w-sm">
-        <Search size={13} className="text-gray-400" />
+      <div className="admin-search-control max-w-sm">
+        <Search size={14} className="admin-search-icon" />
         <input value={searchInput} onChange={(e) => handleSearchInput(e.target.value)}
           placeholder="Search hospitals..."
-          className="flex-1 text-sm outline-none bg-transparent text-[#0f1e38] placeholder-gray-400" />
+          className="admin-search-input" />
       </div>
 
       {error && (
