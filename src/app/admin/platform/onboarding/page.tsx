@@ -24,6 +24,7 @@ import {
   Upload,
   UserRound,
 } from "lucide-react";
+import { formatMoneyCents, moneyCentsToMajorString, moneyMajorToCents } from "@/lib/money";
 
 type OnboardingStatus =
   | "NEW"
@@ -266,6 +267,18 @@ const EMPTY_DOCTOR_DRAFT: DoctorDraft = {
 
 function normalizeDoctorDraft(draft?: Partial<DoctorDraft>): DoctorDraft {
   return { ...EMPTY_DOCTOR_DRAFT, ...draft };
+}
+
+function formatEuroCents(amountCents: number | null | undefined) {
+  return formatMoneyCents(amountCents, "EUR");
+}
+
+function formatEuroRange(minCents: number | null | undefined, maxCents: number | null | undefined) {
+  if (minCents == null && maxCents == null) return "No fee";
+  const min = minCents ?? maxCents;
+  const max = maxCents;
+  if (min == null) return "No fee";
+  return max != null && max !== min ? `${formatEuroCents(min)}-${formatEuroCents(max)}` : formatEuroCents(min);
 }
 
 const DATA_STEPS: {
@@ -767,14 +780,16 @@ export default function PlatformOnboardingPage() {
       return;
     }
     const previousData = data;
+    const feeMinCents = moneyMajorToCents(draft.feeMin);
+    const feeMaxCents = moneyMajorToCents(draft.feeMax);
     const optimisticDoctor = {
       doctor: {
         id: editId || nextTempId("doctor"),
         fullName: draft.fullName.trim(),
         licenseNumber: draft.licenseNumber.trim() || null,
         experienceYears: draft.experienceYears ? Number(draft.experienceYears) : null,
-        feeMin: draft.feeMin ? Number(draft.feeMin) : null,
-        feeMax: draft.feeMax ? Number(draft.feeMax) : null,
+        feeMin: feeMinCents,
+        feeMax: feeMaxCents,
         currency: "EUR",
         media: draft.photoUrl ? [{ id: nextTempId("doctor-media"), url: draft.photoUrl, altText: null, isPrimary: true }] : [],
         departments: draft.departmentId ? [{ departmentId: draft.departmentId }] : [],
@@ -797,8 +812,8 @@ export default function PlatformOnboardingPage() {
       positionTitle: draft.positionTitle || null,
       licenseNumber: draft.licenseNumber || null,
       experienceYears: draft.experienceYears ? Number(draft.experienceYears) : null,
-      feeMin: draft.feeMin ? Number(draft.feeMin) : null,
-      feeMax: draft.feeMax ? Number(draft.feeMax) : null,
+      feeMin: feeMinCents,
+      feeMax: feeMaxCents,
       currency: "EUR",
       photoUrl: draft.photoUrl || null,
     });
@@ -861,11 +876,12 @@ export default function PlatformOnboardingPage() {
       return;
     }
     const previousData = data;
+    const priceCents = moneyMajorToCents(draft.price);
     const optimisticPackage = {
       id: editId || nextTempId("package"),
       title: draft.title.trim(),
       description: draft.description.trim() || null,
-      price: draft.price ? Number(draft.price) : null,
+      price: priceCents,
       currency: "EUR",
     };
     updateOnboarding(item.id, (entry) => {
@@ -881,7 +897,7 @@ export default function PlatformOnboardingPage() {
       entityId: editId || undefined,
       title: draft.title,
       description: draft.description,
-      price: draft.price ? Number(draft.price) : null,
+      price: priceCents,
       currency: "EUR",
     });
     setPackageDrafts((prev) => ({ ...prev, [item.id]: { title: "", description: "", price: "" } }));
@@ -1392,7 +1408,7 @@ export default function PlatformOnboardingPage() {
                   </div>
                   <div className="min-w-0">
                     <p className="font-bold text-[#0f1e38]">{doc.fullName}</p>
-                    <p className="mt-1 truncate text-xs font-semibold text-[#8a9ab5]">{positionTitle || "No position"}{doc.feeMin ? ` - EUR ${doc.feeMin}` : ""}</p>
+                    <p className="mt-1 truncate text-xs font-semibold text-[#8a9ab5]">{positionTitle || "No position"}{doc.feeMin ? ` - ${formatEuroCents(doc.feeMin)}` : ""}</p>
                   </div>
                 </div>
                 <span className="flex gap-1">
@@ -1404,8 +1420,8 @@ export default function PlatformOnboardingPage() {
                       positionTitle: positionTitle ?? "",
                       licenseNumber: doc.licenseNumber ?? "",
                       experienceYears: doc.experienceYears === null ? "" : String(doc.experienceYears),
-                      feeMin: doc.feeMin === null ? "" : String(doc.feeMin),
-                      feeMax: doc.feeMax === null ? "" : String(doc.feeMax),
+                      feeMin: moneyCentsToMajorString(doc.feeMin),
+                      feeMax: moneyCentsToMajorString(doc.feeMax),
                       photoUrl: doc.media[0]?.url ?? "",
                     } }));
                   }} className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#f7f4ef] text-[#0f1e38]"><Edit3 size={13} /></button>
@@ -1639,13 +1655,13 @@ export default function PlatformOnboardingPage() {
               <div key={pkg.id} className="flex items-center justify-between gap-3 p-4">
                 <div className="min-w-0">
                   <p className="font-bold text-[#0f1e38]">{pkg.title}</p>
-                  <p className="mt-1 text-xs font-semibold text-[#8a9ab5]">{pkg.price === null ? "No price" : `EUR ${pkg.price}`}</p>
+                  <p className="mt-1 text-xs font-semibold text-[#8a9ab5]">{pkg.price === null ? "No price" : formatEuroCents(pkg.price)}</p>
                   {pkg.description && <p className="mt-1 line-clamp-2 text-xs text-[#8a9ab5]">{pkg.description}</p>}
                 </div>
                 <span className="flex gap-1">
                   <button onClick={() => {
                     setEditTargets((prev) => ({ ...prev, [`${item.id}:package`]: pkg.id }));
-                    setPackageDrafts((prev) => ({ ...prev, [item.id]: { title: pkg.title, description: pkg.description ?? "", price: pkg.price === null ? "" : String(pkg.price) } }));
+                    setPackageDrafts((prev) => ({ ...prev, [item.id]: { title: pkg.title, description: pkg.description ?? "", price: moneyCentsToMajorString(pkg.price) } }));
                   }} className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#f7f4ef] text-[#0f1e38]"><Edit3 size={13} /></button>
                   <button onClick={() => requestDelete({
                     key: `${pkg.id}-delete`,
@@ -2004,7 +2020,7 @@ export default function PlatformOnboardingPage() {
                         <p className="truncate text-sm font-bold text-[#0f1e38]">{doc.fullName}</p>
                         <p className="mt-0.5 truncate text-xs font-semibold text-[#8a9ab5]">{positionTitle || "No position"}{doc.licenseNumber ? ` - ${doc.licenseNumber}` : ""}</p>
                       </div>
-                      <p className="text-xs font-bold text-[#0f1e38]">{doc.feeMin || doc.feeMax ? `EUR ${doc.feeMin ?? doc.feeMax}${doc.feeMax ? `-${doc.feeMax}` : ""}` : "No fee"}</p>
+                      <p className="text-xs font-bold text-[#0f1e38]">{formatEuroRange(doc.feeMin, doc.feeMax)}</p>
                     </div>
                   ))}
                 </div>
@@ -2059,7 +2075,7 @@ export default function PlatformOnboardingPage() {
                       >
                         <span className="min-w-0">
                           <span className="block truncate text-sm font-bold text-[#0f1e38]">{pkg.title}</span>
-                          <span className="mt-1 block text-xs font-bold text-[#8a9ab5]">{pkg.price === null ? "No price" : `EUR ${pkg.price}`}</span>
+                          <span className="mt-1 block text-xs font-bold text-[#8a9ab5]">{pkg.price === null ? "No price" : formatEuroCents(pkg.price)}</span>
                         </span>
                         <ChevronRight size={15} className={`flex-shrink-0 text-[#8a9ab5] transition-transform ${expandedPackages[pkg.id] ? "rotate-90" : ""}`} />
                       </button>
