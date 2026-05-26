@@ -242,7 +242,9 @@ export default function HospitalAdminShell({
 
         {/* Page content */}
         <main className="admin-content flex-1 overflow-y-auto p-6">
-          {children}
+          <div className="admin-page-frame">
+            {children}
+          </div>
         </main>
       </div>
     </div>

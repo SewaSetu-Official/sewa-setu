@@ -19,6 +19,14 @@ const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 type BookingStep = "slots" | "details";
 
+function normalizeSlotTime(value: string | null | undefined) {
+  return value?.replace(/\s*-\s*/g, " - ").trim() ?? "";
+}
+
+function occurrenceKey(slotId: string, date: string, slotTime: string | null | undefined) {
+  return `${slotId}::${date}::${normalizeSlotTime(slotTime)}`;
+}
+
 function createInitialFormData() {
   return {
     patientName: "",
@@ -73,7 +81,7 @@ function AvailabilityModalDialog({
   const [selectedOcc, setSelectedOcc] = useState<Occurrence | null>(null);
   const [bookingStep, setBookingStep] = useState<BookingStep>("slots");
   const [isLoading, setIsLoading] = useState(false);
-  // booked slot sets: keys are `${slotId}::${date}`
+  // booked slot sets: keys are `${slotId}::${date}::${slotTime}`
   const [bookedSet, setBookedSet] = useState<Set<string>>(new Set());
   const [yourSet, setYourSet] = useState<Set<string>>(new Set());
   const [formData, setFormData] = useState(createInitialFormData);
@@ -91,11 +99,11 @@ function AvailabilityModalDialog({
   useEffect(() => {
     fetch(`/api/availability/booked?doctorId=${doctor.id}`)
       .then((r) => r.json())
-      .then((data: { booked?: { slotId: string; date: string; isYours: boolean }[] }) => {
+      .then((data: { booked?: { slotId: string; date: string; slotTime?: string | null; isYours: boolean }[] }) => {
         const booked = new Set<string>();
         const yours = new Set<string>();
         for (const b of data.booked ?? []) {
-          const key = `${b.slotId}::${b.date}`;
+          const key = occurrenceKey(b.slotId, b.date, b.slotTime);
           booked.add(key);
           if (b.isYours) yours.add(key);
         }
@@ -658,7 +666,7 @@ function AvailabilityModalDialog({
                         occ.map((o) => {
                           const isSel = selectedOcc?.date === o.date && selectedOcc?.startTime === o.startTime && selectedOcc?.mode === o.mode;
                           const isOnline = o.mode === "ONLINE";
-                          const bookedKey = `${o.windowId}::${o.date}`;
+                          const bookedKey = occurrenceKey(o.windowId, o.date, `${o.startTime}-${o.endTime}`);
                           const isBooked = bookedSet.has(bookedKey);
                           const isYours = yourSet.has(bookedKey);
 

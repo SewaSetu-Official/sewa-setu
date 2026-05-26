@@ -35,7 +35,7 @@ export function cleanEducation(raw?: string | null) {
 
   // Truncate at scraper-injected biography / section-header markers
   const breakIdx = s.search(
-    /\b(Professional Summary|Academic Background|Areas of Expertise|Profile\s*:|At Grande|Consultant\s*[â€“\-]|Memberships?(\s*&|\s*:)|\bTrainings?\s*(&|and)\s*Certifications?|Languages\s*Spoken|\b(He|She)\s+(is|was|has|completed|serves)\b)/i
+    /\b(Professional Summary|Academic Background|Areas of Expertise|Profile\s*:|At Grande|Consultant\s*[-]|Memberships?(\s*&|\s*:)|\bTrainings?\s*(&|and)\s*Certifications?|Languages\s*Spoken|\b(He|She)\s+(is|was|has|completed|serves)\b)/i
   );
   if (breakIdx > 0) {
     s = s.slice(0, breakIdx).trim();
@@ -72,7 +72,7 @@ function withDrPrefix(name: string) {
 
 /**
  * We store cents (Stripe-friendly) but we display whole euros only.
- * Since seed uses 500/600/.../1000, this becomes â‚¬5..â‚¬10.
+ * Since seed uses 500/600/.../1000, this becomes EUR 5..EUR 10.
  */
 function formatFeeWholeEUR(amountCents?: number | null, currency?: string | null) {
   void currency;
