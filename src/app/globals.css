@@ -105,6 +105,16 @@
   --admin-card-shadow: 0 8px 20px rgba(15, 30, 56, 0.05);
 }
 
+.admin-page-frame {
+  width: 100%;
+  min-width: 0;
+}
+
+.admin-page-frame > * {
+  width: 100%;
+  max-width: none !important;
+}
+
 .admin-content .bg-white {
   border-color: var(--admin-border) !important;
   box-shadow: var(--admin-card-shadow);
