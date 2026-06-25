@@ -3,15 +3,96 @@ import { HeroSection } from "@/components/herosection";
 import { HowItWorks } from "@/components/howitworks";
 import { Footer } from "@/components/footer";
 import { HospitalCard } from "@/components/hospital-card";
-import { TrustSection } from "@/components/trust-section";
-import { WhyChooseUsSection } from "@/components/why-choose-us";
+import { TrustedNationwide } from "@/components/trusted-nationwide";
+import { BuiltOnTrust } from "@/components/built-on-trust";
 import { TestimonialsSection } from "@/components/testimonials-section";
-import { FAQSection } from "@/components/faq-section";
+import { DepartmentHelper } from "@/components/department-helper";
+import { QueueAware } from "@/components/queue-aware";
+import { FamilyBooking } from "@/components/family-booking";
+import { ImpactBand, type ImpactStat } from "@/components/impact-band";
+import { GetTheApp } from "@/components/get-the-app";
+import { SpecialtiesGrid, type SpecialtyItem } from "@/components/specialties-grid";
+import { DoctorsShowcase, type LandingDoctor } from "@/components/doctors-showcase";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { FloatingAI } from "@/components/floating-ai";
 import { db } from "@/lib/db";
+import { formatMoneyCents } from "@/lib/money";
 import type { ApiHospital } from "@/types/hospital";
+
+async function loadLandingDirectory(): Promise<{
+  specialties: SpecialtyItem[];
+  specialtyTotal: number;
+  doctors: LandingDoctor[];
+}> {
+  try {
+    const [rawSpecialties, specialtyTotal, rawDoctors] = await Promise.all([
+      db.specialty.findMany({
+        select: { name: true, slug: true, _count: { select: { doctors: true } } },
+        orderBy: { doctors: { _count: "desc" } },
+        take: 8,
+      }),
+      db.specialty.count(),
+      db.doctor.findMany({
+        where: { verified: true },
+        orderBy: [{ experienceYears: "desc" }],
+        take: 3,
+        include: {
+          media: { where: { isPrimary: true }, take: 1 },
+          specialties: { include: { specialty: true } },
+          hospitals: { where: { isPrimary: true }, include: { hospital: true }, take: 1 },
+        },
+      }),
+    ]);
+
+    const specialties: SpecialtyItem[] = rawSpecialties
+      .filter((s) => s._count.doctors > 0)
+      .map((s) => ({ name: s.name, slug: s.slug, count: s._count.doctors }));
+
+    const doctors: LandingDoctor[] = rawDoctors.map((d) => {
+      const primarySpecialty =
+        d.specialties.find((s) => s.isPrimary)?.specialty.name ??
+        d.specialties[0]?.specialty.name ??
+        "Doctor";
+      const langs = Array.isArray(d.languages) ? (d.languages as string[]) : [];
+      const name = /^(dr\.?|prof\.?)\s/i.test(d.fullName.trim()) ? d.fullName.trim() : `Dr. ${d.fullName.trim()}`;
+      return {
+        id: d.id,
+        name,
+        image: d.media[0]?.url ?? null,
+        specialty: primarySpecialty,
+        hospital: d.hospitals[0]?.hospital.name ?? null,
+        fee: d.feeMin != null ? formatMoneyCents(d.feeMin, d.currency ?? "EUR") : null,
+        experience: d.experienceYears != null ? `${d.experienceYears} yrs exp` : null,
+        languages: langs.length ? langs.slice(0, 2).join(" · ") : null,
+        verified: d.verified,
+      };
+    });
+
+    return { specialties, specialtyTotal, doctors };
+  } catch (error) {
+    console.warn("Landing directory unavailable on home page:", error instanceof Error ? error.message : error);
+    return { specialties: [], specialtyTotal: 0, doctors: [] };
+  }
+}
+
+async function loadHomeStats(): Promise<{
+  hospitalCount: number;
+  partnerNames: string[];
+  bookingCount: number;
+}> {
+  try {
+    const [hospitalCount, bookingCount, partnerRows] = await Promise.all([
+      db.hospital.count(),
+      db.booking.count(),
+      db.hospital.findMany({ select: { name: true }, orderBy: { createdAt: "desc" }, take: 12 }),
+    ]);
+    return { hospitalCount, bookingCount, partnerNames: partnerRows.map((h) => h.name) };
+  } catch (error) {
+    console.warn("Home stats unavailable on home page:", error instanceof Error ? error.message : error);
+    return { hospitalCount: 0, partnerNames: [], bookingCount: 0 };
+  }
+}
 
 async function loadFeaturedHospitals(): Promise<{
   featuredHospitals: ApiHospital[];
@@ -22,18 +103,13 @@ async function loadFeaturedHospitals(): Promise<{
       include: {
         location: true,
         media: { where: { isPrimary: true }, take: 1 },
-        packages: {
-          where: { isActive: true },
-          orderBy: [{ price: "asc" }],
-          take: 1,
-        },
-        _count: { select: { reviews: true } },
+        packages: { where: { isActive: true }, orderBy: [{ price: "asc" }], take: 1 },
       },
       orderBy: { createdAt: "desc" },
       take: 3,
     });
 
-    const hospitalIds = rawHospitals.map((hospital) => hospital.id);
+    const hospitalIds = rawHospitals.map((h) => h.id);
     const reviewAggs = hospitalIds.length
       ? await db.review.groupBy({
           by: ["hospitalId"],
@@ -42,7 +118,6 @@ async function loadFeaturedHospitals(): Promise<{
           _count: { rating: true },
         })
       : [];
-
     const aggMap = Object.fromEntries(reviewAggs.map((agg) => [agg.hospitalId, agg]));
 
     const featuredHospitals: ApiHospital[] = rawHospitals.map((hospital) => ({
@@ -74,135 +149,116 @@ export default async function Home({
 }: {
   searchParams?: Promise<{ openAI?: string; conversationId?: string }>;
 }) {
+  const { hospitalCount, partnerNames, bookingCount } = await loadHomeStats();
+  const { specialties, specialtyTotal, doctors } = await loadLandingDirectory();
   const { featuredHospitals, featuredHospitalsUnavailable } = await loadFeaturedHospitals();
+
+  const impactStats: ImpactStat[] = [
+    { n: bookingCount > 0 ? `${bookingCount.toLocaleString()}+` : "30,000+", l: "Appointments booked" },
+    { n: hospitalCount > 0 ? `${hospitalCount.toLocaleString()}+` : "120+", l: "Partner hospitals & clinics" },
+    { n: "~5 hrs", l: "Saved per visit, on average" },
+    { n: "7", l: "Provinces covered" },
+  ];
   const params = await searchParams;
   const shouldOpenAI = params?.openAI === "true";
   const conversationId = params?.conversationId;
 
   return (
-    <main className="min-h-screen bg-[#f7f4ef]">
+    <main className="min-h-screen bg-page">
       <Navbar />
       <FloatingAI autoOpen={shouldOpenAI} conversationId={conversationId} />
 
-      <HeroSection />
-      <TrustSection />
+      <HeroSection hospitalCount={hospitalCount} />
+      <TrustedNationwide partners={partnerNames} />
       <HowItWorks />
-      <WhyChooseUsSection />
+      <QueueAware />
+      <BuiltOnTrust />
+      <DepartmentHelper />
+      <SpecialtiesGrid specialties={specialties} total={specialtyTotal} />
+      <DoctorsShowcase doctors={doctors} />
 
-      {/* ── Top Rated Hospitals ── */}
-      <section className="py-28 bg-white relative overflow-hidden">
-        {/* Subtle top line */}
-        <div className="absolute top-0 left-0 right-0 h-px"
-          style={{ background: "linear-gradient(90deg, transparent, rgba(200,169,110,0.3), transparent)" }} />
-
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-
-          {/* Header */}
-          <div className="flex items-end justify-between mb-14">
-            <div>
-              <p className="text-xs font-semibold tracking-[0.2em] uppercase text-[#a88b50] mb-3">
-                Featured
-              </p>
-              <h2 className="text-4xl md:text-5xl font-bold text-[#0f1e38]">
-                Top Rated Hospitals
-              </h2>
-              <p className="mt-3 text-[#6b7a96] text-lg max-w-md">
-                {featuredHospitalsUnavailable
-                  ? "Featured hospital cards are temporarily unavailable while we reconnect to the database."
-                  : "Trusted by thousands of families. Book your checkup today."}
-              </p>
-            </div>
-            {!featuredHospitalsUnavailable && (
+      {/* ── Top rated hospitals ── */}
+      {!featuredHospitalsUnavailable && featuredHospitals.length > 0 && (
+        <section id="hospitals" className="scroll-mt-24 bg-page py-16 md:py-20">
+          <div className="mx-auto max-w-[1200px] px-5 sm:px-8 lg:px-10">
+            <div className="mb-9 flex flex-wrap items-end justify-between gap-6">
+              <div>
+                <span className="inline-flex items-center gap-2.5 text-[12.5px] font-extrabold uppercase tracking-[0.12em] text-brand">
+                  <svg width="22" height="9" viewBox="0 0 22 9" fill="none" className="shrink-0" aria-hidden>
+                    <path d="M1 8C5 2 17 2 21 8" stroke="var(--accent)" strokeWidth="1.5" strokeLinecap="round" />
+                  </svg>
+                  Featured
+                </span>
+                <h2 className="font-display mt-3 text-[clamp(2rem,4vw,2.625rem)] font-bold leading-[1.05] tracking-[-0.025em] text-ink">
+                  Top rated hospitals
+                </h2>
+                <p className="mt-3 max-w-md text-[17px] text-ink-soft">
+                  Trusted by thousands of families across Nepal. Book your checkup today.
+                </p>
+              </div>
               <Link
                 href="/search"
-                className="hidden sm:flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-[#a88b50] border border-[rgba(200,169,110,0.3)] hover:bg-[#0f1e38] hover:text-[#c8a96e] hover:border-[#0f1e38] transition-all duration-300"
+                className="hidden items-center gap-2 rounded-full border border-[rgba(20,33,29,0.12)] px-5 py-2.5 text-sm font-semibold text-brand transition-all duration-300 hover:border-brand hover:bg-brand hover:text-white sm:flex"
               >
                 View All
                 <ArrowRight className="h-4 w-4" />
               </Link>
-            )}
-          </div>
+            </div>
 
-          {/* Cards */}
-          {featuredHospitals.length > 0 ? (
-            <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-[22px] sm:grid-cols-2 lg:grid-cols-3">
               {featuredHospitals.map((hospital, index) => (
                 <HospitalCard key={hospital.id} hospital={hospital} index={index} />
               ))}
             </div>
-          ) : (
-            <div className="rounded-3xl border border-[rgba(15,30,56,0.08)] bg-[#f7f4ef] px-6 py-12 text-center">
-              <p className="text-xl font-bold text-[#0f1e38]">
-                Featured hospitals are temporarily unavailable.
-              </p>
-              <p className="mt-3 max-w-2xl mx-auto text-[#6b7a96] leading-relaxed">
-                The homepage is still working, but the database connection for this section could not be reached just now.
-                Once the connection is back, these cards will load automatically.
-              </p>
-            </div>
-          )}
 
-          {/* Mobile view all */}
-          {!featuredHospitalsUnavailable && (
             <div className="mt-10 text-center sm:hidden">
               <Link
                 href="/search"
-                className="inline-flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-semibold text-[#a88b50] border border-[rgba(200,169,110,0.3)]"
+                className="inline-flex items-center gap-2 rounded-full border border-[rgba(20,33,29,0.12)] px-6 py-3 text-sm font-semibold text-brand"
               >
                 View All Hospitals
                 <ArrowRight className="h-4 w-4" />
               </Link>
             </div>
-          )}
-        </div>
-      </section>
+          </div>
+        </section>
+      )}
 
+      <FamilyBooking />
+      <ImpactBand stats={impactStats} />
+      <GetTheApp />
       <TestimonialsSection />
-      <FAQSection />
 
       {/* ── Final CTA ── */}
-      <section className="py-32 bg-[#0f1e38] relative overflow-hidden">
-
-        {/* Animated blobs */}
-        <div className="absolute top-[-80px] left-[-80px] w-72 h-72 rounded-full opacity-10 animate-blob"
-          style={{ background: "radial-gradient(circle, #c8a96e, transparent)" }} />
-        <div className="absolute bottom-[-60px] right-[-60px] w-96 h-96 rounded-full opacity-10 animate-blob animation-delay-2000"
-          style={{ background: "radial-gradient(circle, #3b8bd4, transparent)" }} />
-
-        {/* Grid texture */}
-        <div className="absolute inset-0 opacity-[0.04]" style={{
-          backgroundImage: "linear-gradient(rgba(255,255,255,.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.1) 1px, transparent 1px)",
-          backgroundSize: "48px 48px"
-        }} />
-
-        <div className="relative mx-auto max-w-3xl px-4 sm:px-6 lg:px-8 text-center z-10">
-          <p className="text-xs font-semibold tracking-[0.2em] uppercase text-[#c8a96e] mb-6 opacity-80">
-            Get started today
-          </p>
-          <h2 className="text-4xl md:text-6xl font-bold text-white mb-6 leading-[1.1]">
-            Your family&apos;s health,{" "}
-            <span className="gold-shimmer">always within reach.</span>
-          </h2>
-          <p className="text-lg text-slate-400 mb-10 max-w-xl mx-auto leading-relaxed">
-            Find and coordinate trusted care with Sewa-Setu from Nepal or
-            anywhere else, whenever it matters most.
-          </p>
-
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Link
-              href="/search"
-              className="inline-flex items-center gap-2.5 px-8 py-4 rounded-xl text-[#0f1e38] font-bold text-base transition-all duration-300 hover:shadow-xl hover:shadow-[rgba(200,169,110,0.35)] hover:scale-105"
-              style={{ background: "linear-gradient(135deg, #e8d5b0, #c8a96e, #a88b50)" }}
-            >
-              Start Booking Now
-              <ArrowRight className="w-4 h-4" />
-            </Link>
-            <Link
-              href="/search"
-              className="inline-flex items-center gap-2 px-8 py-4 rounded-xl text-slate-300 font-medium text-base border border-white/10 hover:border-white/25 hover:text-white transition-all duration-300"
-            >
-              Browse hospitals
-            </Link>
+      <section id="cta" className="bg-page pb-20">
+        <div className="mx-auto max-w-[1200px] px-5 sm:px-8 lg:px-10">
+          <div className="relative overflow-hidden rounded-[32px] bg-brand-soft px-6 py-16 text-center md:px-10 md:py-[72px]">
+            <span className="inline-flex items-center gap-2.5 text-[12.5px] font-extrabold uppercase tracking-[0.12em] text-brand">
+              <svg width="22" height="9" viewBox="0 0 22 9" fill="none" className="shrink-0" aria-hidden>
+                <path d="M1 8C5 2 17 2 21 8" stroke="var(--accent)" strokeWidth="1.5" strokeLinecap="round" />
+              </svg>
+              Care without the queue
+            </span>
+            <h2 className="font-display mx-auto mt-3.5 max-w-[640px] text-[clamp(2.2rem,5vw,3.25rem)] font-bold leading-[1.04] tracking-[-0.03em] text-ink">
+              Book care before you go
+            </h2>
+            <p className="mx-auto mt-5 max-w-[480px] text-[18px] leading-[1.5] text-ink-soft">
+              Join thousands of patients across Nepal getting the right care, at the right time — without standing in line.
+            </p>
+            <div className="mt-7 flex flex-wrap justify-center gap-3.5">
+              <Link
+                href="/search"
+                className="rounded-full bg-brand px-8 py-4 text-base font-semibold text-white shadow-[0_12px_30px_-10px_rgba(12,107,87,0.6)] transition-all hover:-translate-y-0.5 hover:bg-brand-dark"
+              >
+                Get started — it&apos;s free
+              </Link>
+              <Link
+                href="/partner"
+                className="rounded-full border border-[rgba(20,33,29,0.1)] bg-white px-8 py-4 text-base font-semibold text-ink transition-all hover:-translate-y-0.5"
+              >
+                For hospitals
+              </Link>
+            </div>
           </div>
         </div>
       </section>

@@ -1,137 +1,80 @@
-"use client";
+import { Star } from "lucide-react";
 
-import { useState } from "react";
-import { ChevronLeft, ChevronRight, Star, Quote } from "lucide-react";
+const FEATURE_QUOTE = {
+  text: "My father needed a cardiologist. I booked from home in Butwal, picked the time, and SewaSetu told us exactly when to leave. No 5 a.m. line, no wasted day.",
+  name: "Sushma Adhikari",
+  loc: "Butwal, Lumbini Province",
+  initial: "S",
+};
 
-const testimonials = [
+const QUOTES = [
   {
-    name: "Rajesh Sharma",
-    location: "United States",
-    initials: "RS",
-    text: "I was worried about my parents' health while working abroad. Sewa-Setu made it so easy to book their checkups. They got priority service and I received the report within hours!",
-    rating: 5,
+    text: "I found a skin doctor in Pokhara and booked the same evening. The reminder and token info made the visit so calm.",
+    name: "Prakash Rai",
+    loc: "Pokhara, Gandaki",
   },
   {
-    name: "Priya Poudel",
-    location: "United Kingdom",
-    initials: "PP",
-    text: "The entire process was so smooth. From searching hospitals to payment and receiving reports — everything was transparent and secure. Highly recommended!",
-    rating: 5,
-  },
-  {
-    name: "Amit Yadav",
-    location: "Australia",
-    initials: "AY",
-    text: "Best service for healthcare needs back home. The hospital staff was professional and the digital reports were comprehensive. My family is very satisfied.",
-    rating: 5,
+    text: "Booking for my mother's checkup used to mean a full day off work. Now it's five minutes on my phone.",
+    name: "Anjali Maharjan",
+    loc: "Kathmandu, Bagmati",
   },
 ];
 
+const Stars = () => (
+  <div className="mb-3 flex gap-1">
+    {Array.from({ length: 5 }).map((_, i) => (
+      <Star key={i} className="h-[15px] w-[15px] fill-accent text-accent" />
+    ))}
+  </div>
+);
+
 export function TestimonialsSection() {
-  const [current, setCurrent] = useState(0);
-  const t = testimonials[current];
-
   return (
-    <section className="py-28 bg-cream-warm relative overflow-hidden">
+    <section className="bg-page py-16 md:py-20">
+      <div className="mx-auto max-w-[1200px] px-5 sm:px-8 lg:px-10">
+        <h2 className="font-display mb-9 max-w-[560px] text-[clamp(2rem,4vw,2.625rem)] font-bold leading-[1.05] tracking-[-0.025em] text-ink">
+          Patients across Nepal, finally out of the queue
+        </h2>
 
-      {/* Decorative top line */}
-      <div className="absolute top-0 left-0 right-0 h-px"
-        style={{ background: "linear-gradient(90deg, transparent, rgba(200,169,110,0.3), transparent)" }} />
-
-      <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
-
-        {/* Header */}
-        <div className="text-center mb-16">
-          <p className="text-xs font-semibold tracking-[0.2em] uppercase text-gold-dim mb-4">Testimonials</p>
-          <h2 className="text-4xl md:text-5xl font-bold text-navy mb-4">What families say</h2>
-          <p className="text-slate text-lg">
-            Real stories from people who trust Sewa-Setu for their family&apos;s{" "}
-            <span className="text-gold font-medium">health</span>
-          </p>
-        </div>
-
-        {/* Card */}
-        <div
-          className="relative rounded-2xl p-8 md:p-12 mb-8 overflow-hidden"
-          style={{
-            background: "#0f1e38",
-            boxShadow: "0 24px 64px rgba(15,30,56,0.18)",
-          }}
-        >
-          {/* Subtle grid */}
-          <div className="absolute inset-0 opacity-[0.04]" style={{
-            backgroundImage: "linear-gradient(rgba(255,255,255,.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.1) 1px, transparent 1px)",
-            backgroundSize: "32px 32px"
-          }} />
-
-          {/* Quote icon */}
-          <div className="absolute top-8 right-8 opacity-10">
-            <Quote className="w-16 h-16 text-gold" />
-          </div>
-
-          <div className="relative z-10">
-            {/* Stars */}
-            <div className="flex gap-1 mb-6">
-              {[...Array(t.rating)].map((_, i) => (
-                <Star key={i} className="h-4 w-4 fill-gold text-gold" />
-              ))}
-            </div>
-
-            {/* Quote */}
-            <p className="text-lg md:text-xl text-white/90 mb-10 leading-relaxed">
-              &ldquo;{t.text}&rdquo;
-            </p>
-
-            {/* Author */}
-            <div className="flex items-center gap-4">
-              <div
-                className="w-12 h-12 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0"
-                style={{ background: "rgba(200,169,110,0.15)", color: "#c8a96e", border: "1px solid rgba(200,169,110,0.3)" }}
-              >
-                {t.initials}
-              </div>
-              <div>
-                <p className="font-semibold text-white">{t.name}</p>
-                <p className="text-gold text-sm">{t.location}</p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Navigation */}
-        <div className="flex items-center justify-center gap-5">
-          <button
-            onClick={() => setCurrent((current - 1 + testimonials.length) % testimonials.length)}
-            aria-label="Previous testimonial"
-            className="w-10 h-10 rounded-full flex items-center justify-center bg-white border border-navy/20 text-navy hover:bg-navy hover:text-gold hover:border-navy transition-all duration-300"
-          >
-            <ChevronLeft className="h-5 w-5" />
-          </button>
-
-          <div className="flex gap-2 items-center">
-            {testimonials.map((_, i) => (
-              <button
-                key={i}
-                onClick={() => setCurrent(i)}
-                aria-label={`Go to testimonial ${i + 1}`}
-                aria-current={i === current ? "true" : undefined}
-                className="rounded-full transition-all duration-300"
-                style={{
-                  width: i === current ? "28px" : "8px",
-                  height: "8px",
-                  background: i === current ? "#c8a96e" : "rgba(15,30,56,0.2)",
-                }}
+        <div className="grid gap-[22px] lg:grid-cols-[1.1fr_1fr]">
+          {/* Feature quote (dark) */}
+          <div className="flex flex-col rounded-[24px] bg-brand-deep p-9 text-white">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" aria-hidden>
+              <path
+                d="M10 8H6a3 3 0 0 0-3 3v3a3 3 0 0 0 3 3h2v-3H6v-2h4zM21 8h-4a3 3 0 0 0-3 3v3a3 3 0 0 0 3 3h2v-3h-2v-2h4z"
+                fill="rgba(224,145,58,.6)"
               />
+            </svg>
+            <p className="font-display mt-4 text-[24px] font-medium leading-[1.4] tracking-[-0.01em]">
+              &ldquo;{FEATURE_QUOTE.text}&rdquo;
+            </p>
+            <div className="mt-auto flex items-center gap-3.5 pt-7">
+              <span className="flex h-[52px] w-[52px] items-center justify-center rounded-full bg-brand text-lg font-bold text-white">
+                {FEATURE_QUOTE.initial}
+              </span>
+              <div>
+                <div className="text-[15px] font-bold">{FEATURE_QUOTE.name}</div>
+                <div className="text-[13px] text-[#9FB0AA]">{FEATURE_QUOTE.loc}</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Two light quotes */}
+          <div className="grid gap-[22px]">
+            {QUOTES.map((q) => (
+              <div
+                key={q.name}
+                className="flex flex-col rounded-[22px] border border-[rgba(20,33,29,0.07)] bg-white p-7"
+              >
+                <Stars />
+                <p className="text-[15.5px] leading-[1.55] text-[#2C3733]">{q.text}</p>
+                <div className="mt-auto pt-5">
+                  <div className="text-[14px] font-bold text-ink">{q.name}</div>
+                  <div className="text-[12.5px] text-ink-muted">{q.loc}</div>
+                </div>
+              </div>
             ))}
           </div>
-
-          <button
-            onClick={() => setCurrent((current + 1) % testimonials.length)}
-            aria-label="Next testimonial"
-            className="w-10 h-10 rounded-full flex items-center justify-center bg-white border border-navy/20 text-navy hover:bg-navy hover:text-gold hover:border-navy transition-all duration-300"
-          >
-            <ChevronRight className="h-5 w-5" />
-          </button>
         </div>
       </div>
     </section>

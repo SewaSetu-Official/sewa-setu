@@ -1,183 +1,163 @@
 import Link from "next/link";
-import Image from "next/image";
-import { Facebook, Twitter, Instagram, Linkedin, Mail, Phone, MapPin } from "lucide-react";
+import { Facebook, Instagram, Twitter, Youtube, ArrowRight } from "lucide-react";
+
+const FOOTER_COLS = [
+  {
+    title: "Product",
+    links: [
+      { label: "How it works", href: "/#how-it-works" },
+      { label: "Find doctors", href: "/#doctors" },
+      { label: "Specialties", href: "/#specialties" },
+      { label: "Queue tracking", href: "/#queue" },
+    ],
+  },
+  {
+    title: "Company",
+    links: [
+      { label: "About", href: "#" },
+      { label: "For hospitals", href: "/partner" },
+      { label: "Careers", href: "#" },
+      { label: "Contact", href: "#contact" },
+    ],
+  },
+  {
+    title: "Support",
+    links: [
+      { label: "Help center", href: "#" },
+      { label: "Privacy policy", href: "#" },
+      { label: "Terms of service", href: "#" },
+    ],
+  },
+];
+
+const SOCIALS = [
+  { label: "Facebook", Icon: Facebook },
+  { label: "Instagram", Icon: Instagram },
+  { label: "X", Icon: Twitter },
+  { label: "YouTube", Icon: Youtube },
+];
 
 export function Footer() {
   return (
-    <footer id="contact" className="bg-navy-dark text-slate-400 relative overflow-hidden">
+    <footer id="contact" className="relative overflow-hidden bg-brand-deep text-[#C7D2CD]">
+      {/* ambient glows */}
+      <div aria-hidden className="pointer-events-none absolute -right-16 -top-36 h-[460px] w-[460px] rounded-full"
+        style={{ background: "radial-gradient(circle, rgba(12,107,87,.5), transparent 68%)" }} />
+      <div aria-hidden className="pointer-events-none absolute -left-32 top-10 h-[340px] w-[340px] rounded-full"
+        style={{ background: "radial-gradient(circle, rgba(224,145,58,.16), transparent 70%)" }} />
 
-      {/* ── Ambient top glow ── */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[1px] opacity-60"
-        style={{ background: "linear-gradient(90deg, transparent, #c8a96e, transparent)" }} />
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[400px] h-[80px] opacity-[0.06] blur-3xl rounded-full"
-        style={{ background: "#c8a96e" }} />
+      <div className="relative mx-auto max-w-[1200px] px-5 pt-[74px] sm:px-8 lg:px-10">
+        <div className="grid gap-10 md:grid-cols-2 lg:grid-cols-[1.5fr_1fr_1fr_1fr]">
+          {/* brand + newsletter + social */}
+          <div className="max-w-[330px]">
+            <div className="flex items-center gap-3">
+              <span className="flex h-[38px] w-[38px] items-center justify-center rounded-[11px] bg-brand shadow-[0_8px_20px_-8px_rgba(12,107,87,0.8)]">
+                <svg width="21" height="21" viewBox="0 0 24 24" fill="none" aria-hidden>
+                  <path d="M3 16c3-6 6-9 9-9s6 3 9 9" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" />
+                  <path d="M12 7v9" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" />
+                  <circle cx="12" cy="18.5" r="1.7" fill="#fff" />
+                </svg>
+              </span>
+              <span className="font-display text-[21px] font-bold text-white">SewaSetu</span>
+            </div>
+            <p className="mt-5 text-[14.5px] leading-[1.6] text-[#9FB0AA]">
+              The bridge between patients and hospitals across Nepal — find care, book appointments, and skip the queue.
+            </p>
 
-      {/* ── Dot grid texture ── */}
-      <div className="absolute inset-0 opacity-[0.025]" style={{
-        backgroundImage: "radial-gradient(circle, rgba(200,169,110,0.8) 1px, transparent 1px)",
-        backgroundSize: "36px 36px",
-      }} />
-
-      {/* ── MAIN BODY ── */}
-      <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-14">
-        <div className="flex flex-col lg:flex-row gap-12">
-
-          {/* ── LEFT: Logo + description (same width as original) ── */}
-          <div className="flex flex-row items-start gap-6 lg:w-[42%] shrink-0">
-
-            {/* Logo */}
-            <div className="shrink-0 transition-all duration-300 hover:scale-105 hover:drop-shadow-[0_0_20px_rgba(200,169,110,0.45)]">
-              <Image
-                src="/SewaSetu-Logo.png"
-                alt="Sewa-Setu"
-                width={500}
-                height={350}
-                className="w-[260px] h-auto object-contain"
+            <div className="mb-3 mt-6 text-[12px] font-bold uppercase tracking-[0.1em] text-[#7E908A]">
+              Get care tips &amp; updates
+            </div>
+            <form className="flex max-w-[320px] items-center gap-2 rounded-[13px] border border-white/[0.12] bg-white/[0.06] py-[5px] pl-[15px] pr-[5px]">
+              <input
+                placeholder="Your email address"
+                aria-label="Email address"
+                className="min-w-0 flex-1 border-0 bg-transparent text-[14px] text-white outline-none placeholder:text-[#7E908A]"
               />
+              <button
+                type="button"
+                className="flex shrink-0 items-center gap-1.5 rounded-[9px] bg-brand px-4 py-2.5 text-[13.5px] font-bold text-white transition-colors hover:bg-brand-dark"
+              >
+                Join
+                <ArrowRight className="h-3.5 w-3.5" />
+              </button>
+            </form>
+
+            <div className="mt-6 flex gap-2.5">
+              {SOCIALS.map(({ label, Icon }) => (
+                <a
+                  key={label}
+                  href="#"
+                  aria-label={label}
+                  className="flex h-10 w-10 items-center justify-center rounded-[11px] border border-white/10 bg-white/[0.06] text-[#9FB0AA] transition-all hover:-translate-y-0.5 hover:border-brand hover:bg-brand hover:text-white"
+                >
+                  <Icon className="h-[17px] w-[17px]" />
+                </a>
+              ))}
             </div>
+          </div>
 
-            {/* Brand info */}
-            <div className="pt-1">
-              <div className="text-2xl font-bold text-white mb-1">
-                Sewa<span className="text-gold">-Setu</span>
-              </div>
-              <p className="text-sm text-slate-400 leading-relaxed mb-5">
-                Bridging the distance between you and your family&apos;s health.
-                Book prepaid health checkups for your loved ones in Nepal — from anywhere in the world.
-              </p>
-
-              {/* Social icons */}
-              <div className="flex gap-2 mb-5">
-                {[
-                  { icon: Facebook,  label: "Facebook"  },
-                  { icon: Twitter,   label: "Twitter"   },
-                  { icon: Instagram, label: "Instagram" },
-                  { icon: Linkedin,  label: "LinkedIn"  },
-                ].map(({ icon: Icon, label }) => (
-                  <a
-                    key={label}
-                    href="#"
-                    aria-label={label}
-                    className="w-8 h-8 rounded-lg flex items-center justify-center text-gold hover:-translate-y-0.5 transition-all duration-300"
-                    style={{ background: "rgba(200,169,110,0.08)", border: "1px solid rgba(200,169,110,0.15)" }}
+          {/* link columns */}
+          {FOOTER_COLS.map((col) => (
+            <div key={col.title}>
+              <div className="mb-[17px] text-[12.5px] font-bold uppercase tracking-[0.05em] text-white">{col.title}</div>
+              <div className="flex flex-col gap-3.5 text-[14.5px]">
+                {col.links.map((l) => (
+                  <Link
+                    key={l.label}
+                    href={l.href}
+                    className="w-fit text-[#9FB0AA] transition-all hover:pl-[5px] hover:text-white"
                   >
-                    <Icon className="h-3.5 w-3.5" />
-                  </a>
+                    {l.label}
+                  </Link>
                 ))}
               </div>
             </div>
-          </div>
+          ))}
+        </div>
 
-          {/* ── Divider ── */}
-          <div
-            className="hidden lg:block w-px self-stretch"
-            style={{ background: "linear-gradient(to bottom, transparent, rgba(200,169,110,0.2), transparent)" }}
-          />
-
-          {/* ── RIGHT: 3 columns ── */}
-          <div className="flex-1 grid grid-cols-1 sm:grid-cols-3 gap-10">
-
-            {/* Quick Links */}
-            <div>
-              <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-gold mb-5">Quick Links</h3>
-              <ul className="space-y-3 text-sm">
-                {[
-                  { label: "Find a Hospital", href: "/search" },
-                  { label: "How it Works",    href: "/#how-it-works" },
-                  { label: "Sign In",         href: "/sign-in" },
-                  { label: "Create Account",  href: "/sign-up" },
-                ].map(({ label, href }) => (
-                  <li key={label}>
-                    <Link href={href} className="group flex items-center gap-1.5 text-slate-400 hover:text-white transition-colors duration-200">
-                      <span className="w-0 group-hover:w-3 h-px bg-gold transition-all duration-300 overflow-hidden" />
-                      {label}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            {/* Company */}
-            <div>
-              <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-gold mb-5">Company</h3>
-              <ul className="space-y-3 text-sm">
-                {[
-                  { label: "About Us",         href: "#" },
-                  { label: "Contact Support",  href: "#" },
-                  { label: "Privacy Policy",   href: "#" },
-                  { label: "Terms of Service", href: "#" },
-                ].map(({ label, href }) => (
-                  <li key={label}>
-                    <Link href={href} className="group flex items-center gap-1.5 text-slate-400 hover:text-white transition-colors duration-200">
-                      <span className="w-0 group-hover:w-3 h-px bg-gold transition-all duration-300 overflow-hidden" />
-                      {label}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            {/* Contact */}
-            <div>
-              <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-gold mb-5">Contact</h3>
-              <ul className="space-y-4 text-sm text-slate-400">
-                {[
-                  { icon: MapPin, text: "Kathmandu, Nepal",       href: null },
-                  { icon: Mail,   text: "support@sewa-setu.com",  href: "mailto:support@sewa-setu.com" },
-                  { icon: Phone,  text: "+977 9800000000",        href: "tel:+9779800000000" },
-                ].map(({ icon: Icon, text, href }) => (
-                  <li key={text}>
-                    {href ? (
-                      <a href={href} className="group flex items-center gap-2.5 hover:text-white transition-colors duration-200">
-                        <div
-                          className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 transition-all duration-300 group-hover:bg-gold/20"
-                          style={{ background: "rgba(200,169,110,0.08)", border: "1px solid rgba(200,169,110,0.15)" }}
-                        >
-                          <Icon className="h-3.5 w-3.5 text-gold" />
-                        </div>
-                        {text}
-                      </a>
-                    ) : (
-                      <div className="flex items-center gap-2.5">
-                        <div
-                          className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
-                          style={{ background: "rgba(200,169,110,0.08)", border: "1px solid rgba(200,169,110,0.15)" }}
-                        >
-                          <Icon className="h-3.5 w-3.5 text-gold" />
-                        </div>
-                        {text}
-                      </div>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-          </div>
+        {/* giant wordmark watermark */}
+        <div aria-hidden className="mt-14 -mb-4 select-none">
+          <svg viewBox="0 16 1000 158" width="100%" className="block overflow-visible">
+            <defs>
+              <linearGradient id="ssWordmark" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0" stopColor="#9FC6B8" stopOpacity=".30" />
+                <stop offset="1" stopColor="#10221E" stopOpacity="0" />
+              </linearGradient>
+            </defs>
+            <text
+              x="0"
+              y="172"
+              textLength="1000"
+              lengthAdjust="spacingAndGlyphs"
+              fontFamily="var(--font-bricolage), sans-serif"
+              fontWeight="700"
+              fontSize="200"
+              fill="url(#ssWordmark)"
+            >
+              SewaSetu
+            </text>
+          </svg>
         </div>
       </div>
 
-      {/* ── BOTTOM BAR ── */}
-      <div className="relative border-t" style={{ borderColor: "rgba(200,169,110,0.1)", background: "rgba(0,0,0,0.3)" }}>
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-4 flex flex-col sm:flex-row items-center justify-between gap-2">
-          <span className="text-xs text-slate-500">
-            © {new Date().getFullYear()} Sewa-Setu Health Pvt Ltd. All rights reserved.
-          </span>
-          <div className="flex items-center gap-4 text-xs text-slate-500">
-            <Link href="#" className="hover:text-slate-300 transition-colors">Privacy</Link>
-            <span className="text-slate-700">·</span>
-            <Link href="#" className="hover:text-slate-300 transition-colors">Terms</Link>
-            <span className="text-slate-700">·</span>
-            <span
-              className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-gold"
-              style={{ background: "rgba(200,169,110,0.08)", border: "1px solid rgba(200,169,110,0.15)" }}
-            >
-              Made with ❤️ for Nepal
+      {/* bottom bar */}
+      <div className="relative z-[2] border-t border-white/[0.08] bg-brand-deep">
+        <div className="mx-auto flex max-w-[1200px] flex-wrap items-center justify-between gap-4 px-5 pb-10 pt-5 sm:px-8 lg:px-10">
+          <span className="text-[13.5px] text-[#7E908A]">© {new Date().getFullYear()} SewaSetu · Made in Nepal 🇳🇵</span>
+          <div className="flex flex-wrap items-center gap-5">
+            <span className="flex items-center gap-2 text-[13px] font-semibold text-[#9FB0AA]">
+              <span className="relative h-2 w-2">
+                <span className="ss-pulse absolute inset-0 rounded-full bg-[#3FD08C]" />
+                <span className="absolute inset-0 rounded-full bg-[#3FD08C]" />
+              </span>
+              All systems operational
+            </span>
+            <span className="rounded-full border border-white/[0.12] px-3 py-1.5 text-[13px] font-semibold text-[#9FB0AA]">
+              English
             </span>
           </div>
         </div>
       </div>
-
     </footer>
   );
 }
