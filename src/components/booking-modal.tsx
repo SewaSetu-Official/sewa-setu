@@ -22,6 +22,9 @@ const TIME_SLOTS = ["09:00","10:00","11:00","13:00","14:00","15:00","16:00","17:
 const DAYS = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
 const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 
+const BRAND_GRAD = "linear-gradient(140deg,#1C7A64,#0C6B57 55%,#0a5848)";
+const SELECT_GRAD = "linear-gradient(135deg,#0C6B57,#0A5446)";
+
 function createInitialFormData(prefilledBuyerEmail = "") {
   return {
     patientName: "",
@@ -198,16 +201,16 @@ function BookingModalDialog({ onClose, hospitalName, hospitalId, selectedPackage
   const modalContent = (
     <div
       className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center sm:p-4"
-      style={{ background: "rgba(10,18,35,0.75)", backdropFilter: "blur(6px)" }}
+      style={{ background: "rgba(20,33,29,0.5)", backdropFilter: "blur(6px)" }}
       onClick={(e) => { if (e.target === e.currentTarget) handleClose(); }}
     >
       <div
-        className="w-full flex flex-col overflow-hidden rounded-t-[24px] sm:rounded-[20px]"
+        className="w-full flex flex-col overflow-hidden rounded-t-[24px] sm:rounded-[22px]"
         style={{
           maxWidth: 980,
           maxHeight: "95vh",
           background: "#fff",
-          boxShadow: "0 32px 80px rgba(10,18,35,.5)",
+          boxShadow: "0 40px 90px -30px rgba(0,0,0,.55)",
         }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -215,30 +218,24 @@ function BookingModalDialog({ onClose, hospitalName, hospitalId, selectedPackage
         {/* ── HEADER ── */}
         <div
           className="flex-shrink-0 flex items-center gap-3 px-5 py-4"
-          style={{
-            background: "linear-gradient(135deg,#0f1e38 0%,#1a3059 100%)",
-            borderBottom: "1px solid rgba(200,169,110,.18)",
-          }}
+          style={{ background: BRAND_GRAD }}
         >
           {/* Step progress pills */}
           <div className="flex items-center gap-1.5 flex-shrink-0">
-            <div
-              className="h-1.5 rounded-full"
-              style={{ width: 28, background: "#c8a96e", transition: "all .3s ease" }}
-            />
+            <div className="h-1.5 rounded-full" style={{ width: 28, background: "#fff", transition: "all .3s ease" }} />
             <div
               className="h-1.5 rounded-full"
               style={{
                 width: step === "details" ? 28 : 8,
-                background: step === "details" ? "#c8a96e" : "rgba(200,169,110,.3)",
+                background: step === "details" ? "#fff" : "rgba(255,255,255,.35)",
                 transition: "all .3s ease",
               }}
             />
           </div>
 
           <div className="flex-1 min-w-0">
-            <h2 className="text-base font-bold text-white truncate">
-              {step === "schedule" ? "Choose Date & Time" : "Confirm Your Booking"}
+            <h2 className="text-base font-bold text-white truncate" style={{ fontFamily: "var(--font-bricolage), sans-serif" }}>
+              {step === "schedule" ? "Choose date & time" : "Confirm your booking"}
             </h2>
           </div>
 
@@ -248,21 +245,21 @@ function BookingModalDialog({ onClose, hospitalName, hospitalId, selectedPackage
               <button
                 onClick={goPrev}
                 disabled={!canPrev}
-                className="flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-lg transition-all disabled:opacity-30 hover:brightness-110"
-                style={{ background: "rgba(255,255,255,.1)", color: "#c8a96e", border: "1px solid rgba(200,169,110,.25)" }}
+                className="flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-lg text-white transition-all disabled:opacity-30 hover:brightness-110"
+                style={{ background: "rgba(255,255,255,.14)", border: "1px solid rgba(255,255,255,.25)" }}
               >
                 <ChevronLeft className="h-3.5 w-3.5" /> Prev
               </button>
               <span
-                className="text-xs font-medium px-3 py-1.5 rounded-lg hidden sm:block"
-                style={{ background: "rgba(200,169,110,.12)", color: "#c8a96e", border: "1px solid rgba(200,169,110,.2)" }}
+                className="text-xs font-medium px-3 py-1.5 rounded-lg hidden text-white sm:block"
+                style={{ background: "rgba(255,255,255,.1)", border: "1px solid rgba(255,255,255,.2)" }}
               >
                 {weekLabel}
               </span>
               <button
                 onClick={goNext}
-                className="flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-lg transition-all hover:brightness-110"
-                style={{ background: "rgba(255,255,255,.1)", color: "#c8a96e", border: "1px solid rgba(200,169,110,.25)" }}
+                className="flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-lg text-white transition-all hover:brightness-110"
+                style={{ background: "rgba(255,255,255,.14)", border: "1px solid rgba(255,255,255,.25)" }}
               >
                 Next <ChevronRight className="h-3.5 w-3.5" />
               </button>
@@ -273,15 +270,17 @@ function BookingModalDialog({ onClose, hospitalName, hospitalId, selectedPackage
           <button
             onClick={handleClose}
             aria-label="Close booking modal"
-            className="flex-shrink-0 h-9 w-9 rounded-full flex items-center justify-center transition-all hover:bg-white/15 hover:border-white/30"
-            style={{ background: "rgba(255,255,255,.08)", border: "1px solid rgba(255,255,255,.15)", color: "rgba(255,255,255,.7)" }}
+            className="flex-shrink-0 h-9 w-9 rounded-full flex items-center justify-center text-white transition-all"
+            style={{ background: "rgba(255,255,255,.14)", border: "1px solid rgba(255,255,255,.22)" }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = "#C0556B"; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = "rgba(255,255,255,.14)"; }}
           >
             <X className="h-4 w-4" />
           </button>
         </div>
 
         {/* ── ANIMATED BODY ── */}
-        <div className="flex-1 overflow-y-auto overflow-x-hidden" style={{ background: "#f5f3ef" }}>
+        <div className="flex-1 overflow-y-auto overflow-x-hidden" style={{ background: "#F6F4EE" }}>
           <AnimatePresence initial={false} mode="wait" custom={direction}>
             <motion.div
               key={step}
@@ -303,17 +302,17 @@ function BookingModalDialog({ onClose, hospitalName, hospitalId, selectedPackage
                     style={{
                       background: "#fff",
                       padding: "28px 28px 24px",
-                      borderRight: "1px solid rgba(15,30,56,.07)",
-                      borderBottom: "1px solid rgba(15,30,56,.07)",
+                      borderRight: "1px solid rgba(20,33,29,.07)",
+                      borderBottom: "1px solid rgba(20,33,29,.07)",
                     }}
                   >
-                    <p style={{ fontSize: "0.65rem", fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase", color: "#c8a96e", marginBottom: 16 }}>
-                      Select a Date
+                    <p style={{ fontSize: "0.65rem", fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase", color: "#C0763A", marginBottom: 16 }}>
+                      Select a date
                     </p>
 
                     <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 4, marginBottom: 4 }}>
                       {DAYS.map(d => (
-                        <div key={d} style={{ textAlign: "center", fontSize: "0.62rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#9aa3b0", padding: "4px 0" }}>
+                        <div key={d} style={{ textAlign: "center", fontSize: "0.62rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#9AA39E", padding: "4px 0" }}>
                           {d}
                         </div>
                       ))}
@@ -334,20 +333,20 @@ function BookingModalDialog({ onClose, hospitalName, hospitalId, selectedPackage
                             style={{
                               display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
                               padding: 0, borderRadius: 10, height: 72, width: "100%",
-                              border: isSel ? "2px solid #c8a96e" : isToday ? "2px solid rgba(200,169,110,.4)" : "2px solid rgba(15,30,56,.08)",
-                              background: isSel ? "linear-gradient(135deg,#c8a96e 0%,#a88b50 100%)" : isToday ? "rgba(200,169,110,.08)" : "#fff",
+                              border: isSel ? "2px solid #0C6B57" : isToday ? "2px solid rgba(12,107,87,.4)" : "2px solid rgba(20,33,29,.08)",
+                              background: isSel ? SELECT_GRAD : isToday ? "rgba(12,107,87,.06)" : "#fff",
                               cursor: isPast ? "not-allowed" : "pointer",
                               opacity: isPast ? 0.35 : 1,
                               transition: "all .14s ease",
                             }}
                           >
-                            <span style={{ fontSize: "0.58rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: isSel ? "rgba(255,255,255,.75)" : "#9aa3b0", marginBottom: 2 }}>
+                            <span style={{ fontSize: "0.58rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: isSel ? "rgba(255,255,255,.75)" : "#9AA39E", marginBottom: 2 }}>
                               {MONTHS[d.getMonth()]}
                             </span>
-                            <span style={{ fontSize: "1.45rem", fontWeight: 800, lineHeight: 1, color: isSel ? "#fff" : isToday ? "#c8a96e" : "#0f1e38" }}>
+                            <span style={{ fontSize: "1.45rem", fontWeight: 800, lineHeight: 1, color: isSel ? "#fff" : isToday ? "#0C6B57" : "#14211D" }}>
                               {d.getDate()}
                             </span>
-                            <span style={{ fontSize: "0.52rem", fontWeight: 700, marginTop: 3, textTransform: "uppercase", letterSpacing: "0.06em", color: isSel ? "rgba(255,255,255,.8)" : "#c8a96e", visibility: isToday ? "visible" : "hidden" }}>
+                            <span style={{ fontSize: "0.52rem", fontWeight: 700, marginTop: 3, textTransform: "uppercase", letterSpacing: "0.06em", color: isSel ? "rgba(255,255,255,.8)" : "#0C6B57", visibility: isToday ? "visible" : "hidden" }}>
                               Today
                             </span>
                           </button>
@@ -356,25 +355,25 @@ function BookingModalDialog({ onClose, hospitalName, hospitalId, selectedPackage
                     </div>
 
                     {/* Mini summary */}
-                    <div style={{ marginTop: 20, padding: "16px", borderRadius: 12, background: "#f5f3ef", border: "1.5px solid rgba(15,30,56,.08)" }}>
-                      <p style={{ fontSize: "0.6rem", fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: "#c8a96e", marginBottom: 10 }}>
-                        Your Selection
+                    <div style={{ marginTop: 20, padding: "16px", borderRadius: 12, background: "#F6F4EE", border: "1.5px solid rgba(20,33,29,.08)" }}>
+                      <p style={{ fontSize: "0.6rem", fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: "#C0763A", marginBottom: 10 }}>
+                        Your selection
                       </p>
-                      <p style={{ fontSize: "0.88rem", fontWeight: 700, color: "#0f1e38", marginBottom: 2, lineHeight: 1.3 }}>{selectedPackage.name}</p>
-                      <p style={{ fontSize: "0.72rem", color: "#6b7a96", marginBottom: 12 }}>{hospitalName}</p>
+                      <p style={{ fontSize: "0.88rem", fontWeight: 700, color: "#14211D", marginBottom: 2, lineHeight: 1.3 }}>{selectedPackage.name}</p>
+                      <p style={{ fontSize: "0.72rem", color: "#7B857F", marginBottom: 12 }}>{hospitalName}</p>
                       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                         {[
                           { label: "Date", value: selDateDisplay, active: !!selectedDate },
                           { label: "Time", value: selTimeDisplay, active: !!selectedTime },
                         ].map(({ label, value, active }) => (
                           <div key={label} style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                            <span style={{ fontSize: "0.72rem", color: "#9aa3b0" }}>{label}</span>
-                            <span style={{ fontSize: "0.78rem", fontWeight: 700, color: active ? "#0f1e38" : "#c8c8c8" }}>{value || "—"}</span>
+                            <span style={{ fontSize: "0.72rem", color: "#9AA39E" }}>{label}</span>
+                            <span style={{ fontSize: "0.78rem", fontWeight: 700, color: active ? "#14211D" : "#C4BFB4" }}>{value || "—"}</span>
                           </div>
                         ))}
-                        <div style={{ borderTop: "1px solid rgba(15,30,56,.07)", paddingTop: 8, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                          <span style={{ fontSize: "0.72rem", color: "#9aa3b0" }}>Fee</span>
-                          <span style={{ fontSize: "0.88rem", fontWeight: 800, color: "#c8a96e" }}>
+                        <div style={{ borderTop: "1px solid rgba(20,33,29,.08)", paddingTop: 8, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                          <span style={{ fontSize: "0.72rem", color: "#9AA39E" }}>Fee</span>
+                          <span style={{ fontSize: "0.88rem", fontWeight: 800, color: "#0C6B57" }}>
                             {formatMoneyCents(selectedPackage.price, selectedPackage.currency)}
                           </span>
                         </div>
@@ -383,17 +382,17 @@ function BookingModalDialog({ onClose, hospitalName, hospitalId, selectedPackage
                   </div>
 
                   {/* RIGHT: Time slots */}
-                  <div className="flex-1" style={{ padding: "28px 24px 24px", background: "#f5f3ef" }}>
-                    <p style={{ fontSize: "0.65rem", fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase", color: "#c8a96e", marginBottom: 16 }}>
-                      Select a Time
+                  <div className="flex-1" style={{ padding: "28px 24px 24px", background: "#F6F4EE" }}>
+                    <p style={{ fontSize: "0.65rem", fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase", color: "#C0763A", marginBottom: 16 }}>
+                      Select a time
                     </p>
 
                     {!selectedDate ? (
                       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: 160, height: "calc(100% - 32px)", gap: 10 }}>
-                        <div className="h-12 w-12 rounded-full flex items-center justify-center" style={{ background: "rgba(200,169,110,.1)", border: "1.5px solid rgba(200,169,110,.2)" }}>
-                          <ChevronLeft className="h-5 w-5 -rotate-90" style={{ color: "#c8a96e" }} />
+                        <div className="h-12 w-12 rounded-full flex items-center justify-center" style={{ background: "#E6F0EC" }}>
+                          <ChevronLeft className="h-5 w-5 -rotate-90" style={{ color: "#0C6B57" }} />
                         </div>
-                        <p style={{ fontSize: "0.8rem", color: "#9aa3b0", fontWeight: 500, textAlign: "center" }}>Pick a date first</p>
+                        <p style={{ fontSize: "0.8rem", color: "#9AA39E", fontWeight: 500, textAlign: "center" }}>Pick a date first</p>
                       </div>
                     ) : (
                       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
@@ -412,18 +411,18 @@ function BookingModalDialog({ onClose, hospitalName, hospitalId, selectedPackage
                               style={{
                                 display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
                                 padding: "12px 8px", borderRadius: 10,
-                                border: isExpired ? "2px solid rgba(15,30,56,.06)" : isSel ? "2px solid #c8a96e" : "2px solid rgba(15,30,56,.1)",
-                                background: isExpired ? "rgba(15,30,56,.03)" : isSel ? "linear-gradient(135deg,#c8a96e 0%,#a88b50 100%)" : "#fff",
+                                border: isExpired ? "2px solid rgba(20,33,29,.06)" : isSel ? "2px solid #0C6B57" : "2px solid rgba(20,33,29,.1)",
+                                background: isExpired ? "rgba(20,33,29,.03)" : isSel ? SELECT_GRAD : "#fff",
                                 cursor: isExpired ? "not-allowed" : "pointer",
                                 opacity: isExpired ? 0.5 : 1,
                                 transition: "all .14s ease",
-                                boxShadow: isSel ? "0 4px 14px rgba(200,169,110,.3)" : "none",
+                                boxShadow: isSel ? "0 4px 14px rgba(12,107,87,.25)" : "none",
                               }}
                             >
-                              <span style={{ fontSize: "1rem", fontWeight: 800, color: isExpired ? "#b0b8c8" : isSel ? "#fff" : "#0f1e38", lineHeight: 1 }}>
+                              <span style={{ fontSize: "1rem", fontWeight: 800, color: isExpired ? "#9AA39E" : isSel ? "#fff" : "#14211D", lineHeight: 1 }}>
                                 {h12}:00
                               </span>
-                              <span style={{ fontSize: "0.6rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: isExpired ? "#b0b8c8" : isSel ? "rgba(255,255,255,.7)" : "#9aa3b0", marginTop: 3 }}>
+                              <span style={{ fontSize: "0.6rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: isExpired ? "#9AA39E" : isSel ? "rgba(255,255,255,.7)" : "#9AA39E", marginTop: 3 }}>
                                 {isExpired ? "Expired" : ampm}
                               </span>
                             </button>
@@ -438,76 +437,75 @@ function BookingModalDialog({ onClose, hospitalName, hospitalId, selectedPackage
                 /* ── STEP 2: Summary + Form ── */
                 <div className="flex flex-col md:flex-row">
 
-                  {/* LEFT: Booking summary */}
+                  {/* LEFT: Booking summary (dark) */}
                   <div
                     className="w-full md:w-[38%] flex-shrink-0"
                     style={{
-                      background: "linear-gradient(160deg,#0f1e38 0%,#1a3059 100%)",
+                      background: "linear-gradient(160deg,#14211D,#0a2620)",
                       padding: "32px 28px",
                       display: "flex", flexDirection: "column",
-                      borderRight: "1px solid rgba(200,169,110,.15)",
                     }}
                   >
                     <div style={{
                       width: 48, height: 48, borderRadius: 12,
-                      background: "rgba(200,169,110,.15)", border: "1.5px solid rgba(200,169,110,.3)",
+                      background: "rgba(255,255,255,.1)", border: "1.5px solid rgba(255,255,255,.18)",
                       display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 16,
                     }}>
-                      <Package className="h-5 w-5" style={{ color: "#c8a96e" }} />
+                      <Package className="h-5 w-5" style={{ color: "#E0913A" }} />
                     </div>
 
-                    <p style={{ fontSize: "0.65rem", fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase", color: "rgba(200,169,110,.65)", marginBottom: 6 }}>
-                      Booking Summary
+                    <p style={{ fontSize: "0.65rem", fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase", color: "#E0913A", marginBottom: 6 }}>
+                      Booking summary
                     </p>
-                    <p style={{ fontSize: "1.1rem", fontWeight: 800, color: "#fff", lineHeight: 1.3 }}>{selectedPackage.name}</p>
-                    <p style={{ fontSize: "0.82rem", fontWeight: 600, color: "#c8a96e", marginTop: 4, marginBottom: 20 }}>{hospitalName}</p>
+                    <p style={{ fontSize: "1.1rem", fontWeight: 700, color: "#fff", lineHeight: 1.3, fontFamily: "var(--font-bricolage), sans-serif" }}>{selectedPackage.name}</p>
+                    <p style={{ fontSize: "0.82rem", fontWeight: 600, color: "#EBB36B", marginTop: 4, marginBottom: 20 }}>{hospitalName}</p>
 
                     {[
                       { label: "Date",  value: selDateDisplay },
                       { label: "Time",  value: selTimeDisplay },
-                      { label: "Type",  value: "In-Person" },
+                      { label: "Type",  value: "In-person" },
                     ].map(({ label, value }) => (
-                      <div key={label} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "11px 0", borderBottom: "1px solid rgba(255,255,255,.07)" }}>
-                        <span style={{ fontSize: "0.78rem", color: "rgba(255,255,255,.45)" }}>{label}</span>
+                      <div key={label} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "11px 0", borderBottom: "1px solid rgba(255,255,255,.08)" }}>
+                        <span style={{ fontSize: "0.78rem", color: "rgba(255,255,255,.5)" }}>{label}</span>
                         <span style={{ fontSize: "0.82rem", fontWeight: 600, color: "#fff" }}>{value}</span>
                       </div>
                     ))}
 
-                    <div style={{ marginTop: 20, background: "rgba(200,169,110,.12)", border: "1.5px solid rgba(200,169,110,.35)", borderRadius: 12, padding: "16px 18px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                    <div style={{ marginTop: 20, background: "rgba(224,145,58,.12)", border: "1.5px solid rgba(224,145,58,.35)", borderRadius: 12, padding: "16px 18px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                       <div>
-                        <p style={{ fontSize: "0.65rem", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "#c8a96e", marginBottom: 4 }}>
-                          Package Fee
+                        <p style={{ fontSize: "0.65rem", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "#EBB36B", marginBottom: 4 }}>
+                          Package fee
                         </p>
-                        <p style={{ fontSize: "0.72rem", color: "rgba(255,255,255,.35)" }}>One-time payment</p>
+                        <p style={{ fontSize: "0.72rem", color: "rgba(255,255,255,.4)" }}>One-time payment</p>
                       </div>
-                      <span style={{ fontSize: "1.8rem", fontWeight: 800, color: "#c8a96e", lineHeight: 1 }}>
+                      <span style={{ fontSize: "1.8rem", fontWeight: 700, color: "#E0913A", lineHeight: 1, fontFamily: "var(--font-bricolage), sans-serif" }}>
                         {formatMoneyCents(selectedPackage.price, selectedPackage.currency)}
                       </span>
                     </div>
 
                     <div className="hidden md:flex items-center gap-2 mt-auto pt-6">
-                      <Lock className="h-3.5 w-3.5 flex-shrink-0" style={{ color: "rgba(255,255,255,.3)" }} />
-                      <span style={{ fontSize: "0.7rem", color: "rgba(255,255,255,.3)", lineHeight: 1.5 }}>
+                      <Lock className="h-3.5 w-3.5 flex-shrink-0" style={{ color: "rgba(255,255,255,.4)" }} />
+                      <span style={{ fontSize: "0.7rem", color: "rgba(255,255,255,.4)", lineHeight: 1.5 }}>
                         Payments processed securely via Stripe. Card details are never stored.
                       </span>
                     </div>
                   </div>
 
                   {/* RIGHT: Form */}
-                  <div className="flex-1" style={{ padding: "32px 36px", display: "flex", flexDirection: "column", background: "#f5f3ef" }}>
-                    <p style={{ fontSize: "0.65rem", fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase", color: "#c8a96e", marginBottom: 6 }}>
+                  <div className="flex-1" style={{ padding: "32px 36px", display: "flex", flexDirection: "column", background: "#fff" }}>
+                    <p style={{ fontSize: "0.65rem", fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase", color: "#E0913A", marginBottom: 6 }}>
                       Step 2 of 2
                     </p>
-                    <h3 style={{ fontSize: "1.3rem", fontWeight: 800, color: "#0f1e38", marginBottom: 24, lineHeight: 1.3 }}>
-                      Your Details
+                    <h3 style={{ fontSize: "1.3rem", fontWeight: 700, color: "#14211D", marginBottom: 24, lineHeight: 1.3, fontFamily: "var(--font-bricolage), sans-serif", letterSpacing: "-0.02em" }}>
+                      Your details
                     </h3>
 
                     <div style={{ display: "flex", flexDirection: "column", gap: 18, maxWidth: 520 }}>
 
                       {/* Full Name */}
                       <div>
-                        <label htmlFor="bm-name" style={{ display: "block", fontSize: "0.75rem", fontWeight: 600, color: "#4a5568", marginBottom: 6 }}>
-                          Full Name
+                        <label htmlFor="bm-name" style={{ display: "block", fontSize: "0.75rem", fontWeight: 600, color: "#46524D", marginBottom: 6 }}>
+                          Full name
                         </label>
                         <Input
                           id="bm-name"
@@ -519,12 +517,12 @@ function BookingModalDialog({ onClose, hospitalName, hospitalId, selectedPackage
                           aria-invalid={!!errors.patientName}
                           style={{
                             background: "#fff",
-                            border: `1.5px solid ${errors.patientName ? "#e53e3e" : "rgba(15,30,56,.14)"}`,
-                            borderRadius: 10, height: 44, transition: "border-color .15s ease",
+                            border: `1.5px solid ${errors.patientName ? "#C0556B" : "rgba(20,33,29,.14)"}`,
+                            borderRadius: 11, height: 44, transition: "border-color .15s ease",
                           }}
                         />
                         {errors.patientName && (
-                          <p className="flex items-center gap-1 mt-1.5" style={{ fontSize: "0.72rem", color: "#e53e3e" }}>
+                          <p className="flex items-center gap-1 mt-1.5" style={{ fontSize: "0.72rem", color: "#C0556B" }}>
                             <AlertCircle className="h-3 w-3 flex-shrink-0" /> {errors.patientName}
                           </p>
                         )}
@@ -533,7 +531,7 @@ function BookingModalDialog({ onClose, hospitalName, hospitalId, selectedPackage
                       {/* Age + Phone */}
                       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
                         <div>
-                          <label htmlFor="bm-age" style={{ display: "block", fontSize: "0.75rem", fontWeight: 600, color: "#4a5568", marginBottom: 6 }}>Age</label>
+                          <label htmlFor="bm-age" style={{ display: "block", fontSize: "0.75rem", fontWeight: 600, color: "#46524D", marginBottom: 6 }}>Age</label>
                           <Input
                             id="bm-age"
                             type="number"
@@ -546,18 +544,18 @@ function BookingModalDialog({ onClose, hospitalName, hospitalId, selectedPackage
                             aria-invalid={!!errors.patientAge}
                             style={{
                               background: "#fff",
-                              border: `1.5px solid ${errors.patientAge ? "#e53e3e" : "rgba(15,30,56,.14)"}`,
-                              borderRadius: 10, height: 44,
+                              border: `1.5px solid ${errors.patientAge ? "#C0556B" : "rgba(20,33,29,.14)"}`,
+                              borderRadius: 11, height: 44,
                             }}
                           />
                           {errors.patientAge && (
-                            <p className="flex items-center gap-1 mt-1.5" style={{ fontSize: "0.72rem", color: "#e53e3e" }}>
+                            <p className="flex items-center gap-1 mt-1.5" style={{ fontSize: "0.72rem", color: "#C0556B" }}>
                               <AlertCircle className="h-3 w-3 flex-shrink-0" /> {errors.patientAge}
                             </p>
                           )}
                         </div>
                         <div>
-                          <label htmlFor="bm-phone" style={{ display: "block", fontSize: "0.75rem", fontWeight: 600, color: "#4a5568", marginBottom: 6 }}>Phone</label>
+                          <label htmlFor="bm-phone" style={{ display: "block", fontSize: "0.75rem", fontWeight: 600, color: "#46524D", marginBottom: 6 }}>Phone</label>
                           <Input
                             id="bm-phone"
                             value={formData.patientPhone}
@@ -568,12 +566,12 @@ function BookingModalDialog({ onClose, hospitalName, hospitalId, selectedPackage
                             aria-invalid={!!errors.patientPhone}
                             style={{
                               background: "#fff",
-                              border: `1.5px solid ${errors.patientPhone ? "#e53e3e" : "rgba(15,30,56,.14)"}`,
-                              borderRadius: 10, height: 44,
+                              border: `1.5px solid ${errors.patientPhone ? "#C0556B" : "rgba(20,33,29,.14)"}`,
+                              borderRadius: 11, height: 44,
                             }}
                           />
                           {errors.patientPhone && (
-                            <p className="flex items-center gap-1 mt-1.5" style={{ fontSize: "0.72rem", color: "#e53e3e" }}>
+                            <p className="flex items-center gap-1 mt-1.5" style={{ fontSize: "0.72rem", color: "#C0556B" }}>
                               <AlertCircle className="h-3 w-3 flex-shrink-0" /> {errors.patientPhone}
                             </p>
                           )}
@@ -583,15 +581,15 @@ function BookingModalDialog({ onClose, hospitalName, hospitalId, selectedPackage
                       {/* Gender + Disability */}
                       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
                         <div>
-                          <label htmlFor="bm-gender" style={{ display: "block", fontSize: "0.75rem", fontWeight: 600, color: "#4a5568", marginBottom: 6 }}>Gender</label>
+                          <label htmlFor="bm-gender" style={{ display: "block", fontSize: "0.75rem", fontWeight: 600, color: "#46524D", marginBottom: 6 }}>Gender</label>
                           <select
                             id="bm-gender"
                             value={formData.patientGender}
                             onChange={(e) => setFormData(p => ({ ...p, patientGender: e.target.value }))}
                             style={{
-                              width: "100%", height: 44, borderRadius: 10, padding: "0 12px",
-                              border: "1.5px solid rgba(15,30,56,.14)",
-                              background: "#fff", fontSize: "0.875rem", color: "#0f1e38",
+                              width: "100%", height: 44, borderRadius: 11, padding: "0 12px",
+                              border: "1.5px solid rgba(20,33,29,.14)",
+                              background: "#fff", fontSize: "0.875rem", color: "#14211D",
                               outline: "none", cursor: "pointer",
                             }}
                           >
@@ -603,15 +601,15 @@ function BookingModalDialog({ onClose, hospitalName, hospitalId, selectedPackage
                           </select>
                         </div>
                         <div>
-                          <label htmlFor="bm-disability" style={{ display: "block", fontSize: "0.75rem", fontWeight: 600, color: "#4a5568", marginBottom: 6 }}>Special Needs</label>
+                          <label htmlFor="bm-disability" style={{ display: "block", fontSize: "0.75rem", fontWeight: 600, color: "#46524D", marginBottom: 6 }}>Special needs</label>
                           <select
                             id="bm-disability"
                             value={formData.patientDisability}
                             onChange={(e) => setFormData(p => ({ ...p, patientDisability: e.target.value }))}
                             style={{
-                              width: "100%", height: 44, borderRadius: 10, padding: "0 12px",
-                              border: "1.5px solid rgba(15,30,56,.14)",
-                              background: "#fff", fontSize: "0.875rem", color: "#0f1e38",
+                              width: "100%", height: 44, borderRadius: 11, padding: "0 12px",
+                              border: "1.5px solid rgba(20,33,29,.14)",
+                              background: "#fff", fontSize: "0.875rem", color: "#14211D",
                               outline: "none", cursor: "pointer",
                             }}
                           >
@@ -626,7 +624,7 @@ function BookingModalDialog({ onClose, hospitalName, hospitalId, selectedPackage
 
                       {/* Email */}
                       <div>
-                        <label htmlFor="bm-email" style={{ display: "block", fontSize: "0.75rem", fontWeight: 600, color: "#4a5568", marginBottom: 6 }}>Email Address</label>
+                        <label htmlFor="bm-email" style={{ display: "block", fontSize: "0.75rem", fontWeight: 600, color: "#46524D", marginBottom: 6 }}>Email address</label>
                         <Input
                           id="bm-email"
                           type="email"
@@ -638,12 +636,12 @@ function BookingModalDialog({ onClose, hospitalName, hospitalId, selectedPackage
                           aria-invalid={!!errors.buyerEmail}
                           style={{
                             background: "#fff",
-                            border: `1.5px solid ${errors.buyerEmail ? "#e53e3e" : "rgba(15,30,56,.14)"}`,
-                            borderRadius: 10, height: 44,
+                            border: `1.5px solid ${errors.buyerEmail ? "#C0556B" : "rgba(20,33,29,.14)"}`,
+                            borderRadius: 11, height: 44,
                           }}
                         />
                         {errors.buyerEmail && (
-                          <p className="flex items-center gap-1 mt-1.5" style={{ fontSize: "0.72rem", color: "#e53e3e" }}>
+                          <p className="flex items-center gap-1 mt-1.5" style={{ fontSize: "0.72rem", color: "#C0556B" }}>
                             <AlertCircle className="h-3 w-3 flex-shrink-0" /> {errors.buyerEmail}
                           </p>
                         )}
@@ -656,23 +654,21 @@ function BookingModalDialog({ onClose, hospitalName, hospitalId, selectedPackage
                         disabled={isLoading || !formValid}
                         style={{
                           marginTop: 6,
-                          width: "100%", height: 52, borderRadius: 12, border: "none",
+                          width: "100%", height: 52, borderRadius: 13, border: "none",
                           cursor: isLoading || !formValid ? "not-allowed" : "pointer",
-                          background: isLoading || !formValid
-                            ? "#e8e4de"
-                            : "linear-gradient(135deg,#c8a96e 0%,#a88b50 100%)",
-                          color: isLoading || !formValid ? "#a0a8b4" : "#0f1e38",
-                          fontSize: "0.95rem", fontWeight: 700, letterSpacing: "0.02em",
-                          boxShadow: isLoading || !formValid ? "none" : "0 4px 18px rgba(200,169,110,.35)",
+                          background: isLoading || !formValid ? "#9CB3AC" : "#0C6B57",
+                          color: "#fff",
+                          fontSize: "0.95rem", fontWeight: 600,
+                          boxShadow: isLoading || !formValid ? "none" : "0 4px 18px rgba(12,107,87,.35)",
                           transition: "all .16s ease",
                           display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
                         }}
                       >
                         <Lock className="h-4 w-4" />
-                        {isLoading ? "Processing…" : "Pay Securely"}
+                        {isLoading ? "Processing…" : `Pay ${formatMoneyCents(selectedPackage.price, selectedPackage.currency)} securely`}
                       </button>
 
-                      <p className="flex md:hidden items-center gap-1.5 justify-center" style={{ fontSize: "0.7rem", color: "#9aa3b0" }}>
+                      <p className="flex md:hidden items-center gap-1.5 justify-center" style={{ fontSize: "0.7rem", color: "#9AA39E" }}>
                         <Lock className="h-3 w-3 flex-shrink-0" />
                         Secured by Stripe · Card details never stored
                       </p>
@@ -688,25 +684,25 @@ function BookingModalDialog({ onClose, hospitalName, hospitalId, selectedPackage
         {/* ── FOOTER ── */}
         <div
           className="flex-shrink-0 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 px-5 py-4"
-          style={{ borderTop: "1px solid rgba(15,30,56,.09)", background: "#fff" }}
+          style={{ borderTop: "1px solid rgba(20,33,29,.09)", background: "#fff" }}
         >
           {step === "schedule" ? (
             <>
-              <div style={{ color: "#6b7a96" }}>
+              <div style={{ color: "#46524D" }}>
                 {canProceed ? (
                   <div
                     className="flex items-center gap-2 flex-wrap"
-                    style={{ background: "rgba(200,169,110,.08)", border: "1px solid rgba(200,169,110,.25)", borderRadius: 10, padding: "6px 12px" }}
+                    style={{ background: "#E6F0EC", border: "1px solid rgba(12,107,87,.25)", borderRadius: 10, padding: "6px 12px" }}
                   >
-                    <span style={{ fontSize: "0.65rem", fontWeight: 700, padding: "2px 8px", borderRadius: 20, background: "rgba(200,169,110,.2)", color: "#a88b50", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                    <span style={{ fontSize: "0.65rem", fontWeight: 700, padding: "2px 8px", borderRadius: 20, background: "rgba(12,107,87,.15)", color: "#0C6B57", textTransform: "uppercase", letterSpacing: "0.06em" }}>
                       Selected
                     </span>
-                    <span className="font-semibold text-sm" style={{ color: "#0f1e38" }}>{selDateDisplay}</span>
-                    <span style={{ color: "#9aa3b0" }}>·</span>
-                    <span className="font-bold text-sm" style={{ color: "#a88b50" }}>{selTimeDisplay}</span>
+                    <span className="font-semibold text-sm" style={{ color: "#14211D" }}>{selDateDisplay}</span>
+                    <span style={{ color: "#9AA39E" }}>·</span>
+                    <span className="font-bold text-sm" style={{ color: "#0C6B57" }}>{selTimeDisplay}</span>
                   </div>
                 ) : (
-                  <span className="text-slate-400 text-xs">Select a date and time to continue</span>
+                  <span className="text-xs" style={{ color: "#9AA39E" }}>Select a date and time to continue</span>
                 )}
               </div>
 
@@ -714,8 +710,8 @@ function BookingModalDialog({ onClose, hospitalName, hospitalId, selectedPackage
                 <button
                   type="button"
                   onClick={handleClose}
-                  className="transition-colors hover:bg-slate-50"
-                  style={{ padding: "7px 18px", borderRadius: 8, border: "1.5px solid rgba(15,30,56,.18)", background: "#fff", color: "#0f1e38", fontSize: "0.85rem", fontWeight: 600, cursor: "pointer" }}
+                  className="transition-colors hover:bg-page"
+                  style={{ padding: "7px 18px", borderRadius: 10, border: "1.5px solid rgba(20,33,29,.18)", background: "#fff", color: "#14211D", fontSize: "0.85rem", fontWeight: 600, cursor: "pointer" }}
                 >
                   Cancel
                 </button>
@@ -724,15 +720,15 @@ function BookingModalDialog({ onClose, hospitalName, hospitalId, selectedPackage
                   onClick={goToDetails}
                   disabled={!canProceed}
                   style={{
-                    padding: "7px 18px", borderRadius: 8, border: "none",
-                    background: canProceed ? "#0f1e38" : "#d1d5db",
-                    color: canProceed ? "#c8a96e" : "#9ca3af",
+                    padding: "7px 18px", borderRadius: 10, border: "none",
+                    background: canProceed ? "#0C6B57" : "#d1d5db",
+                    color: canProceed ? "#fff" : "#9ca3af",
                     fontSize: "0.85rem", fontWeight: 700,
                     cursor: canProceed ? "pointer" : "not-allowed",
                     transition: "all .14s ease",
                   }}
                 >
-                  {canProceed ? "Continue →" : "Select Date & Time"}
+                  {canProceed ? "Continue →" : "Select date & time"}
                 </button>
               </div>
             </>
@@ -741,17 +737,16 @@ function BookingModalDialog({ onClose, hospitalName, hospitalId, selectedPackage
               <button
                 type="button"
                 onClick={goToSchedule}
-                className="flex items-center gap-2 transition-all hover:bg-slate-900 hover:text-[#c8a96e] hover:border-slate-900"
+                className="flex items-center gap-2 transition-colors hover:bg-page"
                 style={{
-                  padding: "10px 28px", borderRadius: 10,
-                  border: "1.5px solid rgba(15,30,56,.18)",
-                  background: "#fff", color: "#0f1e38",
+                  padding: "10px 28px", borderRadius: 11,
+                  border: "1.5px solid rgba(20,33,29,.18)",
+                  background: "#fff", color: "#14211D",
                   fontSize: "0.9rem", fontWeight: 700, cursor: "pointer",
-                  boxShadow: "0 2px 8px rgba(15,30,56,.08)",
                 }}
               >
                 <ChevronLeft className="h-4 w-4" />
-                Back to Schedule
+                Back to schedule
               </button>
             </div>
           )}

@@ -28,6 +28,8 @@ const PACKAGE_TIME_SLOTS = ["09:00", "10:00", "11:00", "13:00", "14:00", "15:00"
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
+const BRAND_GRAD = "linear-gradient(135deg,#0C6B57,#0A5446)";
+
 function pad2(n: number) { return String(n).padStart(2, "0"); }
 function toDateKey(d: Date) { return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`; }
 
@@ -211,27 +213,27 @@ export function RescheduleModal({ booking, onClose, onSuccess }: Props) {
   const content = (
     <div
       className="fixed inset-0 z-[9999] flex items-center justify-center p-4"
-      style={{ background: "rgba(10,18,35,0.80)", backdropFilter: "blur(6px)" }}
+      style={{ background: "rgba(20,33,29,0.55)", backdropFilter: "blur(6px)" }}
       onClick={onClose}
     >
       <div
         className="w-full overflow-hidden flex flex-col"
         style={{
-          maxWidth: 560,
+          maxWidth: 680,
           maxHeight: "92vh",
           background: "#fff",
           borderRadius: 20,
-          boxShadow: "0 32px 80px rgba(10,18,35,.45)",
+          boxShadow: "0 40px 90px -30px rgba(0,0,0,.55)",
         }}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
         <div
           className="flex-shrink-0 flex items-center justify-between gap-3 px-6 py-4"
-          style={{ background: "linear-gradient(135deg,#0f1e38 0%,#1a3059 100%)" }}
+          style={{ background: "linear-gradient(135deg,#14211D,#0a2620)" }}
         >
           <div className="flex-1 min-w-0">
-            <p className="text-xs font-bold uppercase tracking-widest text-[#c8a96e]/70 mb-0.5">
+            <p className="text-xs font-bold uppercase tracking-widest mb-0.5" style={{ color: "#E0913A" }}>
               Reschedule Appointment
             </p>
             <h2 className="text-base font-extrabold text-white truncate">
@@ -247,19 +249,19 @@ export function RescheduleModal({ booking, onClose, onSuccess }: Props) {
             <button
               onClick={() => setPageStart((d) => new Date(d.getTime() - 7 * 86400000))}
               disabled={!canPrev}
-              className="h-7 w-7 rounded-lg flex items-center justify-center disabled:opacity-30 transition-all"
-              style={{ background: "rgba(255,255,255,.1)", border: "1px solid rgba(200,169,110,.25)", color: "#c8a96e" }}
+              className="h-7 w-7 rounded-lg flex items-center justify-center disabled:opacity-30 transition-all text-white"
+              style={{ background: "rgba(255,255,255,.12)", border: "1px solid rgba(255,255,255,.25)" }}
             >
               <ChevronLeft size={13} />
             </button>
-            <span className="text-[10px] font-medium px-2 py-1 rounded-md hidden sm:block"
-              style={{ background: "rgba(200,169,110,.12)", color: "#c8a96e", border: "1px solid rgba(200,169,110,.2)" }}>
+            <span className="text-[10px] font-medium px-2 py-1 rounded-md hidden text-white sm:block"
+              style={{ background: "rgba(255,255,255,.1)", border: "1px solid rgba(255,255,255,.2)" }}>
               {weekLabel}
             </span>
             <button
               onClick={() => setPageStart((d) => new Date(d.getTime() + 7 * 86400000))}
-              className="h-7 w-7 rounded-lg flex items-center justify-center transition-all"
-              style={{ background: "rgba(255,255,255,.1)", border: "1px solid rgba(200,169,110,.25)", color: "#c8a96e" }}
+              className="h-7 w-7 rounded-lg flex items-center justify-center transition-all text-white"
+              style={{ background: "rgba(255,255,255,.12)", border: "1px solid rgba(255,255,255,.25)" }}
             >
               <ChevronRight size={13} />
             </button>
@@ -267,23 +269,23 @@ export function RescheduleModal({ booking, onClose, onSuccess }: Props) {
 
           <button
             onClick={onClose}
-            className="flex-shrink-0 h-8 w-8 rounded-full flex items-center justify-center transition-all ml-1"
-            style={{ background: "rgba(255,255,255,.08)", border: "1px solid rgba(255,255,255,.15)", color: "rgba(255,255,255,.7)" }}
-            onMouseEnter={(e) => { const b = e.currentTarget; b.style.background = "#e53e3e"; b.style.color = "#fff"; }}
-            onMouseLeave={(e) => { const b = e.currentTarget; b.style.background = "rgba(255,255,255,.08)"; b.style.color = "rgba(255,255,255,.7)"; }}
+            className="flex-shrink-0 h-8 w-8 rounded-full flex items-center justify-center transition-all ml-1 text-white"
+            style={{ background: "rgba(255,255,255,.12)", border: "1px solid rgba(255,255,255,.22)" }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = "#C0556B"; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = "rgba(255,255,255,.12)"; }}
           >
             <X size={14} />
           </button>
         </div>
 
         {/* Current appointment reminder */}
-        <div className="flex-shrink-0 flex items-center gap-3 px-5 py-3" style={{ background: "#fdf8f2", borderBottom: "1px solid rgba(200,169,110,.18)" }}>
-          <div className="h-7 w-7 rounded-lg bg-[#c8a96e]/15 flex items-center justify-center flex-shrink-0">
-            <CalendarDays size={13} className="text-[#c8a96e]" />
+        <div className="flex-shrink-0 flex items-center gap-3 px-5 py-3" style={{ background: "#F8FBF7", borderBottom: "1px solid rgba(12,107,87,.15)" }}>
+          <div className="h-7 w-7 rounded-lg bg-[#E6F0EC] flex items-center justify-center flex-shrink-0">
+            <CalendarDays size={13} className="text-[#0C6B57]" />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-[0.65rem] font-bold uppercase tracking-widest text-[#c8a96e] mb-0.5">Current Appointment</p>
-            <p className="text-xs font-semibold text-[#0f1e38]">
+            <p className="text-[0.65rem] font-bold uppercase tracking-widest text-[#C0763A] mb-0.5">Current Appointment</p>
+            <p className="text-xs font-semibold text-[#14211D]">
               {formatDate(currentBookingDate)}
               {booking.slotTime ? ` · ${to12h(booking.slotTime.split("-")[0])}` : ""}
             </p>
@@ -291,29 +293,29 @@ export function RescheduleModal({ booking, onClose, onSuccess }: Props) {
         </div>
 
         {/* Body */}
-        <div className="flex-1 overflow-y-auto" style={{ background: "#f5f3ef" }}>
-          <div style={{ display: "flex", minHeight: 360 }}>
+        <div className="flex-1 overflow-y-auto" style={{ background: "#F6F4EE" }}>
+          <div style={{ display: "flex" }}>
 
             {/* LEFT: Date grid */}
             <div style={{
-              width: "54%", flexShrink: 0, background: "#fff",
-              padding: "20px 20px 16px", borderRight: "1px solid rgba(15,30,56,.07)",
+              width: "52%", flexShrink: 0, background: "#fff",
+              padding: "24px 26px 20px", borderRight: "1px solid rgba(20,33,29,.07)",
             }}>
-              <p style={{ fontSize: "0.6rem", fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase", color: "#c8a96e", marginBottom: 12 }}>
+              <p style={{ fontSize: "0.6rem", fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase", color: "#C0763A", marginBottom: 12 }}>
                 Select a New Date
               </p>
 
               {/* Day headers — dynamic, matching weekDates */}
               <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 2, marginBottom: 4 }}>
                 {weekDates.map((d) => (
-                  <div key={d.toISOString()} style={{ textAlign: "center", fontSize: "0.55rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#9aa3b0", padding: "3px 0" }}>
+                  <div key={d.toISOString()} style={{ textAlign: "center", fontSize: "0.55rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#9AA39E", padding: "3px 0" }}>
                     {DAYS[d.getDay()]}
                   </div>
                 ))}
               </div>
 
               {/* Date cells */}
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 3 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 4 }}>
                 {weekDates.map((d) => {
                   const key = toDateKey(d);
                   const isToday = d.getTime() === today.getTime();
@@ -338,24 +340,24 @@ export function RescheduleModal({ booking, onClose, onSuccess }: Props) {
                       style={{
                         display: "flex", flexDirection: "column", alignItems: "center",
                         justifyContent: "center", padding: 0, borderRadius: 8,
-                        border: isSel ? "2px solid #c8a96e" : isCurrent ? "2px solid #c8a96e40" : "2px solid rgba(15,30,56,.08)",
+                        border: isSel ? "2px solid #0C6B57" : isCurrent ? "2px solid rgba(12,107,87,.35)" : "2px solid rgba(20,33,29,.08)",
                         background: isSel
-                          ? "linear-gradient(135deg,#c8a96e 0%,#a88b50 100%)"
-                          : isCurrent ? "rgba(200,169,110,.06)" : "#fff",
+                          ? BRAND_GRAD
+                          : isCurrent ? "rgba(12,107,87,.06)" : "#fff",
                         cursor: disabled ? "not-allowed" : "pointer",
                         opacity: disabled ? 0.3 : 1,
                         transition: "all .12s ease",
-                        height: 58, width: "100%",
+                        height: 62, width: "100%",
                       }}
                     >
-                      <span style={{ fontSize: "0.5rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: isSel ? "rgba(255,255,255,.75)" : "#9aa3b0", marginBottom: 1 }}>
+                      <span style={{ fontSize: "0.5rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: isSel ? "rgba(255,255,255,.75)" : "#9AA39E", marginBottom: 1 }}>
                         {MONTHS[d.getMonth()]}
                       </span>
-                      <span style={{ fontSize: "1.15rem", fontWeight: 800, lineHeight: 1, color: isSel ? "#fff" : isToday ? "#c8a96e" : "#0f1e38" }}>
+                      <span style={{ fontSize: "1.15rem", fontWeight: 800, lineHeight: 1, color: isSel ? "#fff" : isToday ? "#0C6B57" : "#14211D" }}>
                         {d.getDate()}
                       </span>
                       {isToday && (
-                        <span style={{ fontSize: "0.45rem", fontWeight: 700, marginTop: 2, textTransform: "uppercase", letterSpacing: "0.06em", color: isSel ? "rgba(255,255,255,.8)" : "#c8a96e" }}>
+                        <span style={{ fontSize: "0.45rem", fontWeight: 700, marginTop: 2, textTransform: "uppercase", letterSpacing: "0.06em", color: isSel ? "rgba(255,255,255,.8)" : "#0C6B57" }}>
                           Today
                         </span>
                       )}
@@ -365,17 +367,17 @@ export function RescheduleModal({ booking, onClose, onSuccess }: Props) {
               </div>
 
               {/* Selection summary */}
-              <div style={{ marginTop: 16, padding: 12, borderRadius: 10, background: "#f5f3ef", border: "1.5px solid rgba(15,30,56,.08)" }}>
-                <p style={{ fontSize: "0.55rem", fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: "#c8a96e", marginBottom: 8 }}>New Schedule</p>
+              <div style={{ marginTop: 18, padding: 14, borderRadius: 12, background: "#F6F4EE", border: "1.5px solid rgba(20,33,29,.08)" }}>
+                <p style={{ fontSize: "0.55rem", fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: "#C0763A", marginBottom: 8 }}>New Schedule</p>
                 <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
-                  <span style={{ fontSize: "0.7rem", color: "#9aa3b0" }}>Date</span>
-                  <span style={{ fontSize: "0.72rem", fontWeight: 700, color: selectedDate ? "#0f1e38" : "#c8c8c8" }}>
+                  <span style={{ fontSize: "0.7rem", color: "#9AA39E" }}>Date</span>
+                  <span style={{ fontSize: "0.72rem", fontWeight: 700, color: selectedDate ? "#14211D" : "#C4BFB4" }}>
                     {selectedDate ? formatDate(selectedDate) : "—"}
                   </span>
                 </div>
                 <div style={{ display: "flex", justifyContent: "space-between" }}>
-                  <span style={{ fontSize: "0.7rem", color: "#9aa3b0" }}>Time</span>
-                  <span style={{ fontSize: "0.72rem", fontWeight: 700, color: selectedTime || selectedSlotId ? "#a88b50" : "#c8c8c8" }}>
+                  <span style={{ fontSize: "0.7rem", color: "#9AA39E" }}>Time</span>
+                  <span style={{ fontSize: "0.72rem", fontWeight: 700, color: selectedTime || selectedSlotId ? "#0C6B57" : "#C4BFB4" }}>
                     {selectedTime ? to12h(selectedTime) : selectedSlotId
                       ? (() => { const s = docSlots.find((x) => x.id === selectedSlotId); return s ? to12h(s.startTime) : "—"; })()
                       : "—"}
@@ -385,28 +387,28 @@ export function RescheduleModal({ booking, onClose, onSuccess }: Props) {
             </div>
 
             {/* RIGHT: Time / slot picker */}
-            <div style={{ flex: 1, padding: "20px 16px 16px", background: "#f5f3ef" }}>
-              <p style={{ fontSize: "0.6rem", fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase", color: "#c8a96e", marginBottom: 12 }}>
+            <div style={{ flex: 1, padding: "24px 22px 20px", background: "#F6F4EE" }}>
+              <p style={{ fontSize: "0.6rem", fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase", color: "#C0763A", marginBottom: 12 }}>
                 {isDoctor ? "Available Slots" : "Select a Time"}
               </p>
 
               {!selectedDate ? (
                 <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "70%", gap: 8 }}>
-                  <Clock size={28} color="#d0ccc5" />
-                  <p style={{ fontSize: "0.75rem", color: "#9aa3b0", fontWeight: 500, textAlign: "center" }}>Pick a date first</p>
+                  <Clock size={28} color="#C4BFB4" />
+                  <p style={{ fontSize: "0.75rem", color: "#9AA39E", fontWeight: 500, textAlign: "center" }}>Pick a date first</p>
                 </div>
               ) : isDoctor ? (
                 slotsLoading ? (
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "70%" }}>
-                    <div className="h-6 w-6 animate-spin rounded-full border-2 border-solid border-[#c8a96e] border-r-transparent" />
+                    <div className="h-6 w-6 animate-spin rounded-full border-2 border-solid border-[#0C6B57] border-r-transparent" />
                   </div>
                 ) : slotsForSelectedDay.length === 0 ? (
                   <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "70%", gap: 8 }}>
-                    <CalendarDays size={24} color="#d0ccc5" />
-                    <p style={{ fontSize: "0.75rem", color: "#9aa3b0", fontWeight: 500, textAlign: "center" }}>No slots available<br />on this day</p>
+                    <CalendarDays size={24} color="#C4BFB4" />
+                    <p style={{ fontSize: "0.75rem", color: "#9AA39E", fontWeight: 500, textAlign: "center" }}>No slots available<br />on this day</p>
                   </div>
                 ) : (
-                  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                     {slotsForSelectedDay.map((slot) => {
                       const key = `${slot.id}::${selectedDate}`;
                       // Current booking: same date AND same start time (doesn't require availabilitySlotId)
@@ -433,21 +435,21 @@ export function RescheduleModal({ booking, onClose, onSuccess }: Props) {
                             key={slot.id}
                             style={{
                               display: "flex", alignItems: "center", justifyContent: "space-between",
-                              padding: "8px 12px", borderRadius: 9,
-                              border: "2px solid #c8a96e",
-                              background: "rgba(200,169,110,.10)",
+                              padding: "11px 14px", borderRadius: 10,
+                              border: "2px solid #0C6B57",
+                              background: "rgba(12,107,87,.10)",
                             }}
                           >
-                            <span style={{ fontSize: "0.8rem", fontWeight: 700, color: "#0f1e38" }}>
+                            <span style={{ fontSize: "0.8rem", fontWeight: 700, color: "#14211D" }}>
                               {to12h(slot.startTime)}
-                              <span style={{ fontWeight: 500, color: "#6b7a96", marginLeft: 4, fontSize: "0.72rem" }}>
+                              <span style={{ fontWeight: 500, color: "#7B857F", marginLeft: 4, fontSize: "0.72rem" }}>
                                 – {to12h(slot.endTime)}
                               </span>
                             </span>
                             <span style={{
                               fontSize: "0.6rem", fontWeight: 700, padding: "2px 7px", borderRadius: 20,
                               textTransform: "uppercase", letterSpacing: "0.06em",
-                              background: "rgba(200,169,110,.2)", color: "#a88b50",
+                              background: "rgba(12,107,87,.15)", color: "#0C6B57",
                             }}>
                               Current
                             </span>
@@ -461,13 +463,13 @@ export function RescheduleModal({ booking, onClose, onSuccess }: Props) {
                             key={slot.id}
                             style={{
                               display: "flex", alignItems: "center", justifyContent: "space-between",
-                              padding: "8px 12px", borderRadius: 9,
-                              border: "2px solid rgba(15,30,56,.08)",
-                              background: "rgba(15,30,56,.03)",
+                              padding: "11px 14px", borderRadius: 10,
+                              border: "2px solid rgba(20,33,29,.08)",
+                              background: "rgba(20,33,29,.03)",
                               opacity: 0.5,
                             }}
                           >
-                            <span style={{ fontSize: "0.8rem", fontWeight: 700, color: "#9aa3b0" }}>
+                            <span style={{ fontSize: "0.8rem", fontWeight: 700, color: "#9AA39E" }}>
                               {to12h(slot.startTime)}
                               <span style={{ fontWeight: 500, marginLeft: 4, fontSize: "0.72rem" }}>
                                 – {to12h(slot.endTime)}
@@ -476,7 +478,7 @@ export function RescheduleModal({ booking, onClose, onSuccess }: Props) {
                             <span style={{
                               fontSize: "0.6rem", fontWeight: 700, padding: "2px 7px", borderRadius: 20,
                               textTransform: "uppercase", letterSpacing: "0.06em",
-                              background: "rgba(15,30,56,.08)", color: "#9aa3b0",
+                              background: "rgba(20,33,29,.08)", color: "#9AA39E",
                             }}>
                               {isTooSoon ? "Too Soon" : "Booked"}
                             </span>
@@ -492,27 +494,27 @@ export function RescheduleModal({ booking, onClose, onSuccess }: Props) {
                           onClick={() => { setSelectedSlotId(slot.id); setSelectedTime(""); }}
                           style={{
                             display: "flex", alignItems: "center", justifyContent: "space-between",
-                            padding: "8px 12px", borderRadius: 9,
+                            padding: "11px 14px", borderRadius: 10,
                             border: isSel
-                              ? `2px solid ${isOnline ? "#c8a96e" : "#10b981"}`
-                              : `2px solid ${isOnline ? "rgba(200,169,110,.3)" : "rgba(16,185,129,.25)"}`,
+                              ? `2px solid ${isOnline ? "#E0913A" : "#0C6B57"}`
+                              : `2px solid ${isOnline ? "rgba(224,145,58,.3)" : "rgba(12,107,87,.25)"}`,
                             background: isSel
-                              ? isOnline ? "rgba(200,169,110,.15)" : "rgba(16,185,129,.12)"
+                              ? isOnline ? "rgba(224,145,58,.12)" : "rgba(12,107,87,.10)"
                               : "#fff",
                             cursor: "pointer", transition: "all .12s ease",
                           }}
                         >
-                          <span style={{ fontSize: "0.8rem", fontWeight: 700, color: "#0f1e38" }}>
+                          <span style={{ fontSize: "0.8rem", fontWeight: 700, color: "#14211D" }}>
                             {to12h(slot.startTime)}
-                            <span style={{ fontWeight: 500, color: "#6b7a96", marginLeft: 4, fontSize: "0.72rem" }}>
+                            <span style={{ fontWeight: 500, color: "#7B857F", marginLeft: 4, fontSize: "0.72rem" }}>
                               – {to12h(slot.endTime)}
                             </span>
                           </span>
                           <span style={{
                             fontSize: "0.6rem", fontWeight: 700, padding: "2px 7px", borderRadius: 20,
                             textTransform: "uppercase", letterSpacing: "0.06em",
-                            background: isOnline ? "rgba(200,169,110,.15)" : "rgba(16,185,129,.12)",
-                            color: isOnline ? "#a88b50" : "#059669",
+                            background: isOnline ? "rgba(224,145,58,.15)" : "rgba(12,107,87,.12)",
+                            color: isOnline ? "#C0763A" : "#0C6B57",
                           }}>
                             {slot.mode}
                           </span>
@@ -541,18 +543,18 @@ export function RescheduleModal({ booking, onClose, onSuccess }: Props) {
                         style={{
                           display: "flex", flexDirection: "column", alignItems: "center",
                           justifyContent: "center", padding: "10px 6px", borderRadius: 9,
-                          border: isExpired ? "2px solid rgba(15,30,56,.06)" : isSel ? "2px solid #c8a96e" : "2px solid rgba(15,30,56,.1)",
-                          background: isExpired ? "rgba(15,30,56,.03)" : isSel ? "linear-gradient(135deg,#c8a96e 0%,#a88b50 100%)" : "#fff",
+                          border: isExpired ? "2px solid rgba(20,33,29,.06)" : isSel ? "2px solid #0C6B57" : "2px solid rgba(20,33,29,.1)",
+                          background: isExpired ? "rgba(20,33,29,.03)" : isSel ? BRAND_GRAD : "#fff",
                           cursor: isExpired ? "not-allowed" : "pointer",
                           opacity: isExpired ? 0.5 : 1,
                           transition: "all .12s ease",
-                          boxShadow: isSel ? "0 4px 12px rgba(200,169,110,.25)" : "none",
+                          boxShadow: isSel ? "0 4px 12px rgba(12,107,87,.25)" : "none",
                         }}
                       >
-                        <span style={{ fontSize: "0.9rem", fontWeight: 800, lineHeight: 1, color: isExpired ? "#b0b8c8" : isSel ? "#fff" : "#0f1e38" }}>
+                        <span style={{ fontSize: "0.9rem", fontWeight: 800, lineHeight: 1, color: isExpired ? "#9AA39E" : isSel ? "#fff" : "#14211D" }}>
                           {to12h(t).split(" ")[0]}
                         </span>
-                        <span style={{ fontSize: "0.55rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", marginTop: 2, color: isExpired ? "#b0b8c8" : isSel ? "rgba(255,255,255,.7)" : "#9aa3b0" }}>
+                        <span style={{ fontSize: "0.55rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", marginTop: 2, color: isExpired ? "#9AA39E" : isSel ? "rgba(255,255,255,.7)" : "#9AA39E" }}>
                           {isExpired ? "Expired" : to12h(t).split(" ")[1]}
                         </span>
                       </button>
@@ -565,12 +567,12 @@ export function RescheduleModal({ booking, onClose, onSuccess }: Props) {
         </div>
 
         {/* Footer */}
-        <div className="flex-shrink-0 px-5 py-4" style={{ borderTop: "1px solid rgba(15,30,56,.09)", background: "#fff" }}>
+        <div className="flex-shrink-0 px-5 py-4" style={{ borderTop: "1px solid rgba(20,33,29,.09)", background: "#fff" }}>
           {error && (
-            <p className="text-xs text-red-600 font-semibold mb-3 text-center">{error}</p>
+            <p className="text-xs font-semibold mb-3 text-center" style={{ color: "#C0556B" }}>{error}</p>
           )}
           {!error && selectedDate && !canConfirm && (
-            <p className="text-xs text-[#6b7a96] font-medium mb-3 text-center">
+            <p className="text-xs font-medium mb-3 text-center" style={{ color: "#46524D" }}>
               Select a slot to enable confirm.
             </p>
           )}
@@ -580,7 +582,7 @@ export function RescheduleModal({ booking, onClose, onSuccess }: Props) {
               onClick={onClose}
               disabled={saving}
               className="flex-1 h-10 rounded-xl font-semibold text-sm transition-all disabled:opacity-50"
-              style={{ border: "1.5px solid rgba(15,30,56,.18)", background: "#fff", color: "#0f1e38" }}
+              style={{ border: "1.5px solid rgba(20,33,29,.18)", background: "#fff", color: "#14211D" }}
             >
               Cancel
             </button>
@@ -590,15 +592,15 @@ export function RescheduleModal({ booking, onClose, onSuccess }: Props) {
               disabled={!canConfirm || saving}
               className="flex-1 h-10 rounded-xl font-bold text-sm transition-all disabled:opacity-50"
               style={{
-                background: canConfirm && !saving ? "linear-gradient(135deg,#c8a96e 0%,#a88b50 100%)" : "#e8e4de",
-                color: canConfirm && !saving ? "#0f1e38" : "#a0a8b4",
+                background: canConfirm && !saving ? BRAND_GRAD : "#e8e4de",
+                color: canConfirm && !saving ? "#fff" : "#a0a8b4",
                 border: "none",
-                boxShadow: canConfirm && !saving ? "0 4px 14px rgba(200,169,110,.3)" : "none",
+                boxShadow: canConfirm && !saving ? "0 4px 14px rgba(12,107,87,.3)" : "none",
               }}
             >
               {saving ? (
                 <span className="flex items-center justify-center gap-2">
-                  <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-solid border-[#0f1e38] border-r-transparent" />
+                  <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-solid border-[#7B857F] border-r-transparent" />
                   Saving...
                 </span>
               ) : "Confirm Reschedule"}

@@ -40,11 +40,11 @@ export type SerializedBooking = {
 };
 
 const STATUS_STYLES: Record<string, { bg: string; text: string; label: string; dot: string }> = {
-  UPCOMING:   { bg: "bg-blue-100",    text: "text-blue-700",    label: "Upcoming",   dot: "bg-blue-500" },
-  COMPLETED:  { bg: "bg-emerald-100", text: "text-emerald-700", label: "Completed",  dot: "bg-emerald-500" },
-  REQUESTED:  { bg: "bg-amber-100",   text: "text-amber-700",   label: "Requested",  dot: "bg-amber-500" },
-  CANCELLED:  { bg: "bg-red-100",     text: "text-red-700",     label: "Cancelled",  dot: "bg-red-500" },
-  DRAFT:      { bg: "bg-gray-100",    text: "text-gray-500",    label: "Draft",      dot: "bg-gray-400" },
+  UPCOMING:   { bg: "bg-[#E6F0EC]", text: "text-[#0C6B57]", label: "Upcoming",   dot: "bg-[#0C6B57]" },
+  COMPLETED:  { bg: "bg-[#F1EFE8]", text: "text-[#7B857F]", label: "Completed",  dot: "bg-[#7B857F]" },
+  REQUESTED:  { bg: "bg-[#FAEBD9]", text: "text-[#C0763A]", label: "Requested",  dot: "bg-[#C0763A]" },
+  CANCELLED:  { bg: "bg-[#FBEAEE]", text: "text-[#C0556B]", label: "Cancelled",  dot: "bg-[#C0556B]" },
+  DRAFT:      { bg: "bg-[#F1EFE8]", text: "text-[#7B857F]", label: "Draft",      dot: "bg-[#9AA39E]" },
 };
 
 function getAppointmentDateTime(scheduledAt: string, slotTime: string | null): Date {
@@ -122,19 +122,19 @@ function formatSlotTime(t: string) {
 
 function Row({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
   return (
-    <div className="flex items-start gap-3 py-3 border-b border-[#f0ece4] last:border-0">
-      <div className="h-8 w-8 rounded-lg bg-[#c8a96e]/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+    <div className="flex items-start gap-3 py-3 border-b border-[rgba(20,33,29,.06)] last:border-0">
+      <div className="h-8 w-8 rounded-lg bg-[#E6F0EC] flex items-center justify-center flex-shrink-0 mt-0.5">
         {icon}
       </div>
       <div className="flex-1 min-w-0">
-        <p className="text-[0.65rem] font-bold uppercase tracking-widest text-gray-400 mb-0.5">{label}</p>
-        <p className="text-sm font-semibold text-[#0f1e38] leading-snug">{value}</p>
+        <p className="text-[0.65rem] font-bold uppercase tracking-widest text-[#9AA39E] mb-0.5">{label}</p>
+        <p className="text-sm font-semibold text-[#14211D] leading-snug">{value}</p>
       </div>
     </div>
   );
 }
 
-function BookingDetailPopup({
+export function BookingDetailPopup({
   booking,
   onClose,
   onReschedule,
@@ -158,22 +158,22 @@ function BookingDetailPopup({
   const refundContactCard = (
     <div
       className="rounded-2xl p-4 space-y-2"
-      style={{ background: "#fdf8f2", border: "1.5px solid rgba(200,169,110,.25)" }}
+      style={{ background: "#F8FBF7", border: "1.5px solid rgba(12,107,87,.18)" }}
     >
-      <p className="text-[0.6rem] font-bold uppercase tracking-widest text-[#c8a96e] mb-1">
+      <p className="text-[0.6rem] font-bold uppercase tracking-widest text-[#0C6B57] mb-1">
         Need a Refund?
       </p>
-      <p className="text-xs text-gray-500 leading-relaxed mb-3">
+      <p className="text-xs text-[#7B857F] leading-relaxed mb-3">
         We don&apos;t process automatic refunds. Please contact the hospital directly and our support team will assist you.
       </p>
       <div className="space-y-2">
         {booking.hospital?.phone && (
           <a
             href={`tel:${booking.hospital.phone}`}
-            className="flex items-center gap-2.5 text-xs font-semibold text-[#0f1e38] hover:text-[#c8a96e] transition-colors"
+            className="flex items-center gap-2.5 text-xs font-semibold text-[#14211D] hover:text-[#0C6B57] transition-colors"
           >
-            <div className="h-7 w-7 rounded-lg bg-[#c8a96e]/12 flex items-center justify-center flex-shrink-0">
-              <PhoneCall size={13} className="text-[#c8a96e]" />
+            <div className="h-7 w-7 rounded-lg bg-[#E6F0EC] flex items-center justify-center flex-shrink-0">
+              <PhoneCall size={13} className="text-[#0C6B57]" />
             </div>
             {booking.hospital.phone}
           </a>
@@ -181,10 +181,10 @@ function BookingDetailPopup({
         {booking.hospital?.email && (
           <a
             href={`mailto:${booking.hospital.email}`}
-            className="flex items-center gap-2.5 text-xs font-semibold text-[#0f1e38] hover:text-[#c8a96e] transition-colors"
+            className="flex items-center gap-2.5 text-xs font-semibold text-[#14211D] hover:text-[#0C6B57] transition-colors"
           >
-            <div className="h-7 w-7 rounded-lg bg-[#c8a96e]/12 flex items-center justify-center flex-shrink-0">
-              <Mail size={13} className="text-[#c8a96e]" />
+            <div className="h-7 w-7 rounded-lg bg-[#E6F0EC] flex items-center justify-center flex-shrink-0">
+              <Mail size={13} className="text-[#0C6B57]" />
             </div>
             {booking.hospital.email}
           </a>
@@ -215,7 +215,7 @@ function BookingDetailPopup({
         {/* Header */}
         <div
           className="flex-shrink-0 px-6 py-5 flex items-start justify-between gap-4"
-          style={{ background: "linear-gradient(135deg,#0f1e38 0%,#1a3059 100%)" }}
+          style={{ background: "linear-gradient(135deg,#14211D,#0a2620)" }}
         >
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-2">
@@ -231,16 +231,16 @@ function BookingDetailPopup({
               {booking.hospital?.name ?? "Hospital"}
             </h3>
             {isPackageBooking ? (
-              <p className="text-sm text-[#c8a96e] font-medium mt-1 truncate">{booking.package!.title}</p>
+              <p className="text-sm text-[#0C6B57] font-medium mt-1 truncate">{booking.package!.title}</p>
             ) : booking.doctor ? (
-              <p className="text-sm text-[#c8a96e] font-medium mt-1 truncate">{booking.doctor.fullName}</p>
+              <p className="text-sm text-[#0C6B57] font-medium mt-1 truncate">{booking.doctor.fullName}</p>
             ) : null}
           </div>
           <button
             onClick={onClose}
             className="flex-shrink-0 h-9 w-9 rounded-full flex items-center justify-center transition-all mt-0.5"
             style={{ background: "rgba(255,255,255,.08)", border: "1px solid rgba(255,255,255,.15)", color: "rgba(255,255,255,.7)" }}
-            onMouseEnter={(e) => { const b = e.currentTarget; b.style.background = "#e53e3e"; b.style.color = "#fff"; }}
+            onMouseEnter={(e) => { const b = e.currentTarget; b.style.background = "#C0556B"; b.style.color = "#fff"; }}
             onMouseLeave={(e) => { const b = e.currentTarget; b.style.background = "rgba(255,255,255,.08)"; b.style.color = "rgba(255,255,255,.7)"; }}
           >
             <X size={16} />
@@ -248,41 +248,41 @@ function BookingDetailPopup({
         </div>
 
         {/* Body */}
-        <div className="flex-1 overflow-y-auto px-6 py-5 space-y-1" style={{ background: "#faf9f6" }}>
+        <div className="flex-1 overflow-y-auto px-6 py-5 space-y-1" style={{ background: "#F6F4EE" }}>
 
           {/* View Receipt */}
           <Link
             href={`/booking/receipt/${booking.id}`}
             className="flex items-center justify-center gap-2 w-full h-10 rounded-2xl text-sm font-bold mb-3 transition-all"
-            style={{ background: "linear-gradient(135deg,#0f1e38 0%,#1a3059 100%)", color: "#c8a96e", boxShadow: "0 4px 14px rgba(15,30,56,.25)" }}
+            style={{ background: "linear-gradient(135deg,#14211D,#0a2620)", color: "#E0913A", boxShadow: "0 4px 14px rgba(15,30,56,.25)" }}
           >
             <FileText size={14} />
             View Boarding Pass / Receipt
           </Link>
 
           {/* Appointment details */}
-          <p className="text-[0.6rem] font-bold uppercase tracking-widest text-[#c8a96e] mb-2">Appointment</p>
-          <div className="bg-white rounded-2xl px-4 shadow-sm border border-gray-100">
+          <p className="text-[0.6rem] font-bold uppercase tracking-widest text-[#0C6B57] mb-2">Appointment</p>
+          <div className="bg-white rounded-2xl px-4 shadow-sm border border-[rgba(20,33,29,.06)]">
             <Row
-              icon={<CalendarDays size={15} className="text-[#c8a96e]" />}
+              icon={<CalendarDays size={15} className="text-[#0C6B57]" />}
               label="Date"
               value={formatDate(booking.scheduledAt)}
             />
             <Row
-              icon={<Clock size={15} className="text-[#c8a96e]" />}
+              icon={<Clock size={15} className="text-[#0C6B57]" />}
               label="Time"
               value={booking.slotTime ? formatSlotTime(booking.slotTime) : "—"}
             />
             {booking.patient && (
               <Row
-                icon={<User size={15} className="text-[#c8a96e]" />}
+                icon={<User size={15} className="text-[#0C6B57]" />}
                 label="Patient"
                 value={booking.patient.fullName}
               />
             )}
             {price && (
               <Row
-                icon={<CreditCard size={15} className="text-[#c8a96e]" />}
+                icon={<CreditCard size={15} className="text-[#0C6B57]" />}
                 label="Amount Paid"
                 value={price}
               />
@@ -292,10 +292,10 @@ function BookingDetailPopup({
           {/* Doctor or Package */}
           {!isPackageBooking && booking.doctor && (
             <>
-              <p className="text-[0.6rem] font-bold uppercase tracking-widest text-[#c8a96e] mb-2 pt-4">Doctor</p>
-              <div className="bg-white rounded-2xl px-4 shadow-sm border border-gray-100">
+              <p className="text-[0.6rem] font-bold uppercase tracking-widest text-[#0C6B57] mb-2 pt-4">Doctor</p>
+              <div className="bg-white rounded-2xl px-4 shadow-sm border border-[rgba(20,33,29,.06)]">
                 <Row
-                  icon={<Stethoscope size={15} className="text-[#c8a96e]" />}
+                  icon={<Stethoscope size={15} className="text-[#0C6B57]" />}
                   label="Doctor"
                   value={booking.doctor.fullName}
                 />
@@ -305,10 +305,10 @@ function BookingDetailPopup({
 
           {isPackageBooking && (
             <>
-              <p className="text-[0.6rem] font-bold uppercase tracking-widest text-[#c8a96e] mb-2 pt-4">Package</p>
-              <div className="bg-white rounded-2xl px-4 shadow-sm border border-gray-100">
+              <p className="text-[0.6rem] font-bold uppercase tracking-widest text-[#0C6B57] mb-2 pt-4">Package</p>
+              <div className="bg-white rounded-2xl px-4 shadow-sm border border-[rgba(20,33,29,.06)]">
                 <Row
-                  icon={<Package size={15} className="text-[#c8a96e]" />}
+                  icon={<Package size={15} className="text-[#0C6B57]" />}
                   label="Package"
                   value={booking.package!.title}
                 />
@@ -317,16 +317,16 @@ function BookingDetailPopup({
           )}
 
           {/* Hospital / Location */}
-          <p className="text-[0.6rem] font-bold uppercase tracking-widest text-[#c8a96e] mb-2 pt-4">Hospital</p>
-          <div className="bg-white rounded-2xl px-4 shadow-sm border border-gray-100">
+          <p className="text-[0.6rem] font-bold uppercase tracking-widest text-[#0C6B57] mb-2 pt-4">Hospital</p>
+          <div className="bg-white rounded-2xl px-4 shadow-sm border border-[rgba(20,33,29,.06)]">
             <Row
-              icon={<MapPin size={15} className="text-[#c8a96e]" />}
+              icon={<MapPin size={15} className="text-[#0C6B57]" />}
               label="Location"
               value={locationStr}
             />
             {booking.hospital?.phone && (
               <Row
-                icon={<Phone size={15} className="text-[#c8a96e]" />}
+                icon={<Phone size={15} className="text-[#0C6B57]" />}
                 label="Phone"
                 value={booking.hospital.phone}
               />
@@ -337,14 +337,14 @@ function BookingDetailPopup({
           {booking.status === "CANCELLED" && (
             <div className="pt-4 space-y-2">
               <div className="flex items-start gap-3 rounded-2xl p-4"
-                style={{ background: "#fef2f2", border: "1.5px solid rgba(220,38,38,.2)" }}>
-                <div className="h-8 w-8 rounded-xl bg-red-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-                  <X size={14} className="text-red-500" />
+                style={{ background: "#FBEAEE", border: "1.5px solid rgba(192,85,107,.25)" }}>
+                <div className="h-8 w-8 rounded-xl bg-[#FBEAEE] flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <X size={14} className="text-[#C0556B]" />
                 </div>
                 <div>
-                  <p className="text-xs font-bold text-[#0f1e38] mb-0.5">Booking Cancelled</p>
+                  <p className="text-xs font-bold text-[#14211D] mb-0.5">Booking Cancelled</p>
                   {booking.cancellationReason && (
-                    <p className="text-xs text-gray-500 leading-relaxed">Reason: {booking.cancellationReason}</p>
+                    <p className="text-xs text-[#7B857F] leading-relaxed">Reason: {booking.cancellationReason}</p>
                   )}
                 </div>
               </div>
@@ -356,8 +356,8 @@ function BookingDetailPopup({
                     <CreditCard size={14} className="text-indigo-500" />
                   </div>
                   <div>
-                    <p className="text-xs font-bold text-[#0f1e38] mb-0.5">Refund Issued</p>
-                    <p className="text-xs text-gray-500 leading-relaxed">
+                    <p className="text-xs font-bold text-[#14211D] mb-0.5">Refund Issued</p>
+                    <p className="text-xs text-[#7B857F] leading-relaxed">
                       Your payment has been refunded. It may take 5–10 business days to appear on your statement.
                     </p>
                   </div>
@@ -373,14 +373,14 @@ function BookingDetailPopup({
                 /* Imminent appointment — no reschedule, no refund */
                 <div
                   className="flex items-start gap-3 rounded-2xl p-4"
-                  style={{ background: "#fef2f2", border: "1.5px solid rgba(220,38,38,.2)" }}
+                  style={{ background: "#FBEAEE", border: "1.5px solid rgba(192,85,107,.25)" }}
                 >
-                  <div className="h-8 w-8 rounded-xl bg-red-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-                    <Lock size={14} className="text-red-500" />
+                  <div className="h-8 w-8 rounded-xl bg-[#FBEAEE] flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <Lock size={14} className="text-[#C0556B]" />
                   </div>
                   <div>
-                    <p className="text-xs font-bold text-[#0f1e38] mb-0.5">Appointment Starting Soon</p>
-                    <p className="text-xs text-gray-500 leading-relaxed">
+                    <p className="text-xs font-bold text-[#14211D] mb-0.5">Appointment Starting Soon</p>
+                    <p className="text-xs text-[#7B857F] leading-relaxed">
                       Your appointment starts in less than 30 minutes. Rescheduling and refunds are no longer available.
                     </p>
                   </div>
@@ -389,14 +389,14 @@ function BookingDetailPopup({
                 /* Quick booking lock: booked too close to appointment start */
                 <div
                   className="flex items-start gap-3 rounded-2xl p-4"
-                  style={{ background: "#fef2f2", border: "1.5px solid rgba(220,38,38,.2)" }}
+                  style={{ background: "#FBEAEE", border: "1.5px solid rgba(192,85,107,.25)" }}
                 >
-                  <div className="h-8 w-8 rounded-xl bg-red-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-                    <Lock size={14} className="text-red-500" />
+                  <div className="h-8 w-8 rounded-xl bg-[#FBEAEE] flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <Lock size={14} className="text-[#C0556B]" />
                   </div>
                   <div>
-                    <p className="text-xs font-bold text-[#0f1e38] mb-0.5">Final Quick Booking</p>
-                    <p className="text-xs text-gray-500 leading-relaxed">
+                    <p className="text-xs font-bold text-[#14211D] mb-0.5">Final Quick Booking</p>
+                    <p className="text-xs text-[#7B857F] leading-relaxed">
                       This appointment was booked within 1 hour of the start time. It cannot be rescheduled or refunded.
                     </p>
                   </div>
@@ -406,14 +406,14 @@ function BookingDetailPopup({
                   {/* One-time limit reached */}
                   <div
                     className="flex items-start gap-3 rounded-2xl p-4"
-                    style={{ background: "#f9f4ee", border: "1.5px solid rgba(200,169,110,.2)" }}
+                    style={{ background: "#F8FBF7", border: "1.5px solid rgba(12,107,87,.18)" }}
                   >
-                    <div className="h-8 w-8 rounded-xl bg-[#c8a96e]/15 flex items-center justify-center flex-shrink-0 mt-0.5">
-                      <Lock size={14} className="text-[#c8a96e]" />
+                    <div className="h-8 w-8 rounded-xl bg-[#E6F0EC] flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <Lock size={14} className="text-[#0C6B57]" />
                     </div>
                     <div>
-                      <p className="text-xs font-bold text-[#0f1e38] mb-0.5">Reschedule Limit Reached</p>
-                      <p className="text-xs text-gray-500 leading-relaxed">
+                      <p className="text-xs font-bold text-[#14211D] mb-0.5">Reschedule Limit Reached</p>
+                      <p className="text-xs text-[#7B857F] leading-relaxed">
                         You can reschedule this appointment only once. For further changes, please contact the hospital directly.
                       </p>
                     </div>
@@ -425,9 +425,9 @@ function BookingDetailPopup({
                 <>
                   <div
                     className="rounded-2xl p-3"
-                    style={{ background: "#f8f5ef", border: "1.5px solid rgba(200,169,110,.2)" }}
+                    style={{ background: "#F8FBF7", border: "1.5px solid rgba(12,107,87,.18)" }}
                   >
-                    <p className="text-xs font-semibold text-[#6b7a96] leading-relaxed">
+                    <p className="text-xs font-semibold text-[#46524D] leading-relaxed">
                       You can reschedule only once, so please choose the new time carefully.
                     </p>
                   </div>
@@ -437,8 +437,8 @@ function BookingDetailPopup({
                     onClick={() => setShowReschedule(true)}
                     className="w-full flex items-center justify-center gap-2 h-11 rounded-2xl font-bold text-sm transition-all"
                     style={{
-                      background: "linear-gradient(135deg,#0f1e38 0%,#1a3059 100%)",
-                      color: "#c8a96e",
+                      background: "linear-gradient(135deg,#14211D,#0a2620)",
+                      color: "#E0913A",
                       border: "none",
                       boxShadow: "0 4px 14px rgba(15,30,56,.25)",
                     }}
@@ -453,14 +453,14 @@ function BookingDetailPopup({
                 /* Locked notice — 30-min creation window expired */
                 <div
                   className="flex items-start gap-3 rounded-2xl p-4"
-                  style={{ background: "#f9f4ee", border: "1.5px solid rgba(200,169,110,.2)" }}
+                  style={{ background: "#F8FBF7", border: "1.5px solid rgba(12,107,87,.18)" }}
                 >
-                  <div className="h-8 w-8 rounded-xl bg-[#c8a96e]/15 flex items-center justify-center flex-shrink-0 mt-0.5">
-                    <Lock size={14} className="text-[#c8a96e]" />
+                  <div className="h-8 w-8 rounded-xl bg-[#E6F0EC] flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <Lock size={14} className="text-[#0C6B57]" />
                   </div>
                   <div>
-                    <p className="text-xs font-bold text-[#0f1e38] mb-0.5">Appointment Locked</p>
-                    <p className="text-xs text-gray-500 leading-relaxed">
+                    <p className="text-xs font-bold text-[#14211D] mb-0.5">Appointment Locked</p>
+                    <p className="text-xs text-[#7B857F] leading-relaxed">
                       The 30-minute reschedule window has expired. For any changes, please contact the hospital directly.
                     </p>
                   </div>
@@ -507,15 +507,15 @@ function BookingDetailPopup({
               </div>
               <div>
                 <p className="text-[0.65rem] font-bold uppercase tracking-widest text-emerald-600">Reschedule Confirmed</p>
-                <h4 className="text-lg font-extrabold text-[#0f1e38] leading-tight">Your new appointment is confirmed</h4>
+                <h4 className="text-lg font-extrabold text-[#14211D] leading-tight">Your new appointment is confirmed</h4>
               </div>
             </div>
 
-            <div className="rounded-2xl p-4 mb-5" style={{ background: "#f8fafc", border: "1px solid #e2e8f0" }}>
-              <p className="text-xs text-gray-500 mb-1">New Date</p>
-              <p className="text-sm font-bold text-[#0f1e38] mb-3">{formatDate(rescheduleSuccess.scheduledAt)}</p>
-              <p className="text-xs text-gray-500 mb-1">New Time</p>
-              <p className="text-sm font-bold text-[#0f1e38]">{formatSlotTime(rescheduleSuccess.slotTime)}</p>
+            <div className="rounded-2xl p-4 mb-5" style={{ background: "#F8FBF7", border: "1px solid rgba(20,33,29,.1)" }}>
+              <p className="text-xs text-[#7B857F] mb-1">New Date</p>
+              <p className="text-sm font-bold text-[#14211D] mb-3">{formatDate(rescheduleSuccess.scheduledAt)}</p>
+              <p className="text-xs text-[#7B857F] mb-1">New Time</p>
+              <p className="text-sm font-bold text-[#14211D]">{formatSlotTime(rescheduleSuccess.slotTime)}</p>
             </div>
 
             <button
@@ -523,8 +523,8 @@ function BookingDetailPopup({
               onClick={() => setRescheduleSuccess(null)}
               className="w-full h-11 rounded-2xl font-bold text-sm"
               style={{
-                background: "linear-gradient(135deg,#0f1e38 0%,#1a3059 100%)",
-                color: "#c8a96e",
+                background: "linear-gradient(135deg,#14211D,#0a2620)",
+                color: "#E0913A",
                 border: "none",
               }}
             >
@@ -576,10 +576,10 @@ export function BookingList({ bookings: initialBookings }: { bookings: Serialize
     return (
       <div className="py-14 flex flex-col items-center justify-center gap-3 text-center px-6">
         <span className="text-4xl">🏥</span>
-        <p className="font-semibold text-[#0f1e38]">No bookings yet</p>
-        <p className="text-sm text-gray-400">Your appointment history will appear here after your first booking.</p>
+        <p className="font-semibold text-[#14211D]">No bookings yet</p>
+        <p className="text-sm text-[#9AA39E]">Your appointment history will appear here after your first booking.</p>
         <a href="/search">
-          <button className="mt-2 px-5 py-2.5 rounded-xl bg-[#0f1e38] text-[#c8a96e] text-sm font-bold hover:bg-[#1a3059] transition-colors">
+          <button className="mt-2 px-5 py-2.5 rounded-xl bg-[#0C6B57] text-white text-sm font-bold hover:bg-[#0A5446] transition-colors">
             Find Hospitals
           </button>
         </a>
@@ -607,16 +607,16 @@ export function BookingList({ bookings: initialBookings }: { bookings: Serialize
               key={b.id}
               type="button"
               onClick={() => setSelectedId(b.id)}
-              className="w-full flex items-center gap-4 px-6 py-4 hover:bg-[#faf8f4] transition-colors text-left group"
+              className="w-full flex items-center gap-4 px-6 py-4 hover:bg-[#F6F4EE] transition-colors text-left group"
             >
-              <div className="h-10 w-10 rounded-xl bg-[#0f1e38]/5 flex items-center justify-center flex-shrink-0 group-hover:bg-[#c8a96e]/15 transition-colors">
-                <CalendarDays size={18} className="text-[#c8a96e]" />
+              <div className="h-10 w-10 rounded-xl bg-[#E6F0EC] flex items-center justify-center flex-shrink-0 group-hover:bg-[#E6F0EC] transition-colors">
+                <CalendarDays size={18} className="text-[#0C6B57]" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="font-semibold text-[#0f1e38] text-sm truncate">
+                <p className="font-semibold text-[#14211D] text-sm truncate">
                   {b.hospital?.name ?? "Hospital"}
                 </p>
-                <p className="text-xs text-gray-400 truncate">
+                <p className="text-xs text-[#9AA39E] truncate">
                   {subtitle} · {date}{b.slotTime ? ` · ${formatSlotTime(b.slotTime)}` : ""}
                 </p>
               </div>
@@ -624,7 +624,7 @@ export function BookingList({ bookings: initialBookings }: { bookings: Serialize
                 <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${st.bg} ${st.text}`}>
                   {st.label}
                 </span>
-                <span className="text-[#c8a96e]/40 group-hover:text-[#c8a96e] transition-colors text-sm">›</span>
+                <span className="text-[#0C6B57]/40 group-hover:text-[#0C6B57] transition-colors text-sm">›</span>
               </div>
             </button>
           );
