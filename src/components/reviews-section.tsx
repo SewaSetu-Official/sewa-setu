@@ -11,24 +11,24 @@ function DeleteConfirmModal({ onConfirm, onCancel, loading }: { onConfirm: () =>
   return createPortal(
     <div
       className="fixed inset-0 z-[9999] flex items-center justify-center p-4"
-      style={{ background: "rgba(7,17,30,0.7)", backdropFilter: "blur(8px)" }}
+      style={{ background: "rgba(20,33,29,0.5)", backdropFilter: "blur(6px)" }}
       onClick={onCancel}
     >
       <div
         className="w-full max-w-[360px] rounded-[24px] overflow-hidden"
-        style={{ background: "#fff", boxShadow: "0 32px 80px rgba(7,17,30,.5)" }}
+        style={{ background: "#fff", boxShadow: "0 40px 90px -30px rgba(0,0,0,.55)" }}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Icon */}
         <div className="px-8 pt-8 pb-5 flex flex-col items-center text-center">
           <div
             className="h-16 w-16 rounded-2xl flex items-center justify-center mb-5"
-            style={{ background: "#fef2f2", border: "1.5px solid #fecaca" }}
+            style={{ background: "#FBEAEE", border: "1.5px solid rgba(192,85,107,.3)" }}
           >
-            <Trash2 className="h-7 w-7" style={{ color: "#e53e3e" }} />
+            <Trash2 className="h-7 w-7" style={{ color: "#C0556B" }} />
           </div>
-          <h3 className="text-lg font-extrabold text-navy mb-1.5">Delete Review?</h3>
-          <p className="text-sm text-slate leading-relaxed max-w-[240px]">
+          <h3 className="font-display text-lg font-bold text-ink mb-1.5">Delete review?</h3>
+          <p className="text-sm text-ink-soft leading-relaxed max-w-[240px]">
             This will permanently remove your review. This action cannot be undone.
           </p>
         </div>
@@ -39,7 +39,7 @@ function DeleteConfirmModal({ onConfirm, onCancel, loading }: { onConfirm: () =>
             onClick={onCancel}
             disabled={loading}
             className="flex-1 h-11 rounded-xl text-sm font-semibold transition-colors disabled:opacity-40"
-            style={{ border: "1.5px solid #e8e3da", color: "#6b7a96", background: "#fafaf9" }}
+            style={{ border: "1.5px solid rgba(20,33,29,.14)", color: "#46524D", background: "#fff" }}
           >
             Keep it
           </button>
@@ -47,7 +47,7 @@ function DeleteConfirmModal({ onConfirm, onCancel, loading }: { onConfirm: () =>
             onClick={onConfirm}
             disabled={loading}
             className="flex-1 h-11 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2 disabled:opacity-40"
-            style={{ background: "linear-gradient(135deg,#ef4444,#dc2626)", color: "#fff", boxShadow: "0 4px 14px rgba(239,68,68,.4)" }}
+            style={{ background: "#C0556B", color: "#fff", boxShadow: "0 4px 14px rgba(192,85,107,.4)" }}
           >
             {loading
               ? <span className="h-4 w-4 animate-spin rounded-full border-2 border-solid border-white border-r-transparent" />
@@ -97,28 +97,29 @@ function initials(name: string) {
   return name.split(" ").filter(Boolean).map((n) => n[0]).join("").slice(0,2).toUpperCase();
 }
 
-function ratingColor(rating: number): string {
-  if (rating <= 1) return "#ef4444";
-  if (rating <= 2) return "#f97316";
-  if (rating <= 3) return "#f59e0b";
-  if (rating <= 4) return "#84cc16";
-  return "#22c55e";
-}
-
 function StarDisplay({ value, size = 14 }: { value: number; size?: number }) {
   return (
     <div className="flex items-center gap-0.5">
       {[1,2,3,4,5].map((s) => (
         <Star key={s} style={{
           width: size, height: size, flexShrink: 0,
-          fill:  s <= value ? "#c8a96e" : "transparent",
-          color: s <= value ? "#c8a96e" : "#ddd8d0",
-          strokeWidth: 1.5,
+          fill:  s <= value ? "#E0913A" : "#DAD4C8",
+          color: s <= value ? "#E0913A" : "#DAD4C8",
+          strokeWidth: 0,
         }} />
       ))}
     </div>
   );
 }
+
+// Avatar gradients matching the rest of the hospital page.
+const AVATAR_GRAD = [
+  "linear-gradient(140deg,#1C7A64,#0C6B57)",
+  "linear-gradient(140deg,#CF6E83,#C0556B)",
+  "linear-gradient(140deg,#9356A6,#7A3E8E)",
+  "linear-gradient(140deg,#566B7A,#3C4742)",
+  "linear-gradient(140deg,#E89B47,#cf7f29)",
+];
 
 type SortKey = "recent" | "highest" | "lowest";
 const PAGE_SIZE = 5;
@@ -210,228 +211,172 @@ export function ReviewsSection({ hospitalId, initialAverage, initialCount }: Pro
     n: reviews.filter((r) => r.rating === s).length,
   }));
 
-  return (
-    <div style={{ borderTop: "1px solid rgba(15,30,56,.08)", paddingTop: "1.5rem", marginTop: "1.5rem" }}>
-      <p className="text-[11px] font-bold uppercase tracking-[0.15em] text-[#9aa3b0] mb-4">Patient Reviews</p>
+  const sorted = sortReviews(reviews, sort);
+  const remaining = sorted.length - visibleCount;
 
-      <div>
-        {loading ? (
-          <div className="flex justify-center py-16">
-            <div className="h-8 w-8 rounded-full border-[3px] border-[#c8a96e] border-r-transparent animate-spin" />
+  return (
+    <div className="rounded-[22px] border border-[rgba(20,33,29,0.07)] bg-white p-6 sm:p-7">
+      {loading ? (
+        <div className="flex justify-center py-16">
+          <div className="h-8 w-8 animate-spin rounded-full border-[3px] border-brand border-r-transparent" />
+        </div>
+
+      ) : count === 0 ? (
+        <div className="flex flex-col items-center gap-3 py-16 text-center">
+          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-soft text-brand">
+            <MessageSquare className="h-6 w-6" />
+          </div>
+          <div>
+            <p className="font-display text-[16px] font-bold text-ink">No reviews yet</p>
+            <p className="mt-0.5 text-sm text-ink-muted">Reviews from verified patients appear here after their visit.</p>
+          </div>
+          {isSignedIn && (
+            <button
+              onClick={openWrite}
+              className="mt-1 flex items-center gap-1.5 rounded-[10px] bg-brand px-4 py-2 text-[13px] font-semibold text-white transition-colors hover:bg-brand-dark"
+            >
+              <PenLine size={13} /> Be the first to review
+            </button>
+          )}
+        </div>
+
+      ) : (
+        <div className="grid gap-8 lg:grid-cols-[260px_1fr] lg:items-start">
+
+          {/* ── Score panel ── */}
+          <div className="text-center lg:border-r lg:border-[rgba(20,33,29,0.07)] lg:pr-8">
+            <div className="font-display text-[56px] font-bold leading-none tracking-[-0.03em] text-ink tabular-nums">
+              {average > 0 ? average.toFixed(1) : "—"}
+            </div>
+            <div className="mt-2 flex justify-center">
+              <StarDisplay value={Math.round(average)} size={18} />
+            </div>
+            <p className="mt-2 text-[13px] text-ink-muted">
+              Based on {count.toLocaleString()} review{count !== 1 ? "s" : ""}
+            </p>
+
+            {/* Bars */}
+            <div className="mt-[18px] space-y-[7px]">
+              {breakdown.map(({ star, n }) => (
+                <div key={star} className="flex items-center gap-[9px]">
+                  <span className="w-2.5 text-[12px] text-ink-muted">{star}</span>
+                  <span className="h-[7px] flex-1 overflow-hidden rounded-full" style={{ background: "#EFEAE0" }}>
+                    <span
+                      className="block h-full rounded-full"
+                      style={{ width: count > 0 ? `${(n / count) * 100}%` : "0%", background: "#E0913A", transition: "width .6s ease" }}
+                    />
+                  </span>
+                  <span className="w-[30px] text-right text-[11.5px] text-[#9AA39E] tabular-nums">
+                    {count > 0 ? `${Math.round((n / count) * 100)}%` : "0%"}
+                  </span>
+                </div>
+              ))}
+            </div>
           </div>
 
-        ) : count === 0 ? (
-          <div className="flex flex-col items-center py-16 text-center gap-3">
-            <div className="h-14 w-14 rounded-2xl flex items-center justify-center"
-              style={{ background: "#f7f4ef", border: "1.5px dashed #c8a96e66" }}>
-              <MessageSquare className="h-6 w-6 text-gold-dim opacity-50" />
+          {/* ── Review list ── */}
+          <div className="min-w-0">
+            {/* Header */}
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <h2 className="font-display text-[20px] font-bold tracking-[-0.02em] text-ink">
+                Patient reviews <span className="text-[14px] font-semibold text-[#9AA39E]">({count})</span>
+              </h2>
+              {isSignedIn && (
+                <button
+                  onClick={openWrite}
+                  className="flex shrink-0 items-center gap-1.5 rounded-[10px] bg-brand px-4 py-2 text-[13px] font-semibold text-white shadow-[0_10px_22px_-12px_rgba(12,107,87,0.8)] transition-colors hover:bg-brand-dark"
+                >
+                  <PenLine size={14} /> Write a review
+                </button>
+              )}
             </div>
-            <div>
-              <p className="font-bold text-navy text-sm">No reviews yet</p>
-              <p className="text-xs text-slate mt-0.5">Reviews from verified patients appear here after their visit.</p>
+
+            {/* Sort segmented control */}
+            <div className="mb-5 inline-flex items-center rounded-[10px] p-1" style={{ background: "#EFEAE0" }}>
+              {SORT_OPTIONS.map(({ key, label, Icon }) => (
+                <button
+                  key={key}
+                  onClick={() => { setSort(key); setVisibleCount(PAGE_SIZE); }}
+                  className="flex items-center gap-1.5 rounded-[8px] px-3.5 py-1.5 text-[11.5px] font-semibold transition-all"
+                  style={sort === key
+                    ? { background: "#fff", color: "#0C6B57", boxShadow: "0 1px 6px rgba(20,33,29,.12)" }
+                    : { background: "transparent", color: "#7B857F" }
+                  }
+                >
+                  <Icon size={11} />
+                  {label}
+                </button>
+              ))}
             </div>
-            {isSignedIn && (
+
+            <div className="flex flex-col gap-4">
+              {sorted.slice(0, visibleCount).map((r, i) => (
+                <div key={r.id} className="border-b border-[rgba(20,33,29,0.06)] pb-4 last:border-b-0 last:pb-0">
+                  <div className="flex items-start gap-[11px]">
+                    {/* Avatar */}
+                    <span
+                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-[14px] font-bold text-white"
+                      style={{ background: AVATAR_GRAD[i % AVATAR_GRAD.length], fontFamily: "var(--font-bricolage), sans-serif" }}
+                    >
+                      {initials(r.user.fullName)}
+                    </span>
+
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-[14px] font-bold text-ink">{r.user.fullName}</span>
+                        <span className="flex items-center gap-1 rounded-full bg-brand-soft px-[7px] py-0.5 text-[10.5px] font-bold text-brand">
+                          {r.isVerifiedPatient ? <ShieldCheck className="h-3 w-3" /> : <BadgeCheck className="h-3 w-3" />}
+                          {r.isVerifiedPatient ? "Verified patient" : "Verified user"}
+                        </span>
+                      </div>
+                      <div className="mt-[3px] flex items-center gap-2">
+                        <StarDisplay value={r.rating} size={12} />
+                        <span className="text-[11.5px] text-[#9AA39E]">{timeAgo(r.createdAt)}</span>
+                      </div>
+                    </div>
+
+                    {/* Action buttons */}
+                    {r.isOwn && (
+                      <div className="flex shrink-0 gap-1.5">
+                        <button
+                          onClick={() => openEdit(r)}
+                          title="Edit"
+                          className="flex h-8 w-8 items-center justify-center rounded-[9px] border border-[rgba(20,33,29,0.12)] bg-white text-ink-soft transition-colors hover:bg-page"
+                        >
+                          <Pencil size={14} />
+                        </button>
+                        <button
+                          onClick={() => setDeletingId(r.id)}
+                          title="Delete"
+                          className="flex h-8 w-8 items-center justify-center rounded-[9px] border border-[rgba(192,85,107,0.25)] transition-colors"
+                          style={{ background: "#FBEAEE", color: "#C0556B" }}
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  {r.comment && (
+                    <p className="mt-[11px] text-[13.5px] leading-[1.6] text-ink-soft">{r.comment}</p>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {/* Load more */}
+            {remaining > 0 && (
               <button
-                onClick={openWrite}
-                className="mt-1 flex items-center gap-1.5 px-4 py-2 rounded-xl text-[12px] font-semibold transition-colors"
-                style={{ border: "1.5px solid rgba(200,169,110,.35)", color: "#a88b50", background: "transparent" }}
-                onMouseEnter={e => (e.currentTarget.style.background = "rgba(200,169,110,.06)")}
-                onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
+                onClick={() => setVisibleCount((v) => v + PAGE_SIZE)}
+                className="mt-[18px] rounded-[11px] border border-[rgba(20,33,29,0.12)] bg-white px-5 py-2.5 text-[13.5px] font-bold text-ink transition-colors hover:bg-page"
               >
-                <PenLine size={11} /> Be the first to review
+                Show more reviews
               </button>
             )}
           </div>
 
-        ) : (
-          <div className="flex flex-col lg:flex-row gap-8">
-
-            {/* ── Score panel ── */}
-            <div className="flex-shrink-0 lg:w-48">
-              {/* Big number */}
-              <div className="rounded-2xl p-6 text-center mb-4"
-                style={{ background: "#0f1e38" }}>
-                <p className="text-5xl font-black text-white leading-none tabular-nums">
-                  {average > 0 ? average.toFixed(1) : "—"}
-                </p>
-                <div className="flex justify-center mt-2.5 mb-2">
-                  <StarDisplay value={Math.round(average)} size={15} />
-                </div>
-                <p className="text-[11px] text-white/40 font-medium">
-                  {count} review{count !== 1 ? "s" : ""}
-                </p>
-              </div>
-
-              {/* Write a review */}
-              {isSignedIn && !loading && (
-                <button
-                  onClick={openWrite}
-                  className="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl text-[12px] font-semibold transition-colors mb-4"
-                  style={{ border: "1.5px solid rgba(200,169,110,.35)", color: "#a88b50", background: "transparent" }}
-                  onMouseEnter={e => (e.currentTarget.style.background = "rgba(200,169,110,.06)")}
-                  onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
-                >
-                  <PenLine size={11} /> Write a review
-                </button>
-              )}
-
-              {/* Bars */}
-              <div className="space-y-2">
-                {breakdown.map(({ star, n }) => (
-                  <div key={star} className="flex items-center gap-2">
-                    <span className="text-[11px] font-bold text-slate w-2.5">{star}</span>
-                    <Star className="w-3.5 h-3.5 flex-shrink-0" style={{ fill: "#c8a96e", color: "#c8a96e" }} />
-                    <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ background: "#f0ece4" }}>
-                      <div
-                        className="h-full rounded-full"
-                        style={{
-                          width: count > 0 ? `${(n / count) * 100}%` : "0%",
-                          background: ratingColor(star),
-                          transition: "width .6s ease",
-                        }}
-                      />
-                    </div>
-                    <span className="text-[11px] text-slate/50 w-3 text-right tabular-nums">{n}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* ── Review list ── */}
-            <div className="flex-1 min-w-0">
-              {/* Sort segmented control */}
-              <div
-                className="inline-flex items-center p-1 rounded-xl mb-4"
-                style={{ background: "#f0ece4" }}
-              >
-                {SORT_OPTIONS.map(({ key, label, Icon }) => (
-                  <button
-                    key={key}
-                    onClick={() => { setSort(key); setVisibleCount(PAGE_SIZE); }}
-                    className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-[10px] text-[11px] font-semibold transition-all duration-200"
-                    style={sort === key
-                      ? { background: "#fff", color: "#0f1e38", boxShadow: "0 1px 6px rgba(15,30,56,.12)" }
-                      : { background: "transparent", color: "#9aa3b0" }
-                    }
-                  >
-                    <Icon size={11} />
-                    {label}
-                  </button>
-                ))}
-              </div>
-
-              <div className="space-y-3">
-              {sortReviews(reviews, sort).slice(0, visibleCount).map((r) => (
-                <div
-                  key={r.id}
-                  className="rounded-2xl p-5"
-                  style={{ background: "#fdf9f5", border: "1px solid #f0ece4" }}
-                >
-                  <div className="flex items-start gap-3">
-                    {/* Avatar */}
-                    <div
-                      className="h-10 w-10 rounded-xl flex items-center justify-center text-xs font-extrabold flex-shrink-0"
-                      style={{
-                        background: "rgba(200,169,110,0.12)",
-                        color: "#a88b50",
-                        border: "1px solid rgba(200,169,110,0.25)",
-                        fontFamily: "var(--font-plus-jakarta), sans-serif",
-                      }}
-                    >
-                      {initials(r.user.fullName)}
-                    </div>
-
-                    <div className="flex-1 min-w-0">
-                      {/* Name row: name | stars | action buttons */}
-                      <div className="flex items-center gap-3">
-                        <p className="text-sm font-bold text-navy leading-tight flex-1 min-w-0 truncate">{r.user.fullName}</p>
-
-                        <StarDisplay value={r.rating} size={14} />
-
-                        {/* Action buttons */}
-                        {r.isOwn && (
-                          <div
-                            className="flex items-center flex-shrink-0 overflow-hidden"
-                            style={{ border: "1px solid #e8e3da", borderRadius: 8, background: "#fff" }}
-                          >
-                            <button
-                              onClick={() => openEdit(r)}
-                              className="flex items-center justify-center w-7 h-7 transition-colors"
-                              style={{ color: "#a88b50" }}
-                              onMouseEnter={e => (e.currentTarget.style.background = "rgba(200,169,110,.1)")}
-                              onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
-                              title="Edit"
-                            >
-                              <Pencil size={12} />
-                            </button>
-                            <div style={{ width: 1, height: 14, background: "#e8e3da" }} />
-                            <button
-                              onClick={() => setDeletingId(r.id)}
-                              className="flex items-center justify-center w-7 h-7 transition-colors"
-                              style={{ color: "#e53e3e" }}
-                              onMouseEnter={e => (e.currentTarget.style.background = "rgba(239,68,68,.07)")}
-                              onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
-                              title="Delete"
-                            >
-                              <Trash2 size={12} />
-                            </button>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Badge + time */}
-                      <div className="flex items-center gap-1.5 mt-1">
-                        {r.isVerifiedPatient ? (
-                          <>
-                            <ShieldCheck className="w-3 h-3 text-emerald-500" />
-                            <span className="text-[10px] font-semibold text-emerald-600">Verified Patient</span>
-                          </>
-                        ) : (
-                          <>
-                            <BadgeCheck className="w-3 h-3 text-blue-400" />
-                            <span className="text-[10px] font-semibold text-blue-500">Verified User</span>
-                          </>
-                        )}
-                        <span className="text-[10px] text-slate/30">·</span>
-                        <span className="text-[10px] text-slate/50">{timeAgo(r.createdAt)}</span>
-                      </div>
-
-                      {r.comment && (
-                        <p className="text-sm text-slate leading-relaxed mt-2.5">{r.comment}</p>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              ))}
-              </div>
-
-              {/* Load more */}
-              {(() => {
-                const sorted = sortReviews(reviews, sort);
-                const remaining = sorted.length - visibleCount;
-                if (remaining <= 0) return null;
-                return (
-                  <div className="flex items-center justify-between mt-5 pt-4" style={{ borderTop: "1px solid #f0ece4" }}>
-                    <p className="text-[11px] text-slate/50">
-                      Showing <span className="font-semibold text-slate">{Math.min(visibleCount, sorted.length)}</span> of <span className="font-semibold text-slate">{sorted.length}</span> reviews
-                    </p>
-                    <button
-                      onClick={() => setVisibleCount((v) => v + PAGE_SIZE)}
-                      className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-[12px] font-semibold transition-all"
-                      style={{ background: "#f0ece4", color: "#0f1e38", border: "1px solid #e8e3da" }}
-                      onMouseEnter={e => (e.currentTarget.style.background = "#e8e3da")}
-                      onMouseLeave={e => (e.currentTarget.style.background = "#f0ece4")}
-                    >
-                      Show {Math.min(remaining, PAGE_SIZE)} more
-                    </button>
-                  </div>
-                );
-              })()}
-            </div>
-
-          </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {showModal && (
         <ReviewModal
