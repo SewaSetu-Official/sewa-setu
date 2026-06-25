@@ -76,7 +76,7 @@ const EMPTY_BOOKING_DATA: BookingData = {
 };
 const INITIAL_GREETING: Message = {
   role: "bot",
-  content: "Namaste! I&apos;m your Sewa-Setu health assistant. Tell me your symptoms or health concerns, and I&apos;ll recommend the right hospital and specialist for you.",
+  content: "Namaste! I'm your Sewa-Setu health assistant. Tell me your symptoms or health concerns, and I'll recommend the right hospital and specialist for you.",
   type: "chat",
 };
 
@@ -425,169 +425,83 @@ export function AISearchModal({ isOpen, onCloseAction, initialConversationId }: 
 
   if (!isOpen || typeof document === "undefined") return null;
 
+  const QUICK_PROMPTS = [
+    "Chest tightness when I climb stairs",
+    "Persistent headache for 3 days",
+    "Need a full-body checkup",
+  ];
+
   const modalContent = (
-    <div
-      style={{
-        position: "fixed",
-        inset: 0,
-        zIndex: 50,
-        background: "rgba(15, 30, 56, 0.6)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        backdropFilter: "blur(4px)",
-      }}
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onCloseAction();
-      }}
-    >
+    <>
+      {/* backdrop */}
       <div
+        onClick={onCloseAction}
+        style={{ position: "fixed", inset: 0, zIndex: 60, background: "rgba(20,33,29,.4)", backdropFilter: "blur(2px)" }}
+      />
+
+      {/* drawer */}
+      <aside
         style={{
-          width: "90%",
-          maxWidth: "900px",
-          height: "90vh",
-          maxHeight: "700px",
-          background: "white",
-          borderRadius: "20px",
-          border: "1px solid rgba(200, 169, 110, 0.2)",
-          boxShadow: "0 20px 60px rgba(15, 30, 56, 0.3)",
-          display: "flex",
-          flexDirection: "column",
-          overflow: "hidden",
+          position: "fixed", top: 0, right: 0, bottom: 0, zIndex: 61,
+          width: 400, maxWidth: "100vw", background: "#14211D",
+          boxShadow: "-30px 0 70px -30px rgba(0,0,0,.7)",
+          display: "flex", flexDirection: "column",
         }}
       >
         {/* Header */}
         <div
           style={{
-            padding: "24px 28px",
-            background: "linear-gradient(135deg, #0f1e38 0%, #1a3059 100%)",
-            borderBottom: "1px solid rgba(200, 169, 110, 0.15)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            flexShrink: 0,
+            position: "relative", padding: "20px 20px 16px",
+            background: "radial-gradient(circle at 90% 0%,rgba(12,107,87,.55),transparent 60%)",
+            borderBottom: "1px solid rgba(255,255,255,.08)",
+            display: "flex", alignItems: "center", gap: 12, flexShrink: 0,
           }}
         >
-          <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
-            <div>
-              <h2 style={{ fontSize: "1.3rem", fontWeight: 800, color: "#c8a96e", margin: 0 }}>
-                🏥 Smart Health Search
-              </h2>
-              <p style={{ fontSize: "0.85rem", color: "rgba(255, 255, 255, 0.6)", margin: "4px 0 0 0" }}>
-                AI-powered hospital and doctor finder
-              </p>
+          <span style={{ width: 42, height: 42, borderRadius: 12, background: "linear-gradient(135deg,#E0913A,#cf7f29)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+            <Sparkles size={22} color="#fff" />
+          </span>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontFamily: "var(--font-bricolage), sans-serif", fontWeight: 700, fontSize: "17px", color: "#fff", display: "flex", alignItems: "center", gap: 7 }}>
+              Smart Search
+              <span style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 10, fontWeight: 700, color: "#9FE3CD", background: "rgba(12,107,87,.45)", padding: "2px 7px", borderRadius: 99 }}>
+                <span style={{ width: 5, height: 5, borderRadius: 99, background: "#3FD08C" }} />AI
+              </span>
             </div>
-            {messages.length > 0 && (
-              <button
-                onClick={handleNewChat}
-                style={{
-                  background: "rgba(200, 169, 110, 0.2)",
-                  border: "1px solid rgba(200, 169, 110, 0.3)",
-                  borderRadius: "8px",
-                  padding: "6px 12px",
-                  fontSize: "0.8rem",
-                  color: "#c8a96e",
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "4px",
-                }}
-                onMouseEnter={(e) => {
-                  (e.currentTarget as HTMLButtonElement).style.background = "rgba(200, 169, 110, 0.3)";
-                }}
-                onMouseLeave={(e) => {
-                  (e.currentTarget as HTMLButtonElement).style.background = "rgba(200, 169, 110, 0.2)";
-                }}
-              >
-                <Sparkles size={14} />
-                New Chat
-              </button>
-            )}
+            <div style={{ fontSize: "12.5px", color: "#9FB0AA" }}>Describe symptoms, get matched</div>
           </div>
+          {messages.length > 1 && (
+            <button
+              onClick={handleNewChat}
+              title="New chat"
+              style={{ border: "none", cursor: "pointer", height: 34, padding: "0 10px", borderRadius: 9, background: "rgba(255,255,255,.08)", color: "#C7D2CD", display: "flex", alignItems: "center", gap: 5, fontSize: 12, fontWeight: 600, flexShrink: 0 }}
+            >
+              <Sparkles size={13} /> New
+            </button>
+          )}
           <button
             onClick={onCloseAction}
-            style={{
-              background: "rgba(255, 255, 255, 0.1)",
-              border: "1px solid rgba(255, 255, 255, 0.15)",
-              borderRadius: "10px",
-              width: "40px",
-              height: "40px",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              color: "rgba(255, 255, 255, 0.7)",
-              cursor: "pointer",
-              transition: "all 0.2s",
-              flexShrink: 0,
-              marginLeft: "16px",
-            }}
-            onMouseEnter={(e) => {
-              (e.currentTarget as HTMLButtonElement).style.background = "rgba(229, 62, 62, 0.9)";
-              (e.currentTarget as HTMLButtonElement).style.color = "white";
-            }}
-            onMouseLeave={(e) => {
-              (e.currentTarget as HTMLButtonElement).style.background = "rgba(255, 255, 255, 0.1)";
-              (e.currentTarget as HTMLButtonElement).style.color = "rgba(255, 255, 255, 0.7)";
-            }}
             aria-label="Close"
+            style={{ border: "none", cursor: "pointer", width: 34, height: 34, borderRadius: 9, background: "rgba(255,255,255,.08)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}
           >
-            <X size={20} />
+            <X size={17} color="#C7D2CD" />
           </button>
         </div>
 
         {/* Chat Area */}
         <div
           ref={scrollRef}
-          style={{
-            flex: 1,
-            overflowY: "auto",
-            padding: "24px 28px",
-            display: "flex",
-            flexDirection: "column",
-            gap: "16px",
-            background: "#f5f3ef",
-          }}
+          className="thin-scrollbar"
+          style={{ flex: 1, padding: 18, display: "flex", flexDirection: "column", gap: 13, overflowY: "auto" }}
         >
-          {messages.map((msg, idx) => (
-            <div key={idx} style={{ display: "flex", gap: "12px", alignItems: "flex-start" }}>
-              {/* Bot avatar */}
-              {msg.role === "bot" && (
-                <div
-                  style={{
-                    width: "32px",
-                    height: "32px",
-                    borderRadius: "8px",
-                    background: "linear-gradient(135deg, #0f1e38, #1a3059)",
-                    border: "1px solid rgba(200,169,110,0.25)",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    flexShrink: 0,
-                  }}
-                >
-                  <Stethoscope size={16} color="white" strokeWidth={2} />
-                </div>
-              )}
-
-              <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "8px", maxWidth: "100%" }}>
+          {messages.map((msg, idx) => {
+            const isUser = msg.role === "user";
+            return (
+              <div key={idx} style={{ display: "flex", flexDirection: "column", gap: 8, width: "100%" }}>
                 {/* Emergency message */}
                 {msg.isEmergency && (
-                  <div
-                    style={{
-                      background: "#fee2e2",
-                      border: "2px solid #dc2626",
-                      color: "#dc2626",
-                      padding: "12px 16px",
-                      borderRadius: "4px 18px 18px 18px",
-                      fontSize: "0.95rem",
-                      lineHeight: "1.6",
-                      fontWeight: 600,
-                      marginBottom: "8px",
-                    }}
-                  >
-                    <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
-                      <AlertTriangle size={18} />
-                      <span>EMERGENCY</span>
+                  <div style={{ alignSelf: "flex-start", maxWidth: "92%", background: "rgba(192,85,107,.16)", border: "1.5px solid rgba(192,85,107,.5)", color: "#F3C3CD", padding: "12px 14px", borderRadius: "15px 15px 15px 4px", fontSize: "13.5px", lineHeight: 1.5, fontWeight: 600 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                      <AlertTriangle size={16} /><span>EMERGENCY</span>
                     </div>
                     {msg.content}
                   </div>
@@ -596,24 +510,17 @@ export function AISearchModal({ isOpen, onCloseAction, initialConversationId }: 
                 {/* Regular chat message */}
                 {!msg.isEmergency && msg.metadata?.action !== "select_department" && (
                   <div
+                    onClick={() => handleMessageClick(msg)}
                     style={{
-                      background: msg.role === "user" ? "linear-gradient(135deg, #0f1e38 0%, #1a3059 100%)" : "white",
-                      color: msg.role === "user" ? "white" : "#0f1e38",
-                      padding: "12px 16px",
-                      borderRadius: msg.role === "user" ? "18px 4px 18px 18px" : "4px 18px 18px 18px",
-                      fontSize: "0.95rem",
-                      lineHeight: "1.6",
-                      whiteSpace: "pre-wrap",
-                      wordBreak: "break-word",
-                      boxShadow: msg.role === "user"
-                        ? "0 4px 12px rgba(15,30,56,0.25)"
-                        : "0 2px 8px rgba(0, 0, 0, 0.08)",
-                      border: msg.role === "user" ? "1px solid rgba(200,169,110,0.15)" : "1px solid rgba(200,169,110,0.1)",
-                      alignSelf: msg.role === "user" ? "flex-end" : "flex-start",
-                      maxWidth: msg.role === "user" ? "60%" : "100%",
+                      alignSelf: isUser ? "flex-end" : "flex-start",
+                      maxWidth: isUser ? "84%" : "92%",
+                      background: isUser ? "#0C6B57" : "rgba(255,255,255,.07)",
+                      color: isUser ? "#fff" : "#E3EAE7",
+                      padding: "11px 14px",
+                      borderRadius: isUser ? "15px 15px 4px 15px" : "15px 15px 15px 4px",
+                      fontSize: "13.5px", lineHeight: 1.5, whiteSpace: "pre-wrap", wordBreak: "break-word",
                       cursor: msg.metadata ? "pointer" : "default",
                     }}
-                    onClick={() => handleMessageClick(msg)}
                   >
                     {msg.content}
                   </div>
@@ -621,104 +528,34 @@ export function AISearchModal({ isOpen, onCloseAction, initialConversationId }: 
 
                 {/* Hospital cards - display when type is symptoms_analyzed */}
                 {msg.type === "symptoms_analyzed" && msg.hospitals && msg.hospitals.length > 0 && (
-                  <div style={{ marginTop: "10px", width: "100%" }}>
-                    <p style={{ fontSize: "0.85rem", color: "#64748b", marginBottom: "8px", fontWeight: 500 }}>
-                      Recommended hospitals:
-                    </p>
+                  <div style={{ marginTop: 4, width: "100%" }}>
+                    <p style={{ fontSize: "11.5px", color: "#9FB0AA", marginBottom: 8, fontWeight: 600 }}>Recommended providers:</p>
                     {msg.hospitals.map((hospital) => (
                       <div
                         key={hospital.id}
                         onClick={() => selectHospital(hospital)}
-                        style={{
-                          background: "#fff",
-                          border: "1.5px solid rgba(200,169,110,0.35)",
-                          borderRadius: "12px",
-                          padding: "12px",
-                          marginBottom: "8px",
-                          cursor: "pointer",
-                          transition: "all 0.3s ease",
-                          boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
-                        }}
-                        onMouseEnter={(e) => {
-                          const el = e.currentTarget as HTMLDivElement;
-                          el.style.borderColor = "rgba(200,169,110,0.7)";
-                          el.style.transform = "translateY(-2px)";
-                          el.style.boxShadow = "0 8px 24px rgba(200,169,110,0.18)";
-                        }}
-                        onMouseLeave={(e) => {
-                          const el = e.currentTarget as HTMLDivElement;
-                          el.style.borderColor = "rgba(200,169,110,0.35)";
-                          el.style.transform = "translateY(0)";
-                          el.style.boxShadow = "0 2px 8px rgba(0,0,0,0.05)";
-                        }}
+                        style={{ background: "rgba(255,255,255,.06)", border: "1px solid rgba(255,255,255,.12)", borderRadius: 12, padding: 12, marginBottom: 8, cursor: "pointer", transition: "all .2s ease" }}
+                        onMouseEnter={(e) => { e.currentTarget.style.borderColor = "rgba(159,227,205,.4)"; e.currentTarget.style.background = "rgba(255,255,255,.09)"; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.borderColor = "rgba(255,255,255,.12)"; e.currentTarget.style.background = "rgba(255,255,255,.06)"; }}
                       >
-                        <div style={{ fontSize: "0.95rem", fontWeight: 700, color: "#0f1e38", marginBottom: "4px", textDecoration: "underline" }}>
-                          🏥 {hospital.name}
+                        <div style={{ fontSize: "13.5px", fontWeight: 700, color: "#fff", marginBottom: 4 }}>{hospital.name}</div>
+                        <div style={{ fontSize: "11.5px", color: "#9FB0AA", display: "flex", alignItems: "center", gap: 4, marginBottom: 6 }}>
+                          <MapPin size={12} />{hospital.location}
                         </div>
-                        <div style={{ fontSize: "0.8rem", color: "#64748b", display: "flex", alignItems: "center", gap: "4px", marginBottom: "6px" }}>
-                          <MapPin size={12} />
-                          {hospital.location}
-                        </div>
-
                         {hospital.matchedDepartment && (
-                          <div style={{ marginBottom: "6px" }}>
-                            <span style={{
-                              fontSize: "0.75rem",
-                              padding: "3px 8px",
-                              background: "rgba(212, 168, 83, 0.15)",
-                              color: "#a88b50",
-                              borderRadius: "4px",
-                              display: "inline-block",
-                              fontWeight: 600,
-                            }}>
-                              ✓ Matched: {hospital.matchedDepartment}
-                            </span>
-                          </div>
+                          <span style={{ fontSize: "11px", padding: "3px 8px", background: "rgba(224,145,58,.18)", color: "#EBB36B", borderRadius: 6, display: "inline-block", fontWeight: 600 }}>
+                            ✓ Matched: {hospital.matchedDepartment}
+                          </span>
                         )}
-
                         {hospital.specialties && hospital.specialties.length > 0 && (
-                          <div style={{ display: "flex", flexWrap: "wrap", gap: "4px", margin: "6px 0" }}>
+                          <div style={{ display: "flex", flexWrap: "wrap", gap: 4, margin: "8px 0 0" }}>
                             {hospital.specialties.slice(0, 3).map((s, i) => (
-                              <span key={i} style={{
-                                fontSize: "0.7rem",
-                                padding: "2px 8px",
-                                background: "rgba(200,169,110,0.08)",
-                                color: "#a88b50",
-                                borderRadius: "12px",
-                                border: "1px solid rgba(200,169,110,0.2)",
-                              }}>
-                                {s}
-                              </span>
+                              <span key={i} style={{ fontSize: "10.5px", padding: "2px 8px", background: "rgba(12,107,87,.3)", color: "#CFE0D8", borderRadius: 12, border: "1px solid rgba(159,227,205,.2)" }}>{s}</span>
                             ))}
-                            {hospital.specialties.length > 3 && (
-                              <span style={{
-                                fontSize: "0.7rem",
-                                padding: "2px 8px",
-                                background: "rgba(200,169,110,0.08)",
-                                color: "#a88b50",
-                                borderRadius: "12px",
-                                border: "1px solid rgba(200,169,110,0.2)",
-                              }}>
-                                +{hospital.specialties.length - 3}
-                              </span>
-                            )}
                           </div>
                         )}
-
-                        {hospital.departments && hospital.departments.length > 0 && (
-                          <div style={{ marginTop: "6px", fontSize: "0.75rem", color: "#64748b" }}>
-                            📋 {hospital.departments.length} departments available
-                          </div>
-                        )}
-
-                        <div style={{
-                          fontSize: "0.75rem",
-                          color: "#c8a96e",
-                          marginTop: "6px",
-                          fontStyle: "italic",
-                          textAlign: "right",
-                        }}>
-                          Click to view {hospital.departments?.length ? "departments" : "doctors"} →
+                        <div style={{ fontSize: "11px", color: "#9FE3CD", marginTop: 8, textAlign: "right", fontWeight: 600 }}>
+                          View {hospital.departments?.length ? "departments" : "doctors"} →
                         </div>
                       </div>
                     ))}
@@ -729,281 +566,117 @@ export function AISearchModal({ isOpen, onCloseAction, initialConversationId }: 
                 {msg.metadata?.action === "select_department" && msg.metadata.hospital && msg.metadata.department && (
                   <button
                     onClick={() => selectDepartment(msg.metadata!.hospital!, msg.metadata!.department!)}
-                    style={{
-                      alignSelf: "flex-start",
-                      background: "linear-gradient(135deg, #e8d5b0 0%, #c8a96e 50%, #a88b50 100%)",
-                      color: "#0f1e38",
-                      padding: "10px 16px",
-                      borderRadius: "6px",
-                      border: "none",
-                      fontSize: "0.9rem",
-                      fontWeight: 700,
-                      cursor: "pointer",
-                      transition: "all 0.2s",
-                      boxShadow: "0 2px 8px rgba(200,169,110,0.25)",
-                    }}
-                    onMouseEnter={(e) => {
-                      (e.currentTarget as HTMLButtonElement).style.transform = "translateY(-2px)";
-                      (e.currentTarget as HTMLButtonElement).style.boxShadow = "0 6px 16px rgba(200,169,110,0.35)";
-                    }}
-                    onMouseLeave={(e) => {
-                      (e.currentTarget as HTMLButtonElement).style.transform = "translateY(0)";
-                      (e.currentTarget as HTMLButtonElement).style.boxShadow = "0 2px 8px rgba(200,169,110,0.25)";
-                    }}
+                    style={{ alignSelf: "flex-start", background: "#0C6B57", color: "#fff", padding: "9px 14px", borderRadius: 10, border: "none", fontSize: "12.5px", fontWeight: 600, cursor: "pointer" }}
                   >
-                    👉 {msg.content} - Click to view doctors
+                    {msg.content} →
                   </button>
                 )}
               </div>
-            </div>
-          ))}
+            );
+          })}
 
-          {/* Quick action button for finding hospitals - only show in chat mode */}
-          {bookingStep === "chat" && messages.length > 0 && !isLoading && (
-            <div style={{ display: "flex", gap: "8px", justifyContent: "center", marginTop: "8px" }}>
+          {/* Welcome prompt chips — only on the fresh greeting */}
+          {bookingStep === "chat" && messages.length <= 1 && !isLoading && (
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 7, marginTop: 2 }}>
+              {QUICK_PROMPTS.map((label) => (
+                <button
+                  key={label}
+                  onClick={() => { setPrompt(label); setTimeout(() => askAI(), 0); }}
+                  style={{ cursor: "pointer", fontSize: "11.5px", fontWeight: 600, color: "#CFE0D8", background: "rgba(12,107,87,.3)", border: "1px solid rgba(159,227,205,.2)", padding: "6px 11px", borderRadius: 99 }}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Quick action button for finding hospitals */}
+          {bookingStep === "chat" && messages.length > 1 && !isLoading && (
+            <div style={{ display: "flex", justifyContent: "center", marginTop: 4 }}>
               <button
                 onClick={startDoctorSearch}
-                style={{
-                  padding: "10px 20px",
-                  background: "linear-gradient(135deg, #e8d5b0 0%, #c8a96e 50%, #a88b50 100%)",
-                  color: "#0f1e38",
-                  border: "none",
-                  borderRadius: "8px",
-                  fontSize: "0.9rem",
-                  fontWeight: 700,
-                  cursor: "pointer",
-                  transition: "all 0.2s",
-                  boxShadow: "0 4px 12px rgba(200,169,110,0.25)",
-                }}
-                onMouseEnter={(e) => {
-                  (e.currentTarget as HTMLButtonElement).style.transform = "translateY(-2px)";
-                  (e.currentTarget as HTMLButtonElement).style.boxShadow = "0 6px 20px rgba(200,169,110,0.35)";
-                }}
-                onMouseLeave={(e) => {
-                  (e.currentTarget as HTMLButtonElement).style.transform = "translateY(0)";
-                  (e.currentTarget as HTMLButtonElement).style.boxShadow = "0 4px 12px rgba(200,169,110,0.25)";
-                }}
+                style={{ padding: "9px 18px", background: "linear-gradient(135deg,#E0913A,#cf7f29)", color: "#fff", border: "none", borderRadius: 10, fontSize: "12.5px", fontWeight: 600, cursor: "pointer" }}
               >
-                🏥 Find Hospitals & Doctors
+                Find hospitals &amp; doctors
               </button>
             </div>
           )}
 
           {/* Typing indicator */}
           {isLoading && (
-            <div style={{ display: "flex", gap: "12px", alignItems: "flex-start" }}>
-              <div
-                style={{
-                  width: "32px",
-                  height: "32px",
-                  borderRadius: "8px",
-                  background: "linear-gradient(135deg, #0f1e38, #1a3059)",
-                  border: "1px solid rgba(200,169,110,0.25)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  flexShrink: 0,
-                }}
-              >
-                <Stethoscope size={16} color="white" strokeWidth={2} />
-              </div>
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "5px",
-                  padding: "12px 15px",
-                  background: "white",
-                  borderRadius: "4px 18px 18px 18px",
-                  boxShadow: "0 2px 8px rgba(0, 0, 0, 0.04)",
-                }}
-              >
-                {[0, 1, 2].map((i) => (
-                  <div
-                    key={i}
-                    style={{
-                      width: "8px",
-                      height: "8px",
-                      borderRadius: "50%",
-                      background: "#c8a96e",
-                      animation: `pulse 1.4s ease-in-out infinite`,
-                      animationDelay: `${i * 0.2}s`,
-                    }}
-                  />
-                ))}
-              </div>
+            <div style={{ alignSelf: "flex-start", display: "flex", gap: 4, background: "rgba(255,255,255,.07)", padding: "12px 15px", borderRadius: "15px 15px 15px 4px" }}>
+              {[0, 1, 2].map((i) => (
+                <span key={i} style={{ width: 6, height: 6, borderRadius: 99, background: "#9FB0AA", animation: "pulse 1.4s ease-in-out infinite", animationDelay: `${i * 0.2}s` }} />
+              ))}
             </div>
           )}
         </div>
 
         {/* Input Area */}
-        <div
-          style={{
-            padding: "20px 28px",
-            background: "#fff",
-            borderTop: "1px solid rgba(200, 169, 110, 0.15)",
-            display: "flex",
-            gap: "12px",
-            alignItems: "flex-end",
-            flexShrink: 0,
-          }}
-        >
+        <div style={{ padding: "14px 16px 16px", borderTop: "1px solid rgba(255,255,255,.08)", flexShrink: 0 }}>
           {bookingStep === "chat" ? (
-            <>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, background: "rgba(255,255,255,.07)", border: "1px solid rgba(255,255,255,.13)", borderRadius: 12, padding: "5px 5px 5px 14px" }}>
               <input
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && askAI()}
-                placeholder="Ask me about symptoms or health concerns..."
-                style={{
-                  flex: 1,
-                  background: "#f5f3ef",
-                  border: "1.5px solid rgba(200, 169, 110, 0.2)",
-                  borderRadius: "12px",
-                  padding: "12px 16px",
-                  fontSize: "0.95rem",
-                  fontFamily: "Plus Jakarta Sans, sans-serif",
-                  color: "#0f1e38",
-                  outline: "none",
-                  transition: "border-color 0.2s",
-                }}
-                onFocus={(e) => {
-                  (e.currentTarget as HTMLInputElement).style.borderColor = "rgba(200, 169, 110, 0.5)";
-                }}
-                onBlur={(e) => {
-                  (e.currentTarget as HTMLInputElement).style.borderColor = "rgba(200, 169, 110, 0.2)";
-                }}
+                placeholder="Describe how you feel…"
+                style={{ flex: 1, minWidth: 0, border: "none", background: "transparent", outline: "none", fontSize: "13.5px", color: "#fff", fontFamily: "inherit" }}
               />
               <button
                 onClick={askAI}
                 disabled={isLoading || !prompt.trim()}
-                style={{
-                  width: "44px",
-                  height: "44px",
-                  background: isLoading || !prompt.trim() ? "rgba(200,169,110,0.25)" : "linear-gradient(135deg, #e8d5b0 0%, #c8a96e 50%, #a88b50 100%)",
-                  border: "none",
-                  borderRadius: "12px",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  color: isLoading || !prompt.trim() ? "#94a3b8" : "#0f1e38",
-                  cursor: isLoading || !prompt.trim() ? "not-allowed" : "pointer",
-                  flexShrink: 0,
-                  transition: "all 0.2s",
-                  boxShadow: isLoading || !prompt.trim() ? "none" : "0 4px 12px rgba(200,169,110,0.25)",
-                }}
                 title="Send"
+                style={{ border: "none", cursor: isLoading || !prompt.trim() ? "not-allowed" : "pointer", width: 34, height: 34, borderRadius: 9, background: isLoading || !prompt.trim() ? "rgba(12,107,87,.4)" : "#0C6B57", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}
               >
-                <Send size={20} />
+                <Send size={16} color="#fff" />
               </button>
-            </>
+            </div>
           ) : bookingStep === "symptoms" ? (
-            <>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               <textarea
                 value={problemDescription}
                 onChange={(e) => setProblemDescription(e.target.value)}
-                placeholder="Describe your symptoms in detail (e.g., 'I have severe headache with fever for 3 days')..."
-                style={{
-                  flex: 1,
-                  background: "#f5f3ef",
-                  border: "1.5px solid rgba(200, 169, 110, 0.2)",
-                  borderRadius: "12px",
-                  padding: "12px 16px",
-                  fontSize: "0.95rem",
-                  fontFamily: "Plus Jakarta Sans, sans-serif",
-                  color: "#0f1e38",
-                  outline: "none",
-                  resize: "none",
-                  minHeight: "60px",
-                  maxHeight: "100px",
-                  transition: "border-color 0.2s",
-                }}
-                onFocus={(e) => {
-                  (e.currentTarget as HTMLTextAreaElement).style.borderColor = "rgba(200, 169, 110, 0.5)";
-                }}
-                onBlur={(e) => {
-                  (e.currentTarget as HTMLTextAreaElement).style.borderColor = "rgba(200, 169, 110, 0.2)";
-                }}
+                placeholder="Describe your symptoms in detail…"
+                style={{ width: "100%", boxSizing: "border-box", background: "rgba(255,255,255,.07)", border: "1px solid rgba(255,255,255,.13)", borderRadius: 12, padding: "11px 14px", fontSize: "13.5px", color: "#fff", outline: "none", resize: "none", minHeight: 64, maxHeight: 110, fontFamily: "inherit" }}
               />
-              <button
-                onClick={analyzeSymptoms}
-                disabled={isLoading || !problemDescription.trim()}
-                style={{
-                  minWidth: "80px",
-                  height: "44px",
-                  background: isLoading || !problemDescription.trim() ? "rgba(200,169,110,0.25)" : "linear-gradient(135deg, #e8d5b0 0%, #c8a96e 50%, #a88b50 100%)",
-                  border: "none",
-                  borderRadius: "12px",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  color: isLoading || !problemDescription.trim() ? "#94a3b8" : "#0f1e38",
-                  cursor: isLoading || !problemDescription.trim() ? "not-allowed" : "pointer",
-                  flexShrink: 0,
-                  transition: "all 0.2s",
-                  fontSize: "0.9rem",
-                  fontWeight: 600,
-                  padding: "0 16px",
-                }}
-              >
-                {isLoading ? <Loader2 size={18} className="animate-spin" /> : "Analyze"}
-              </button>
-              <button
-                onClick={() => {
-                  setBookingStep("chat");
-                  setProblemDescription("");
-                }}
-                style={{
-                  minWidth: "60px",
-                  height: "44px",
-                  background: "rgba(255, 255, 255, 0.1)",
-                  border: "1px solid rgba(200, 169, 110, 0.2)",
-                  borderRadius: "12px",
-                  color: "#0f1e38",
-                  cursor: "pointer",
-                  flexShrink: 0,
-                  transition: "all 0.2s",
-                  fontSize: "0.9rem",
-                  fontWeight: 600,
-                }}
-                onMouseEnter={(e) => {
-                  (e.currentTarget as HTMLButtonElement).style.background = "rgba(200, 169, 110, 0.1)";
-                }}
-                onMouseLeave={(e) => {
-                  (e.currentTarget as HTMLButtonElement).style.background = "rgba(255, 255, 255, 0.1)";
-                }}
-              >
-                Back
-              </button>
-            </>
+              <div style={{ display: "flex", gap: 8 }}>
+                <button
+                  onClick={() => { setBookingStep("chat"); setProblemDescription(""); }}
+                  style={{ height: 40, padding: "0 16px", background: "rgba(255,255,255,.08)", border: "1px solid rgba(255,255,255,.13)", borderRadius: 10, color: "#C7D2CD", cursor: "pointer", fontSize: "13px", fontWeight: 600 }}
+                >
+                  Back
+                </button>
+                <button
+                  onClick={analyzeSymptoms}
+                  disabled={isLoading || !problemDescription.trim()}
+                  style={{ flex: 1, height: 40, background: isLoading || !problemDescription.trim() ? "rgba(12,107,87,.4)" : "#0C6B57", border: "none", borderRadius: 10, color: "#fff", cursor: isLoading || !problemDescription.trim() ? "not-allowed" : "pointer", fontSize: "13px", fontWeight: 600, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}
+                >
+                  {isLoading ? <Loader2 size={16} className="animate-spin" /> : "Analyze symptoms"}
+                </button>
+              </div>
+            </div>
           ) : bookingStep === "hospital_selection" ? (
-            <div style={{ fontSize: "0.9rem", color: "#7a9a95", textAlign: "center", width: "100%", padding: "8px" }}>
-              ✓ Select a hospital above or{" "}
-              <button
-                onClick={() => setBookingStep("symptoms")}
-                style={{
-                  background: "none",
-                  border: "none",
-                  color: "#c8a96e",
-                  textDecoration: "underline",
-                  cursor: "pointer",
-                  fontWeight: 600,
-                }}
-              >
+            <div style={{ fontSize: "12.5px", color: "#9FB0AA", textAlign: "center", padding: 6 }}>
+              Select a provider above, or{" "}
+              <button onClick={() => setBookingStep("symptoms")} style={{ background: "none", border: "none", color: "#9FE3CD", textDecoration: "underline", cursor: "pointer", fontWeight: 600 }}>
                 describe more symptoms
               </button>
             </div>
           ) : null}
+          <div style={{ fontSize: "10.5px", color: "#6E7E78", textAlign: "center", marginTop: 9 }}>
+            AI guidance, not a medical diagnosis. For emergencies call 102.
+          </div>
         </div>
-      </div>
+      </aside>
 
       <style>{`
         @keyframes pulse {
-          0%, 60%, 100% { transform: translateY(0) scale(1); opacity: 0.6; }
-          30% { transform: translateY(-5px) scale(1.1); opacity: 1; }
+          0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+          30% { transform: translateY(-4px); opacity: 1; }
         }
       `}</style>
-    </div>
+    </>
   );
 
   return createPortal(modalContent, document.body);

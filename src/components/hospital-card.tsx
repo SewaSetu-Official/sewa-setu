@@ -2,8 +2,7 @@
 
 import Image from "next/image";
 import { motion } from "framer-motion";
-import { MapPin, Star, ArrowRight } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { MapPin, Star, ArrowRight, Building2, Stethoscope, FlaskConical, Siren } from "lucide-react";
 import Link from "next/link";
 import type { ApiHospital } from "@/types/hospital";
 import { formatMoneyCents } from "@/lib/money";
@@ -13,105 +12,92 @@ interface HospitalCardProps {
   index: number;
 }
 
+const TYPE_THEME = {
+  HOSPITAL: { label: "Hospital", fg: "#0C6B57", badge: "#E6F0EC", tone: "linear-gradient(140deg,#1C7A64,#0C6B57 55%,#0a5848)", Icon: Building2 },
+  CLINIC:   { label: "Clinic",   fg: "#C0763A", badge: "#FAEBD9", tone: "linear-gradient(140deg,#E89B47,#E0913A 55%,#c87d2c)", Icon: Stethoscope },
+  LAB:      { label: "Lab",      fg: "#7A3E8E", badge: "#F0E9F4", tone: "linear-gradient(140deg,#9356A6,#7A3E8E 55%,#693279)", Icon: FlaskConical },
+} as const;
+
 export function HospitalCard({ hospital, index }: HospitalCardProps) {
   const formattedPrice = formatMoneyCents(hospital.fromPrice, hospital.currency);
   const location = hospital.area ? `${hospital.area}, ${hospital.city}` : hospital.city;
+  const theme = TYPE_THEME[hospital.type] ?? TYPE_THEME.HOSPITAL;
+  const WatermarkIcon = theme.Icon;
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true }}
-      transition={{ duration: 0.4, delay: index * 0.1 }}
-      className="group bg-white rounded-2xl overflow-hidden border border-navy/7 hover:border-gold/35 transition-all duration-500"
-      style={{ boxShadow: "0 2px 12px rgba(15,30,56,0.06)" }}
-      onMouseEnter={e => (e.currentTarget.style.boxShadow = "0 16px 48px rgba(15,30,56,0.13)")}
-      onMouseLeave={e => (e.currentTarget.style.boxShadow = "0 2px 12px rgba(15,30,56,0.06)")}
+      transition={{ duration: 0.4, delay: Math.min(index, 6) * 0.06 }}
     >
-      {/* ── Image ── */}
-      <div className="relative h-52 overflow-hidden">
-        <Image
-          loader={({ src }) => src}
-          unoptimized
-          src={hospital.image ?? "https://picsum.photos/seed/hospital-fallback/800/600"}
-          alt={hospital.name}
-          fill
-          sizes="(max-width: 768px) 100vw, 33vw"
-          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-in-out"
-        />
+      <Link
+        href={`/hospital/${hospital.slug}`}
+        className="group flex h-full flex-col overflow-hidden rounded-[18px] border border-[rgba(20,33,29,0.07)] bg-white shadow-[0_14px_30px_-24px_rgba(20,33,29,0.5)] transition-all duration-200 hover:-translate-y-1 hover:shadow-[0_24px_44px_-24px_rgba(20,33,29,0.55)]"
+      >
+        {/* ── Header ── */}
+        <div className="relative h-[120px] overflow-hidden" style={{ background: theme.tone }}>
+          {hospital.image ? (
+            <Image
+              loader={({ src }) => src}
+              unoptimized
+              src={hospital.image}
+              alt={hospital.name}
+              fill
+              sizes="(max-width: 768px) 100vw, 33vw"
+              className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+            />
+          ) : (
+            <WatermarkIcon className="absolute -bottom-5 -right-3.5 h-[116px] w-[116px] text-white/20" strokeWidth={1.6} />
+          )}
 
-        {/* Gradient overlay */}
-        <div className="absolute inset-0 bg-gradient-to-t from-navy/75 via-navy/20 to-transparent" />
+          {/* type badge — top left */}
+          <span className="absolute left-3 top-3 flex items-center gap-1.5 rounded-full px-2.5 py-1.5 text-[11.5px] font-bold" style={{ background: theme.badge, color: theme.fg }}>
+            <span className="h-[7px] w-[7px] rounded-[2px]" style={{ background: theme.fg }} />
+            {theme.label}
+          </span>
 
-        {/* Rating pill — top right */}
-        <div
-          className="absolute top-3 right-3 flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold backdrop-blur-sm"
-          style={{ background: "rgba(15,30,56,0.65)", color: "#c8a96e", border: "1px solid rgba(200,169,110,0.3)" }}
-        >
-          <Star className="w-3 h-3 fill-gold" />
-          {hospital.rating}
+          {/* rating — top right */}
+          {hospital.rating > 0 && (
+            <span className="absolute right-3 top-3 flex items-center gap-1.5 rounded-full px-2.5 py-1.5 text-[11.5px] font-bold text-white backdrop-blur" style={{ background: "rgba(20,33,29,.78)" }}>
+              <Star className="h-[11px] w-[11px] fill-[#FFC368] text-[#FFC368]" />
+              {hospital.rating}
+            </span>
+          )}
         </div>
 
-        {/* Type badge — bottom left */}
-        <div className="absolute bottom-3 left-3">
-          <Badge
-            variant="secondary"
-            className="bg-white/90 backdrop-blur-sm text-xs font-medium text-navy border-0"
-          >
-            {hospital.type}
-          </Badge>
-        </div>
-      </div>
+        {/* ── Body ── */}
+        <div className="flex flex-1 flex-col px-[15px] pb-[15px] pt-3.5">
+          <div className="font-display text-[16.5px] font-bold leading-[1.2] tracking-[-0.01em] text-ink">{hospital.name}</div>
 
-      {/* ── Body ── */}
-      <div className="p-5">
-
-        {/* Name */}
-        <h3 className="font-bold text-lg text-navy line-clamp-1 mb-2 group-hover:text-navy-mid transition-colors duration-300">
-          {hospital.name}
-        </h3>
-
-        {/* Location */}
-        <div className="flex items-center gap-1.5 text-slate mb-1.5">
-          <MapPin className="w-3.5 h-3.5 flex-shrink-0" />
-          <span className="text-sm">{location}</span>
-        </div>
-
-        {/* Specialty */}
-        <p className="text-sm text-slate line-clamp-1 mb-5">{hospital.specialty}</p>
-
-        {/* Divider */}
-        <div className="h-px bg-gradient-to-r from-transparent via-navy/8 to-transparent mb-4" />
-
-        {/* Footer */}
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-[10px] font-semibold tracking-widest uppercase text-slate mb-0.5">Starting from</p>
-            <p className="text-xl font-bold text-gold-dim">{formattedPrice}</p>
+          <div className="mt-1.5 flex items-center gap-1.5 text-[12.5px] font-medium text-ink-muted">
+            <MapPin className="h-3 w-3 shrink-0" /> {location}
           </div>
 
-          <Link href={`/hospital/${hospital.slug}`}>
-            <button
-              className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all duration-300 group/btn"
-              style={{
-                background: "#0f1e38",
-                color: "#c8a96e",
-              }}
-              onMouseEnter={e => {
-                (e.currentTarget as HTMLButtonElement).style.background = "#c8a96e";
-                (e.currentTarget as HTMLButtonElement).style.color = "#0f1e38";
-              }}
-              onMouseLeave={e => {
-                (e.currentTarget as HTMLButtonElement).style.background = "#0f1e38";
-                (e.currentTarget as HTMLButtonElement).style.color = "#c8a96e";
-              }}
-            >
-              View Packages
-              <ArrowRight className="w-3.5 h-3.5 transition-transform duration-300 group-hover/btn:translate-x-0.5" />
-            </button>
-          </Link>
+          {hospital.emergencyAvailable && (
+            <div className="mt-2.5 flex flex-wrap gap-1.5">
+              <span className="flex items-center gap-1.5 rounded-full bg-[#FBEAEE] px-2.5 py-1 text-[11px] font-bold text-[#C0556B]">
+                <Siren className="h-[11px] w-[11px]" /> Emergency 24/7
+              </span>
+            </div>
+          )}
+
+          {hospital.specialty && (
+            <p className="mt-2.5 line-clamp-2 flex-1 text-[12.5px] leading-[1.45] text-ink-soft">{hospital.specialty}</p>
+          )}
+
+          <div className="mt-3 flex items-end justify-between border-t border-[rgba(20,33,29,0.07)] pt-3">
+            <div>
+              <div className="text-[10.5px] font-semibold text-ink-muted">Starting from</div>
+              <div className="font-display text-[18px] font-bold text-brand">{formattedPrice}</div>
+            </div>
+            <span className="flex items-center gap-1.5 rounded-[10px] bg-brand px-3 py-2.5 text-[12.5px] font-semibold text-white transition-colors group-hover:bg-brand-dark">
+              View packages
+              <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
+            </span>
+          </div>
         </div>
-      </div>
+      </Link>
     </motion.div>
   );
 }

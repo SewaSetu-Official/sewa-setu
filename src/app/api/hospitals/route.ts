@@ -20,10 +20,11 @@ export async function GET(req: Request) {
   const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10));
   const pageSize = Math.min(24, Math.max(6, parseInt(searchParams.get("pageSize") || "12", 10)));
 
-  const whereConditions: Prisma.HospitalWhereInput[] = [];
+  // Base conditions exclude the type filter so we can compute per-type facet counts.
+  const baseConditions: Prisma.HospitalWhereInput[] = [];
 
   if (q) {
-    whereConditions.push({
+    baseConditions.push({
       OR: [
         { name: { contains: q, mode: "insensitive" } },
         { servicesSummary: { contains: q, mode: "insensitive" } },
@@ -31,20 +32,16 @@ export async function GET(req: Request) {
     });
   }
 
-  if (city) whereConditions.push({ location: { city: { equals: city, mode: "insensitive" } } });
-  if (district) whereConditions.push({ location: { district: { equals: district, mode: "insensitive" } } });
-  if (country) whereConditions.push({ location: { country: { equals: country, mode: "insensitive" } } });
-
-  if (type && ["HOSPITAL", "CLINIC", "LAB"].includes(type.toUpperCase())) {
-    whereConditions.push({ type: type.toUpperCase() as HospitalType });
-  }
+  if (city) baseConditions.push({ location: { city: { equals: city, mode: "insensitive" } } });
+  if (district) baseConditions.push({ location: { district: { equals: district, mode: "insensitive" } } });
+  if (country) baseConditions.push({ location: { country: { equals: country, mode: "insensitive" } } });
 
   if (emergency === "true") {
-    whereConditions.push({ emergencyAvailable: true });
+    baseConditions.push({ emergencyAvailable: true });
   }
 
   if (specialty) {
-    whereConditions.push({
+    baseConditions.push({
       OR: [
         // Hospital has a department linked to this specialty slug
         { departments: { some: { specialty: { slug: specialty } } } },
@@ -54,6 +51,11 @@ export async function GET(req: Request) {
     });
   }
 
+  const typeValid = type && ["HOSPITAL", "CLINIC", "LAB"].includes(type.toUpperCase());
+  const whereConditions: Prisma.HospitalWhereInput[] = typeValid
+    ? [...baseConditions, { type: type.toUpperCase() as HospitalType }]
+    : baseConditions;
+
   // Price filters apply to PACKAGES now
   const packageFilters: Prisma.HospitalPackageWhereInput[] = [{ isActive: true }];
   if (minPrice) packageFilters.push({ price: { gte: parseInt(minPrice, 10) } });
@@ -62,13 +64,15 @@ export async function GET(req: Request) {
   let orderBy: Prisma.HospitalOrderByWithRelationInput = { createdAt: "desc" };
   if (sortBy === "name") orderBy = { name: "asc" };
 
+  const whereBase = baseConditions.length > 0 ? { AND: baseConditions } : undefined;
   const where = whereConditions.length > 0 ? { AND: whereConditions } : undefined;
 
   const isPriceSort = sortBy === "price-low" || sortBy === "price-high";
 
   // For price-based sorts we must fetch all matching rows first (sort is post-DB)
-  const [total, raw] = await Promise.all([
+  const [total, typeGroups, raw] = await Promise.all([
     db.hospital.count({ where }),
+    db.hospital.groupBy({ by: ["type"], where: whereBase, _count: { _all: true } }),
     db.hospital.findMany({
       where,
       include: {
@@ -120,11 +124,18 @@ export async function GET(req: Request) {
     payload = payload.slice((page - 1) * pageSize, page * pageSize);
   }
 
+  const typeCounts = { HOSPITAL: 0, CLINIC: 0, LAB: 0 } as Record<"HOSPITAL" | "CLINIC" | "LAB", number>;
+  for (const g of typeGroups) {
+    if (g.type in typeCounts) typeCounts[g.type as keyof typeof typeCounts] = g._count._all;
+  }
+  const allCount = typeCounts.HOSPITAL + typeCounts.CLINIC + typeCounts.LAB;
+
   return NextResponse.json({
     hospitals: payload,
     total,
     page,
     pageSize,
     hasMore: page * pageSize < total,
+    typeCounts: { all: allCount, ...typeCounts },
   });
 }
