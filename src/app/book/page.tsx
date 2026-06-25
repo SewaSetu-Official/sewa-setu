@@ -78,25 +78,28 @@ function BookForm() {
 
   return (
     <div className="mx-auto max-w-lg px-4 pt-28 pb-16">
-      <div className="rounded-2xl overflow-hidden shadow-lg" style={{ border: "1px solid rgba(15,30,56,.08)" }}>
+      <div className="overflow-hidden rounded-[28px] border border-[rgba(20,33,29,0.08)] bg-white shadow-[0_28px_56px_-30px_rgba(20,33,29,0.4)]">
 
         {/* Card header */}
-        <div style={{ background: "linear-gradient(135deg,#0f1e38 0%,#1a3059 100%)", padding: "28px 32px" }}>
-          <p style={{ fontSize: "0.65rem", fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase", color: "rgba(200,169,110,.7)", marginBottom: 8 }}>
+        <div className="relative overflow-hidden px-8 py-8" style={{ background: "linear-gradient(135deg,#0C6B57 0%,#0A5446 100%)" }}>
+          <span className="inline-flex items-center gap-2.5 text-[12px] font-extrabold uppercase tracking-[0.14em] text-white/80">
+            <svg width="22" height="9" viewBox="0 0 22 9" fill="none" className="shrink-0" aria-hidden>
+              <path d="M1 8C5 2 17 2 21 8" stroke="#E0913A" strokeWidth="1.5" strokeLinecap="round" />
+            </svg>
             Appointment Booking
-          </p>
-          <h1 style={{ fontSize: "1.5rem", fontWeight: 800, color: "#fff", lineHeight: 1.2 }}>
+          </span>
+          <h1 className="font-display mt-3 text-[1.65rem] font-bold leading-[1.15] tracking-[-0.02em] text-white">
             Book Appointment
           </h1>
           {packageId && (
-            <p style={{ fontSize: "0.78rem", color: "rgba(255,255,255,.4)", marginTop: 6 }}>
+            <p className="mt-2 text-[0.78rem] text-white/55">
               Package: {packageId}
             </p>
           )}
         </div>
 
         {/* Form body */}
-        <div style={{ background: "#f5f3ef", padding: "32px" }}>
+        <div style={{ background: "#FBFAF6", padding: "32px" }}>
 
           {errorMsg && (
             <div
@@ -112,7 +115,7 @@ function BookForm() {
 
             {/* Full Name */}
             <div>
-              <label htmlFor="bp-name" style={{ display: "block", fontSize: "0.75rem", fontWeight: 600, color: "#4a5568", marginBottom: 6 }}>
+              <label htmlFor="bp-name" style={{ display: "block", fontSize: "0.75rem", fontWeight: 600, color: "#46524D", marginBottom: 6 }}>
                 Full Name
               </label>
               <Input
@@ -122,7 +125,7 @@ function BookForm() {
                 onBlur={() => handleBlur("name")}
                 placeholder="Enter your full name"
                 aria-invalid={!!errors.name}
-                style={{ background: "#fff", border: `1.5px solid ${errors.name ? "#e53e3e" : "rgba(15,30,56,.14)"}`, borderRadius: 10, height: 44 }}
+                style={{ background: "#fff", border: `1.5px solid ${errors.name ? "#e53e3e" : "rgba(20,33,29,.14)"}`, borderRadius: 10, height: 44 }}
               />
               {errors.name && (
                 <p className="flex items-center gap-1 mt-1.5" style={{ fontSize: "0.72rem", color: "#e53e3e" }}>
@@ -134,7 +137,7 @@ function BookForm() {
             {/* Age + Phone */}
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label htmlFor="bp-age" style={{ display: "block", fontSize: "0.75rem", fontWeight: 600, color: "#4a5568", marginBottom: 6 }}>Age</label>
+                <label htmlFor="bp-age" style={{ display: "block", fontSize: "0.75rem", fontWeight: 600, color: "#46524D", marginBottom: 6 }}>Age</label>
                 <Input
                   id="bp-age"
                   type="number"
@@ -144,7 +147,7 @@ function BookForm() {
                   onBlur={() => handleBlur("age")}
                   placeholder="30"
                   aria-invalid={!!errors.age}
-                  style={{ background: "#fff", border: `1.5px solid ${errors.age ? "#e53e3e" : "rgba(15,30,56,.14)"}`, borderRadius: 10, height: 44 }}
+                  style={{ background: "#fff", border: `1.5px solid ${errors.age ? "#e53e3e" : "rgba(20,33,29,.14)"}`, borderRadius: 10, height: 44 }}
                 />
                 {errors.age && (
                   <p className="flex items-center gap-1 mt-1.5" style={{ fontSize: "0.72rem", color: "#e53e3e" }}>
@@ -153,7 +156,7 @@ function BookForm() {
                 )}
               </div>
               <div>
-                <label htmlFor="bp-phone" style={{ display: "block", fontSize: "0.75rem", fontWeight: 600, color: "#4a5568", marginBottom: 6 }}>Phone</label>
+                <label htmlFor="bp-phone" style={{ display: "block", fontSize: "0.75rem", fontWeight: 600, color: "#46524D", marginBottom: 6 }}>Phone</label>
                 <Input
                   id="bp-phone"
                   value={formData.phone}
@@ -161,7 +164,7 @@ function BookForm() {
                   onBlur={() => handleBlur("phone")}
                   placeholder="98XXXXXXXX"
                   aria-invalid={!!errors.phone}
-                  style={{ background: "#fff", border: `1.5px solid ${errors.phone ? "#e53e3e" : "rgba(15,30,56,.14)"}`, borderRadius: 10, height: 44 }}
+                  style={{ background: "#fff", border: `1.5px solid ${errors.phone ? "#e53e3e" : "rgba(20,33,29,.14)"}`, borderRadius: 10, height: 44 }}
                 />
                 {errors.phone && (
                   <p className="flex items-center gap-1 mt-1.5" style={{ fontSize: "0.72rem", color: "#e53e3e" }}>
@@ -173,7 +176,7 @@ function BookForm() {
 
             {/* Email */}
             <div>
-              <label htmlFor="bp-email" style={{ display: "block", fontSize: "0.75rem", fontWeight: 600, color: "#4a5568", marginBottom: 6 }}>
+              <label htmlFor="bp-email" style={{ display: "block", fontSize: "0.75rem", fontWeight: 600, color: "#46524D", marginBottom: 6 }}>
                 Email Address
               </label>
               <Input
@@ -184,7 +187,7 @@ function BookForm() {
                 onBlur={() => handleBlur("email")}
                 placeholder="you@example.com"
                 aria-invalid={!!errors.email}
-                style={{ background: "#fff", border: `1.5px solid ${errors.email ? "#e53e3e" : "rgba(15,30,56,.14)"}`, borderRadius: 10, height: 44 }}
+                style={{ background: "#fff", border: `1.5px solid ${errors.email ? "#e53e3e" : "rgba(20,33,29,.14)"}`, borderRadius: 10, height: 44 }}
               />
               {errors.email && (
                 <p className="flex items-center gap-1 mt-1.5" style={{ fontSize: "0.72rem", color: "#e53e3e" }}>
@@ -195,7 +198,7 @@ function BookForm() {
 
             {/* Date */}
             <div>
-              <label htmlFor="bp-date" style={{ display: "block", fontSize: "0.75rem", fontWeight: 600, color: "#4a5568", marginBottom: 6 }}>
+              <label htmlFor="bp-date" style={{ display: "block", fontSize: "0.75rem", fontWeight: 600, color: "#46524D", marginBottom: 6 }}>
                 Appointment Date
               </label>
               <Input
@@ -204,7 +207,7 @@ function BookForm() {
                 value={formData.date}
                 min={new Date().toISOString().split("T")[0]}
                 onChange={(e) => setFormData(p => ({ ...p, date: e.target.value }))}
-                style={{ background: "#fff", border: "1.5px solid rgba(15,30,56,.14)", borderRadius: 10, height: 44 }}
+                style={{ background: "#fff", border: "1.5px solid rgba(20,33,29,.14)", borderRadius: 10, height: 44 }}
               />
             </div>
 
@@ -213,12 +216,12 @@ function BookForm() {
               type="submit"
               disabled={loading}
               style={{
-                width: "100%", height: 52, borderRadius: 12, border: "none",
+                width: "100%", height: 52, borderRadius: 999, border: "none",
                 cursor: loading ? "not-allowed" : "pointer",
-                background: loading ? "#e8e4de" : "linear-gradient(135deg,#c8a96e 0%,#a88b50 100%)",
-                color: loading ? "#a0a8b4" : "#0f1e38",
+                background: loading ? "#e6e2da" : "linear-gradient(135deg,#0C6B57 0%,#0A5446 100%)",
+                color: loading ? "#9aa0a0" : "#ffffff",
                 fontSize: "0.95rem", fontWeight: 700,
-                boxShadow: loading ? "none" : "0 4px 18px rgba(200,169,110,.35)",
+                boxShadow: loading ? "none" : "0 12px 30px -10px rgba(12,107,87,.6)",
                 transition: "all .16s ease",
                 display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
               }}
@@ -243,11 +246,11 @@ function BookForm() {
 
 export default function BookingPage() {
   return (
-    <main className="min-h-screen" style={{ background: "#f5f3ef" }}>
+    <main className="min-h-screen bg-page">
       <Navbar />
       <Suspense fallback={
         <div className="flex items-center justify-center pt-40">
-          <Loader2 className="h-8 w-8 animate-spin" style={{ color: "#c8a96e" }} />
+          <Loader2 className="h-8 w-8 animate-spin" style={{ color: "#0C6B57" }} />
         </div>
       }>
         <BookForm />

@@ -7,11 +7,11 @@ import { motion, AnimatePresence } from "framer-motion";
 /* ═══════════════════════════════════════════════════════════
    DESIGN TOKENS
    ═══════════════════════════════════════════════════════════ */
-const GOLD = "#c8a96e";
-const GOLD_LIGHT = "#e8d5b0";
-const GOLD_DARK = "#a88b50";
-const NAVY = "#060e1d";
-const CREAM = "#f5f1ea";
+const GOLD = "#E0913A";
+const GOLD_LIGHT = "#EBB36B";
+const GOLD_DARK = "#C0763A";
+const NAVY = "#14211D";
+const CREAM = "#F6F4EE";
 
 const FACILITY_TYPES = [
   { value: "HOSPITAL", label: "Hospital", icon: "🏥", desc: "Full-service hospital" },
@@ -609,7 +609,7 @@ export default function PartnerPage() {
                 transition={{ delay: 0.6, duration: 0.5 }}
                 style={{ height: 3, background: `linear-gradient(90deg, ${GOLD}, ${GOLD_LIGHT})`, borderRadius: 2, marginBottom: 20 }}
               />
-              <h2 style={{ fontSize: 34, fontWeight: 800, color: "#0f1e38", fontFamily: "Outfit", letterSpacing: "-0.02em" }}>
+              <h2 style={{ fontSize: 34, fontWeight: 800, color: "#14211D", fontFamily: "Outfit", letterSpacing: "-0.02em" }}>
                 Apply to Partner
               </h2>
               <p style={{ color: "#64748b", fontSize: 15, marginTop: 8, lineHeight: 1.6 }}>
@@ -697,7 +697,7 @@ export default function PartnerPage() {
                               fontSize: 26, transition: "all 0.3s",
                             }}>{t.icon}</div>
                             <div>
-                              <div style={{ fontSize: 16, fontWeight: 700, color: active ? GOLD_DARK : "#0f1e38" }}>{t.label}</div>
+                              <div style={{ fontSize: 16, fontWeight: 700, color: active ? GOLD_DARK : "#14211D" }}>{t.label}</div>
                               <div style={{ fontSize: 13, color: "#94a3b8", marginTop: 3 }}>{t.desc}</div>
                             </div>
                             <div style={{
@@ -808,7 +808,7 @@ export default function PartnerPage() {
                         ].map((item, i) => (
                           <div key={i}>
                             <div style={{ fontSize: 10, color: "#94a3b8", fontWeight: 600 }}>{item.l}</div>
-                            <div style={{ fontSize: 14, color: "#0f1e38", fontWeight: 600, marginTop: 3 }}>{item.v}</div>
+                            <div style={{ fontSize: 14, color: "#14211D", fontWeight: 600, marginTop: 3 }}>{item.v}</div>
                           </div>
                         ))}
                       </div>
@@ -832,7 +832,7 @@ export default function PartnerPage() {
                         style={{
                           width: "100%", borderRadius: 14, padding: "16px 18px",
                           fontSize: 14, border: "1.5px solid #e2ddd6",
-                          background: "#fff", color: "#0f1e38", resize: "none",
+                          background: "#fff", color: "#14211D", resize: "none",
                           outline: "none", transition: "all 0.3s", fontFamily: "DM Sans",
                         }}
                       />
@@ -945,7 +945,7 @@ function FormField({ label, required, type = "text", placeholder, value, onChang
           background: "#fff",
           border: `1.5px solid ${focused ? GOLD + "90" : "#e2ddd6"}`,
           boxShadow: focused ? `0 0 0 3px ${GOLD}12` : "none",
-          color: "#0f1e38", transition: "all 0.3s", fontFamily: "DM Sans",
+          color: "#14211D", transition: "all 0.3s", fontFamily: "DM Sans",
         }}
       />
     </div>

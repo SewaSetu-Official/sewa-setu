@@ -48,24 +48,24 @@ function isUpcoming(scheduledAt: string, slotTime: string | null) {
 }
 
 const STATUS_META: Record<string, { label: string; color: string; bg: string; border: string }> = {
-  CONFIRMED: { label: "Confirmed",  color: "#059669", bg: "rgba(5,150,105,.08)",  border: "rgba(5,150,105,.2)"  },
-  REQUESTED: { label: "Requested",  color: "#d97706", bg: "rgba(217,119,6,.08)",  border: "rgba(217,119,6,.2)"  },
-  COMPLETED: { label: "Completed",  color: "#6b7a96", bg: "rgba(107,122,150,.08)", border: "rgba(107,122,150,.2)" },
-  CANCELLED: { label: "Cancelled",  color: "#e53e3e", bg: "rgba(229,62,62,.08)",  border: "rgba(229,62,62,.2)"  },
-  DRAFT:     { label: "Draft",      color: "#9aa3b0", bg: "rgba(154,163,176,.08)", border: "rgba(154,163,176,.2)" },
+  CONFIRMED: { label: "Confirmed",  color: "#0C6B57", bg: "rgba(12,107,87,.08)",  border: "rgba(12,107,87,.2)"  },
+  REQUESTED: { label: "Requested",  color: "#C0763A", bg: "rgba(192,118,58,.08)", border: "rgba(192,118,58,.2)" },
+  COMPLETED: { label: "Completed",  color: "#7B857F", bg: "rgba(123,133,127,.08)", border: "rgba(123,133,127,.2)" },
+  CANCELLED: { label: "Cancelled",  color: "#C0556B", bg: "rgba(192,85,107,.08)", border: "rgba(192,85,107,.2)" },
+  DRAFT:     { label: "Draft",      color: "#9AA39E", bg: "rgba(154,163,158,.08)", border: "rgba(154,163,158,.2)" },
 };
 
 function Row({ icon: Icon, label, value }: { icon: React.ElementType; label: string; value: string }) {
   if (!value) return null;
   return (
-    <div className="flex items-start gap-3 py-3.5" style={{ borderBottom: "1px solid rgba(15,30,56,.06)" }}>
+    <div className="flex items-start gap-3 py-3.5" style={{ borderBottom: "1px solid rgba(20,33,29,.06)" }}>
       <div className="h-8 w-8 rounded-lg flex items-center justify-center flex-shrink-0"
-        style={{ background: "rgba(200,169,110,.1)" }}>
-        <Icon className="h-4 w-4" style={{ color: "#a88b50" }} />
+        style={{ background: "#E6F0EC" }}>
+        <Icon className="h-4 w-4" style={{ color: "#0C6B57" }} />
       </div>
       <div>
-        <p className="text-[10px] font-bold uppercase tracking-[0.12em]" style={{ color: "#9aa3b0" }}>{label}</p>
-        <p className="text-sm font-semibold mt-0.5" style={{ color: "#0f1e38" }}>{value}</p>
+        <p className="text-[10px] font-bold uppercase tracking-[0.12em]" style={{ color: "#9AA39E" }}>{label}</p>
+        <p className="text-sm font-semibold mt-0.5" style={{ color: "#14211D" }}>{value}</p>
       </div>
     </div>
   );
@@ -92,10 +92,10 @@ export default function VerifyPage() {
   /* ── Loading ── */
   if (state === "loading") {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ background: "#f7f4ef" }}>
+      <div className="min-h-screen flex items-center justify-center" style={{ background: "#F6F4EE" }}>
         <div className="flex flex-col items-center gap-3">
-          <Loader2 className="h-10 w-10 animate-spin" style={{ color: "#c8a96e" }} />
-          <p className="text-sm font-semibold text-navy">Verifying booking…</p>
+          <Loader2 className="h-10 w-10 animate-spin" style={{ color: "#0C6B57" }} />
+          <p className="text-sm font-semibold text-ink">Verifying booking…</p>
         </div>
       </div>
     );
@@ -104,19 +104,19 @@ export default function VerifyPage() {
   /* ── Invalid ── */
   if (state === "invalid" || !booking) {
     return (
-      <div className="min-h-screen flex items-center justify-center px-4" style={{ background: "#f7f4ef" }}>
+      <div className="min-h-screen flex items-center justify-center px-4" style={{ background: "#F6F4EE" }}>
         <div className="w-full max-w-sm text-center">
           <div className="inline-flex h-20 w-20 rounded-2xl items-center justify-center mb-5"
-            style={{ background: "#fef2f2", border: "2px solid #fecaca" }}>
-            <XCircle className="h-10 w-10 text-red-500" />
+            style={{ background: "#FBEAEE", border: "2px solid rgba(192,85,107,.3)" }}>
+            <XCircle className="h-10 w-10" style={{ color: "#C0556B" }} />
           </div>
-          <h1 className="text-xl font-extrabold text-navy mb-2">Booking Not Found</h1>
-          <p className="text-sm text-slate leading-relaxed">
+          <h1 className="font-display text-xl font-bold text-ink mb-2">Booking not found</h1>
+          <p className="text-sm text-ink-soft leading-relaxed">
             This QR code is invalid or the booking has been removed. Please ask the patient to show their booking ID manually.
           </p>
           <Link href="/"
             className="inline-flex items-center gap-2 mt-6 px-5 py-2.5 rounded-xl text-sm font-bold"
-            style={{ background: "#0f1e38", color: "#fff" }}>
+            style={{ background: "#0C6B57", color: "#fff" }}>
             Go to Sewa Setu
           </Link>
         </div>
@@ -129,7 +129,7 @@ export default function VerifyPage() {
   const meta     = STATUS_META[booking.status] ?? STATUS_META.DRAFT;
 
   return (
-    <div className="min-h-screen py-10 px-4" style={{ background: "#f7f4ef" }}>
+    <div className="min-h-screen py-10 px-4" style={{ background: "#F6F4EE" }}>
       <div className="max-w-md mx-auto">
 
         {/* Valid / Invalid banner */}
@@ -165,20 +165,20 @@ export default function VerifyPage() {
 
         {/* Booking card */}
         <div className="rounded-3xl overflow-hidden shadow-lg"
-          style={{ background: "#fff", border: "1px solid #f0ece4" }}>
+          style={{ background: "#fff", border: "1px solid rgba(20,33,29,.08)" }}>
 
           {/* Header */}
           <div className="px-6 py-5 flex items-center justify-between"
-            style={{ background: "#0f1e38" }}>
+            style={{ background: "linear-gradient(135deg,#14211D,#0a2620)" }}>
             <div>
               <p className="text-[10px] font-bold uppercase tracking-[0.18em]"
-                style={{ color: "rgba(200,169,110,.7)" }}>Sewa Setu</p>
-              <p className="text-white font-bold text-base leading-tight">Booking Verification</p>
+                style={{ color: "rgba(224,145,58,.7)" }}>Sewa Setu</p>
+              <p className="text-white font-bold text-base leading-tight">Booking verification</p>
             </div>
             <div className="text-right">
               <p className="text-[10px] uppercase tracking-wider font-semibold"
                 style={{ color: "rgba(255,255,255,.4)" }}>Booking ID</p>
-              <p className="font-mono font-bold tracking-widest text-base" style={{ color: "#c8a96e" }}>
+              <p className="font-mono font-bold tracking-widest text-base" style={{ color: "#E0913A" }}>
                 #{booking.displayId}
               </p>
             </div>
@@ -186,7 +186,7 @@ export default function VerifyPage() {
 
           {/* Status pill */}
           <div className="px-6 py-4 flex items-center justify-between"
-            style={{ background: "#fdf9f5", borderBottom: "1px solid #f0ece4" }}>
+            style={{ background: "#F8FBF7", borderBottom: "1px solid rgba(20,33,29,.08)" }}>
             <div className="flex items-center gap-2">
               <ShieldCheck className="h-4 w-4" style={{ color: meta.color }} />
               <span className="text-sm font-bold" style={{ color: meta.color }}>{meta.label}</span>
@@ -212,20 +212,20 @@ export default function VerifyPage() {
 
           {/* Footer */}
           <div className="px-6 py-4 flex items-center justify-between"
-            style={{ background: "#fdf9f5", borderTop: "1px solid #f0ece4" }}>
-            <p className="text-[10px] text-slate/40 font-medium">
+            style={{ background: "#F8FBF7", borderTop: "1px solid rgba(20,33,29,.08)" }}>
+            <p className="text-[10px] text-[#9AA39E] font-medium">
               Verified via Sewa Setu
             </p>
             <div className="flex items-center gap-1">
-              <Hash size={10} style={{ color: "#c8a96e" }} />
-              <span className="font-mono text-[10px] font-bold" style={{ color: "#c8a96e" }}>
+              <Hash size={10} style={{ color: "#C0763A" }} />
+              <span className="font-mono text-[10px] font-bold" style={{ color: "#C0763A" }}>
                 {booking.displayId}
               </span>
             </div>
           </div>
         </div>
 
-        <p className="text-center text-[11px] text-slate/40 mt-5">
+        <p className="text-center text-[11px] text-[#9AA39E] mt-5">
           This page is for hospital reception use only.
         </p>
       </div>
