@@ -14,6 +14,19 @@
   --cream-dark:  #ede9e2;
   --cream-warm:  #f7f4ef;
   --slate:       #6b7a96;
+
+  /* ── Redesign brand (customer-facing only — admin keeps navy/gold) ── */
+  --brand:        #0C6B57;
+  --brand-dark:   #0A5446;
+  --brand-deep:   #10221E;
+  --brand-soft:   #E6F0EC;
+  --accent:       #E0913A;
+  --accent-soft:  #F6ECD7;
+  --page:         #F6F4EE;
+  --ink:          #14211D;
+  --ink-soft:     #46524D;
+  --ink-muted:    #7B857F;
+  --line:         rgba(20, 33, 29, 0.08);
 }
 
 @theme inline {
@@ -30,6 +43,20 @@
   --color-cream-dark: var(--cream-dark);
   --color-cream-warm: var(--cream-warm);
   --color-slate: var(--slate);
+
+  /* redesign brand tokens */
+  --color-brand: var(--brand);
+  --color-brand-dark: var(--brand-dark);
+  --color-brand-deep: var(--brand-deep);
+  --color-brand-soft: var(--brand-soft);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-page: var(--page);
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-ink-muted: var(--ink-muted);
+
+  --font-display: var(--font-bricolage), "Plus Jakarta Sans", sans-serif;
 }
 
 
@@ -98,6 +125,41 @@
 @media print {
   @page { margin: 1cm; }
 }
+
+/* ── Redesign (customer-facing) animations & utilities ── */
+@keyframes ss-float  { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-12px); } }
+@keyframes ss-float2 { 0%,100% { transform: translateY(0); } 50% { transform: translateY(9px); } }
+@keyframes ss-pulse  { 0% { transform: scale(1); opacity: .5; } 70% { transform: scale(2.6); opacity: 0; } 100% { opacity: 0; } }
+@keyframes ss-marquee { from { transform: translateX(0); } to { transform: translateX(calc(-50% - 15px)); } }
+
+.ss-float  { animation: ss-float 6s ease-in-out infinite; }
+.ss-float2 { animation: ss-float2 7s ease-in-out infinite; }
+.ss-pulse  { animation: ss-pulse 1.8s ease-out infinite; }
+.ss-marquee-track { animation: ss-marquee 42s linear infinite; width: max-content; }
+.ss-marquee:hover .ss-marquee-track { animation-play-state: paused; }
+
+@media (prefers-reduced-motion: reduce) {
+  .ss-float, .ss-float2, .ss-pulse, .ss-marquee-track { animation: none; }
+}
+
+/* Display font helper for redesigned customer pages */
+.font-display { font-family: var(--font-bricolage), "Plus Jakarta Sans", sans-serif; }
+
+/* Hide scrollbar while keeping scroll functionality */
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+.no-scrollbar::-webkit-scrollbar { display: none; }
+
+/* Brand range slider */
+.ss-range { -webkit-appearance: none; appearance: none; height: 4px; border-radius: 99px; background: rgba(20,33,29,.12); outline: none; }
+.ss-range::-webkit-slider-thumb { -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%; background: #0C6B57; cursor: pointer; box-shadow: 0 1px 4px rgba(12,107,87,.5); }
+.ss-range::-moz-range-thumb { width: 16px; height: 16px; border: none; border-radius: 50%; background: #0C6B57; cursor: pointer; box-shadow: 0 1px 4px rgba(12,107,87,.5); }
+
+/* Very thin, subtle scrollbar — tidy but still discoverable */
+.thin-scrollbar { scrollbar-width: thin; scrollbar-color: rgba(20,33,29,.18) transparent; }
+.thin-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+.thin-scrollbar::-webkit-scrollbar-track { background: transparent; }
+.thin-scrollbar::-webkit-scrollbar-thumb { background: rgba(20,33,29,.18); border-radius: 99px; }
+.thin-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(20,33,29,.32); }
 
 /* Admin UI polish without theme change */
 .admin-content {

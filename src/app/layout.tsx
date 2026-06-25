@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Inter, Plus_Jakarta_Sans } from "next/font/google";
+import { Inter, Plus_Jakarta_Sans, Bricolage_Grotesque } from "next/font/google";
 import { ClerkProvider } from "@clerk/nextjs";
 import { syncCurrentClerkUserToDb } from "@/lib/clerk-user-sync";
 import "./globals.css";
@@ -14,6 +14,13 @@ const plusJakarta = Plus_Jakarta_Sans({
   variable: "--font-plus-jakarta",
   subsets: ["latin"],
   weight: ["600", "700", "800"],
+  display: "swap",
+});
+
+const bricolage = Bricolage_Grotesque({
+  variable: "--font-bricolage",
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700", "800"],
   display: "swap",
 });
 
@@ -33,7 +40,8 @@ export default async function RootLayout({
     <ClerkProvider>
       <html lang="en" data-scroll-behavior="smooth">
         <body
-          className={`${inter.variable} ${plusJakarta.variable} antialiased`}
+          className={`${inter.variable} ${plusJakarta.variable} ${bricolage.variable} antialiased`}
+          suppressHydrationWarning
         >
           {children}
         </body>
