@@ -79,7 +79,7 @@ const EMPTY_BOOKING_DATA: BookingData = {
 };
 const INITIAL_GREETING: Message = {
   role: "bot",
-  content: "Namaste! I&apos;m your Sewa-Setu health assistant. Tell me your symptoms or health concerns, and I&apos;ll recommend the right hospital and specialist for you.",
+  content: "Namaste! I'm your Sewa-Setu health assistant. Tell me your symptoms or health concerns, and I'll recommend the right hospital and specialist for you.",
   type: "chat",
 };
 
@@ -512,23 +512,23 @@ export function FloatingAI({ autoOpen = false, conversationId }: FloatingAIProps
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,600;1,9..144,400&display=swap');
 
         :root {
-          --teal-900: #07111e;
-          --teal-700: #0f1e38;
-          --teal-500: #c8a96e;
-          --teal-400: #d4b483;
-          --teal-300: #e8d5b0;
-          --teal-100: rgba(200,169,110,0.2);
-          --teal-50:  rgba(200,169,110,0.07);
-          --cream:    #f5f2ed;
+          --teal-900: #14211D;
+          --teal-700: #0C6B57;
+          --teal-500: #1C7A64;
+          --teal-400: #2C8E76;
+          --teal-300: #3FA483;
+          --teal-100: rgba(12,107,87,0.2);
+          --teal-50:  rgba(12,107,87,0.07);
+          --cream:    #F6F4EE;
           --sand:     #ede8de;
-          --warm-100: #e2ddd6;
-          --text-dark: #0f1e38;
-          --text-mid:  #334155;
-          --text-soft: #64748b;
-          --gold:     #c8a96e;
-          --red:      #dc2626;
-          --red-light: #fee2e2;
-          --shadow-teal: rgba(200,169,110,0.18);
+          --warm-100: rgba(20,33,29,0.10);
+          --text-dark: #14211D;
+          --text-mid:  #46524D;
+          --text-soft: #7B857F;
+          --gold:     #E0913A;
+          --red:      #C0556B;
+          --red-light: #FBEAEE;
+          --shadow-teal: rgba(12,107,87,0.18);
         }
 
         .ss-wrap * {
@@ -540,7 +540,7 @@ export function FloatingAI({ autoOpen = false, conversationId }: FloatingAIProps
           background: var(--cream);
           border-radius: 28px;
           overflow: hidden;
-          border: 1px solid rgba(14,149,128,0.14);
+          border: 1px solid rgba(12,107,87,0.14);
           box-shadow:
             0 0 0 1px rgba(255,255,255,0.7) inset,
             0 2px 4px rgba(0,0,0,0.04),
@@ -570,7 +570,7 @@ export function FloatingAI({ autoOpen = false, conversationId }: FloatingAIProps
           position: absolute;
           top: -40px; right: -40px;
           width: 160px; height: 160px;
-          background: radial-gradient(circle, rgba(200,169,110,0.18) 0%, transparent 65%);
+          background: radial-gradient(circle, rgba(12,107,87,0.18) 0%, transparent 65%);
           pointer-events: none;
           z-index: 0;
         }
@@ -579,7 +579,7 @@ export function FloatingAI({ autoOpen = false, conversationId }: FloatingAIProps
           position: absolute;
           bottom: -28px; left: -20px;
           width: 120px; height: 120px;
-          background: radial-gradient(circle, rgba(212,168,83,0.1) 0%, transparent 65%);
+          background: radial-gradient(circle, rgba(224,145,58,0.1) 0%, transparent 65%);
           pointer-events: none;
           z-index: 0;
           border-radius: 50%;
@@ -604,7 +604,7 @@ export function FloatingAI({ autoOpen = false, conversationId }: FloatingAIProps
           border-radius: 16px;
           display: flex; align-items: center; justify-content: center;
           border: 1.5px solid rgba(255,255,255,0.15);
-          box-shadow: 0 4px 12px rgba(0,0,0,0.2), 0 0 0 3px rgba(77,207,186,0.15);
+          box-shadow: 0 4px 12px rgba(0,0,0,0.2), 0 0 0 3px rgba(12,107,87,0.15);
         }
 
         .ss-status {
@@ -743,7 +743,7 @@ export function FloatingAI({ autoOpen = false, conversationId }: FloatingAIProps
 
         .ss-bubble-bot {
           background: #ffffff;
-          border: 1px solid rgba(200,169,110,0.12);
+          border: 1px solid rgba(12,107,87,0.12);
           color: var(--text-dark);
           padding: 11px 15px;
           border-radius: 4px 18px 18px 18px;
@@ -787,7 +787,7 @@ export function FloatingAI({ autoOpen = false, conversationId }: FloatingAIProps
 
         .ss-hospital-card {
           background: white;
-          border: 1.5px solid rgba(200,169,110,0.35);
+          border: 1.5px solid rgba(12,107,87,0.35);
           border-radius: 12px;
           padding: 12px;
           margin: 8px 0;
@@ -798,7 +798,7 @@ export function FloatingAI({ autoOpen = false, conversationId }: FloatingAIProps
         }
 
         .ss-hospital-card:hover {
-          border-color: rgba(200,169,110,0.7);
+          border-color: rgba(12,107,87,0.7);
           transform: translateY(-2px);
           box-shadow: 0 8px 24px var(--shadow-teal);
         }
@@ -840,8 +840,8 @@ export function FloatingAI({ autoOpen = false, conversationId }: FloatingAIProps
           font-size: 10px;
           font-weight: 600;
           color: var(--gold);
-          background: rgba(212,168,83,0.1);
-          border: 1px solid rgba(212,168,83,0.3);
+          background: rgba(224,145,58,0.1);
+          border: 1px solid rgba(224,145,58,0.3);
           border-radius: 16px;
           padding: 2px 8px;
           display: inline-block;
@@ -851,7 +851,7 @@ export function FloatingAI({ autoOpen = false, conversationId }: FloatingAIProps
           display: flex; align-items: center; gap: 5px;
           padding: 12px 15px;
           background: #ffffff;
-          border: 1px solid rgba(200,169,110,0.12);
+          border: 1px solid rgba(12,107,87,0.12);
           border-radius: 4px 18px 18px 18px;
           width: fit-content;
           box-shadow: 0 2px 8px rgba(0,0,0,0.04);
@@ -896,7 +896,7 @@ export function FloatingAI({ autoOpen = false, conversationId }: FloatingAIProps
         .ss-input-field::placeholder { color: var(--text-soft); }
         .ss-input-field:focus {
           border-color: var(--teal-300);
-          box-shadow: 0 0 0 3px rgba(14,149,128,0.1);
+          box-shadow: 0 0 0 3px rgba(12,107,87,0.1);
         }
 
         .ss-send {
@@ -934,7 +934,7 @@ export function FloatingAI({ autoOpen = false, conversationId }: FloatingAIProps
         }
         .ss-fab:hover {
           transform: scale(1.1) translateY(-2px);
-          box-shadow: 0 8px 28px var(--shadow-teal), 0 0 0 8px rgba(200,169,110,0.1);
+          box-shadow: 0 8px 28px var(--shadow-teal), 0 0 0 8px rgba(12,107,87,0.1);
         }
         .ss-fab:active { transform: scale(0.95); }
 
@@ -943,7 +943,7 @@ export function FloatingAI({ autoOpen = false, conversationId }: FloatingAIProps
           position: absolute;
           inset: -5px;
           border-radius: 50%;
-          border: 1.5px solid rgba(200,169,110,0.25);
+          border: 1.5px solid rgba(12,107,87,0.25);
           animation: ssHalo 3s ease-in-out infinite;
         }
         @keyframes ssHalo {
@@ -1132,7 +1132,7 @@ export function FloatingAI({ autoOpen = false, conversationId }: FloatingAIProps
               {/* Symptom Input */}
               {bookingStep === "symptoms" && (
                 <div className="ss-row-bot" style={{ width: "100%" }}>
-                  <div style={{ width: "100%", background: "rgba(200,169,110,0.06)", borderRadius: "12px", padding: "10px", border: "1px solid rgba(200,169,110,0.2)" }}>
+                  <div style={{ width: "100%", background: "rgba(12,107,87,0.06)", borderRadius: "12px", padding: "10px", border: "1px solid rgba(12,107,87,0.2)" }}>
                     <textarea
                       placeholder="Describe your symptoms in detail (e.g., 'I have severe headache with fever for 3 days')"
                       value={problemDescription}
@@ -1141,13 +1141,13 @@ export function FloatingAI({ autoOpen = false, conversationId }: FloatingAIProps
                         width: "100%",
                         padding: "8px 10px",
                         fontSize: "12px",
-                        border: "1px solid rgba(200,169,110,0.2)",
+                        border: "1px solid rgba(12,107,87,0.2)",
                         borderRadius: "6px",
                         fontFamily: "Plus Jakarta Sans, sans-serif",
                         outline: "none",
                         minHeight: "80px",
                         resize: "vertical",
-                        color: "#0f1e38",
+                        color: "#14211D",
                       }}
                     />
                     <button
@@ -1159,8 +1159,8 @@ export function FloatingAI({ autoOpen = false, conversationId }: FloatingAIProps
                         padding: "8px",
                         fontSize: "12px",
                         fontWeight: "600",
-                        background: isLoading || !problemDescription.trim() ? "rgba(200,169,110,0.3)" : "linear-gradient(135deg, #e8d5b0 0%, #c8a96e 50%, #a88b50 100%)",
-                        color: isLoading || !problemDescription.trim() ? "#94a3b8" : "#0f1e38",
+                        background: isLoading || !problemDescription.trim() ? "rgba(12,107,87,0.3)" : "#0C6B57",
+                        color: isLoading || !problemDescription.trim() ? "#94a3b8" : "#fff",
                         border: "none",
                         borderRadius: "6px",
                         cursor: isLoading || !problemDescription.trim() ? "not-allowed" : "pointer",
