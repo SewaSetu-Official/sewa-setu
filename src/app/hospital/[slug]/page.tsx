@@ -1,10 +1,12 @@
-import { ArrowLeft, MapPin, Star, Building2, Stethoscope, Beaker } from "lucide-react";
+import { ChevronLeft, MapPin, Star, Building2, Stethoscope, Beaker, CheckCircle2, Siren, Banknote, ArrowRight } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { notFound } from "next/navigation";
 import { HospitalDetailClient } from "./HospitalDetailClient";
+import { HospitalHeroActions } from "./hospital-hero-actions";
 import { Navbar } from "@/components/navbar";
 import { getHospitalBySlug } from "@/lib/get-hospital";
+import { formatMoneyCents } from "@/lib/money";
 
 interface PageProps {
   params: Promise<{ slug: string }>;
@@ -25,81 +27,104 @@ export default async function HospitalDetails({ params }: PageProps) {
     features: s.features?.length ? s.features : s.description ? [s.description] : [],
   }));
 
+  const currency = packages[0]?.currency ?? hospital.doctors[0]?.currency ?? "EUR";
+  const prices = [
+    ...packages.map((p) => p.price),
+    ...hospital.doctors.map((d) => d.feeMin),
+  ].filter((n): n is number => typeof n === "number" && n > 0);
+  const startingFrom = prices.length ? formatMoneyCents(Math.min(...prices), currency) : null;
+
+  const TypeIcon = hospital.type === "CLINIC" ? Stethoscope : hospital.type === "LAB" ? Beaker : Building2;
+
+  const stats: { value: string; label: string; Icon: typeof Banknote; bg: string; fg: string }[] = [
+    ...(startingFrom ? [{ value: startingFrom, label: "Starting from", Icon: Banknote, bg: "#E6F0EC", fg: "#0C6B57" }] : []),
+    { value: String(hospital.doctors.length), label: "Doctors", Icon: Stethoscope, bg: "#FAEBD9", fg: "#C0763A" },
+    { value: String(hospital.departments?.length ?? 0), label: "Departments", Icon: Building2, bg: "#F0E9F4", fg: "#7A3E8E" },
+    { value: hospital.location.city, label: "Location", Icon: MapPin, bg: "#E6EEF4", fg: "#3F6B8C" },
+  ];
+
   return (
-    <>
+    <main className="min-h-screen bg-page">
       <Navbar />
-      <main style={{ minHeight: "100vh", background: "#f7f4ef", padding: "calc(80px + 1.25rem) 0 3rem" }}>
-        <div className="px-4 sm:px-8 lg:px-[10%]">
-          <div className="bg-white rounded-[2rem] overflow-hidden shadow-xl shadow-slate-200/50 border border-slate-100" style={{ marginBottom: "2rem" }}>
-            {/* Hero */}
-            <div className="relative h-80 sm:h-96 lg:h-[450px] w-full">
-              <Image
-                src={hospital.image ?? "/SewaSetu-Logo.webp"}
-                alt={hospital.name}
-                fill
-                className="object-cover"
-                priority
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent" />
+      <div className="mx-auto max-w-[1160px] px-5 pt-[88px] pb-2 sm:px-9">
 
-              {/* Back button */}
-              <div className="absolute top-4 left-6">
-                <Link
-                  href="/search"
-                  className="inline-flex items-center gap-2 text-sm font-medium px-4 py-2 rounded-lg transition-all bg-black/25 backdrop-blur-md text-white border border-white/30 hover:border-gold hover:text-white"
-                >
-                  <ArrowLeft className="h-3.5 w-3.5" />
-                  Back To Hospitals
-                </Link>
-              </div>
+        {/* back */}
+        <Link href="/search" className="mb-4 inline-flex items-center gap-2 text-[13.5px] font-semibold text-ink-soft transition-colors hover:text-brand">
+          <ChevronLeft className="h-4 w-4" /> Back to hospitals
+        </Link>
 
-              <div className="absolute bottom-0 left-0 w-full p-6 sm:p-8 text-white">
-                {/* Type Badge */}
-                <div className="mb-3 flex items-center gap-2">
-                  {hospital.type === "HOSPITAL" && <Building2 className="h-5 w-5" />}
-                  {hospital.type === "CLINIC" && <Stethoscope className="h-5 w-5" />}
-                  {hospital.type === "LAB" && <Beaker className="h-5 w-5" />}
-                  <span className="px-3 py-1 rounded-full text-xs font-bold bg-white/30 backdrop-blur">
-                    {hospital.type}
+        {/* ── HERO ── */}
+        <div className="relative h-[300px] overflow-hidden rounded-[26px] shadow-[0_30px_70px_-36px_rgba(12,107,87,0.7)] sm:h-[360px]" style={{ background: "linear-gradient(140deg,#1C7A64,#0C6B57 55%,#0a5848)" }}>
+          {hospital.image && (
+            <Image unoptimized src={hospital.image} alt={hospital.name} fill priority className="object-cover" />
+          )}
+          <div className="absolute inset-0" style={{ background: "linear-gradient(to top,rgba(8,42,34,.78),transparent 62%)" }} />
+          {!hospital.image && <TypeIcon className="absolute -bottom-12 right-2 h-72 w-72 text-white/10" strokeWidth={1.4} />}
+
+          {/* badges */}
+          <div className="absolute left-6 top-5 flex flex-wrap gap-2.5">
+            <span className="flex items-center gap-1.5 rounded-full bg-white/95 px-3 py-1.5 text-xs font-bold text-brand">
+              <span className="h-[7px] w-[7px] rounded-[2px] bg-brand" />
+              {hospital.type.charAt(0) + hospital.type.slice(1).toLowerCase()}
+            </span>
+            {hospital.verified && (
+              <span className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold text-white" style={{ background: "rgba(63,164,131,.95)" }}>
+                <CheckCircle2 className="h-3.5 w-3.5" /> Verified
+              </span>
+            )}
+            {hospital.emergencyAvailable && (
+              <span className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold text-white" style={{ background: "rgba(192,85,107,.95)" }}>
+                <Siren className="h-3.5 w-3.5" /> Emergency 24/7
+              </span>
+            )}
+          </div>
+
+          {/* title block */}
+          <div className="absolute inset-x-6 bottom-9 flex items-end justify-between gap-5">
+            <div className="min-w-0">
+              <h1 className="font-display text-[30px] font-bold leading-[1.05] tracking-[-0.025em] text-white sm:text-[38px]">{hospital.name}</h1>
+              <div className="mt-2.5 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-sm font-medium text-[#D6E5DE]">
+                <span className="flex items-center gap-1.5">
+                  <MapPin className="h-[15px] w-[15px]" />
+                  {[hospital.location.area, hospital.location.city].filter(Boolean).join(", ")}
+                </span>
+                {hospital.rating > 0 && (
+                  <span className="flex items-center gap-1.5">
+                    <Star className="h-[15px] w-[15px] fill-[#FFC368] text-[#FFC368]" />
+                    <strong className="font-bold text-white">{hospital.rating.toFixed(1)}</strong>
+                    <span>· {hospital.reviewCount.toLocaleString()} reviews</span>
                   </span>
-                </div>
-
-                {/* Tags */}
-                <div className="flex flex-wrap gap-2 mb-4">
-                  {hospital.tags?.slice(0, 4).map((tag, i) => (
-                    <span
-                      key={tag}
-                      className={`px-3 py-1 rounded-full text-xs font-semibold text-navy ${
-                        i === 0 ? "bg-gold" : "bg-gold/70"
-                      }`}
-                    >
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-
-                <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-3 tracking-tight text-white drop-shadow-lg" style={{ textShadow: "0 4px 6px rgba(0,0,0,0.7)" }}>
-                  {hospital.name}
-                </h1>
-
-                <div className="flex flex-wrap items-center gap-4 text-sm sm:text-base font-medium text-slate-200">
-                  <div className="flex items-center gap-1">
-                    <MapPin className="h-4 w-4" />
-                    <span>{hospital.location.area}, {hospital.location.city}</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <Star className="h-4 w-4 text-orange-400 fill-orange-400" />
-                    <span className="text-white">{hospital.rating.toFixed(1)}</span>
-                    <span className="text-slate-300 font-normal">({hospital.reviewCount}+ reviews)</span>
-                  </div>
-                </div>
+                )}
               </div>
             </div>
-
-            <HospitalDetailClient hospital={hospital} packages={packages} />
+            <HospitalHeroActions />
           </div>
         </div>
-      </main>
-    </>
+
+        {/* ── QUICK STATS BAR ── */}
+        <div className="relative z-[2] mx-auto -mt-[30px] flex max-w-[calc(100%-24px)] flex-wrap items-center gap-4 rounded-[18px] border border-[rgba(20,33,29,0.07)] bg-white px-5 py-4 shadow-[0_22px_50px_-30px_rgba(20,33,29,0.5)]">
+          {stats.map((s) => {
+            const Icon = s.Icon;
+            return (
+              <div key={s.label} className="flex min-w-[140px] flex-1 items-center gap-3">
+                <span className="flex h-[42px] w-[42px] shrink-0 items-center justify-center rounded-[12px]" style={{ background: s.bg, color: s.fg }}>
+                  <Icon className="h-5 w-5" />
+                </span>
+                <div>
+                  <div className="font-display text-[19px] font-bold leading-none tracking-[-0.01em] text-ink">{s.value}</div>
+                  <div className="mt-1 text-[11.5px] font-semibold text-ink-muted">{s.label}</div>
+                </div>
+              </div>
+            );
+          })}
+          <a href="#services-section" className="flex items-center gap-2 whitespace-nowrap rounded-[12px] bg-brand px-5 py-3 text-[14.5px] font-semibold text-white shadow-[0_12px_24px_-12px_rgba(12,107,87,0.8)] transition-colors hover:bg-brand-dark">
+            Book appointment
+            <ArrowRight className="h-[15px] w-[15px]" />
+          </a>
+        </div>
+      </div>
+
+      <HospitalDetailClient hospital={hospital} packages={packages} />
+    </main>
   );
 }

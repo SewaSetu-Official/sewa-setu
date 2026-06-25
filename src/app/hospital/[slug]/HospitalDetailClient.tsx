@@ -45,48 +45,48 @@ export function HospitalDetailClient({ hospital, packages }: Props) {
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@500;600;700&display=swap');
 
         .hdc-root {
-          --navy:         #0f1e38;
-          --navy-mid:     #1a3059;
-          --navy-soft:    #243f6b;
-          --navy-ghost:   rgba(15,30,56,.06);
-          --gold:         #c8a96e;
-          --gold-lt:      #dfc08a;
-          --gold-dim:     #a88b50;
-          --gold-pale:    rgba(200,169,110,.10);
-          --gold-border:  rgba(200,169,110,.28);
-          --cream:        #f7f4ef;
+          --navy:         #0C6B57;
+          --navy-mid:     #0A5446;
+          --navy-soft:    #0A5446;
+          --navy-ghost:   rgba(20,33,29,.06);
+          --gold:         #E0913A;
+          --gold-lt:      #EBB36B;
+          --gold-dim:     #B8731F;
+          --gold-pale:    rgba(224,145,58,.10);
+          --gold-border:  rgba(224,145,58,.28);
+          --cream:        #F6F4EE;
           --white:        #ffffff;
-          --ink:          #0f1e38;
-          --ink-mid:      #3d506e;
-          --ink-soft:     #6b7a96;
-          --ink-ghost:    #9aaac0;
-          --border:       rgba(15,30,56,.09);
-          --sh-sm:        0 2px 10px rgba(15,30,56,.06);
-          --sh-md:        0 6px 28px rgba(15,30,56,.10);
-          --sh-lg:        0 20px 64px rgba(15,30,56,.16);
+          --ink:          #14211D;
+          --ink-mid:      #46524D;
+          --ink-soft:     #7B857F;
+          --ink-ghost:    #9AA39E;
+          --border:       rgba(20,33,29,.09);
+          --sh-sm:        0 2px 10px rgba(20,33,29,.06);
+          --sh-md:        0 6px 28px rgba(20,33,29,.10);
+          --sh-lg:        0 20px 64px rgba(20,33,29,.16);
           --r:            20px;
           --r-sm:         12px;
           --r-xs:         8px;
-          --page-max:     1280px;
+          --page-max:     1160px;
           --page-pad:     clamp(1rem, 4vw, 3rem);
 
           font-family: 'Inter', sans-serif;
           color: var(--ink);
-          background: var(--cream);
+          background: transparent;
           -webkit-font-smoothing: antialiased;
 
-          min-height: 100vh;
+          min-height: auto;
           width: 100%;
           display: flex;
           flex-direction: column;
         }
 
         .hdc-root::before {
-          content: '';
+          content: none;
           position: fixed; inset: 0;
           background:
-            radial-gradient(ellipse 70% 45% at 15% 8%, rgba(200,169,110,.05) 0%, transparent 55%),
-            radial-gradient(ellipse 55% 35% at 85% 92%, rgba(15,30,56,.04) 0%, transparent 55%);
+            radial-gradient(ellipse 70% 45% at 15% 8%, rgba(224,145,58,.05) 0%, transparent 55%),
+            radial-gradient(ellipse 55% 35% at 85% 92%, rgba(20,33,29,.04) 0%, transparent 55%);
           pointer-events: none; z-index: 0;
         }
 
@@ -104,7 +104,7 @@ export function HospitalDetailClient({ hospital, packages }: Props) {
           display: flex;
           flex-direction: column;
           width: 100%;
-          box-shadow: var(--sh-lg);
+          box-shadow: none;
         }
 
         /* AI Recommendation Badge */
@@ -112,7 +112,7 @@ export function HospitalDetailClient({ hospital, packages }: Props) {
           display: inline-flex;
           align-items: center;
           gap: 6px;
-          background: linear-gradient(135deg, rgba(200,169,110,0.15), rgba(15,30,56,0.05));
+          background: linear-gradient(135deg, rgba(224,145,58,0.15), rgba(20,33,29,0.05));
           border: 1px solid var(--gold-border);
           border-radius: 100px;
           padding: 8px 16px;
@@ -176,17 +176,17 @@ export function HospitalDetailClient({ hospital, packages }: Props) {
         }
         .hdc-g1 {
           width:320px; height:320px; top:-150px; right:80px;
-          background: radial-gradient(circle, rgba(200,169,110,.17) 0%, transparent 65%);
+          background: radial-gradient(circle, rgba(224,145,58,.17) 0%, transparent 65%);
         }
         .hdc-g2 {
           width:160px; height:160px; bottom:-90px; left:12%;
-          background: radial-gradient(circle, rgba(200,169,110,.09) 0%, transparent 65%);
+          background: radial-gradient(circle, rgba(224,145,58,.09) 0%, transparent 65%);
         }
         .hdc-cta-rule {
           position: absolute; top:0; left:0; right:0; height:1px;
           background: linear-gradient(90deg,
-            transparent 0%, rgba(200,169,110,.7) 35%,
-            rgba(200,169,110,.7) 65%, transparent 100%);
+            transparent 0%, rgba(224,145,58,.7) 35%,
+            rgba(224,145,58,.7) 65%, transparent 100%);
         }
         .hdc-cta-id {
           display:flex; flex-direction:column; gap:.3rem;
@@ -221,47 +221,47 @@ export function HospitalDetailClient({ hospital, packages }: Props) {
           background: linear-gradient(135deg, var(--gold) 0%, var(--gold-dim) 100%) !important;
           color: var(--navy) !important;
           border: none !important;
-          box-shadow: 0 4px 16px rgba(200,169,110,.40), 0 1px 2px rgba(0,0,0,.18) !important;
+          box-shadow: 0 4px 16px rgba(224,145,58,.40), 0 1px 2px rgba(0,0,0,.18) !important;
         }
         .hdc-cta button:first-of-type:hover {
           background: linear-gradient(135deg, var(--gold-lt) 0%, var(--gold) 100%) !important;
-          box-shadow: 0 6px 24px rgba(200,169,110,.52) !important;
+          box-shadow: 0 6px 24px rgba(224,145,58,.52) !important;
           transform: translateY(-1px) !important;
         }
         .hdc-cta button:last-of-type {
-          background: rgba(200,169,110,.08) !important;
+          background: rgba(224,145,58,.08) !important;
           color: var(--gold-lt) !important;
           border: 1px solid var(--gold-border) !important;
           box-shadow: none !important;
         }
         .hdc-cta button:last-of-type:hover {
-          background: rgba(200,169,110,.16) !important;
-          border-color: rgba(200,169,110,.55) !important;
+          background: rgba(224,145,58,.16) !important;
+          border-color: rgba(224,145,58,.55) !important;
           transform: translateY(-1px) !important;
         }
 
         .hdc-body {
           flex: 1;
           position: relative;
-          background: var(--white);
+          background: transparent;
         }
         .hdc-body::before {
-          content:''; position:absolute;
+          content:none; position:absolute;
           top:0; left:0; bottom:0; width:3px;
-          background: linear-gradient(180deg, var(--gold) 0%, rgba(200,169,110,.18) 55%, transparent 100%);
+          background: linear-gradient(180deg, var(--gold) 0%, rgba(224,145,58,.18) 55%, transparent 100%);
           pointer-events:none; z-index:1;
         }
         .hdc-body::after {
-          content:''; position:absolute;
+          content:none; position:absolute;
           top:0; left:0; right:0; height:52px;
-          background: linear-gradient(180deg, rgba(15,30,56,.025) 0%, transparent 100%);
+          background: linear-gradient(180deg, rgba(20,33,29,.025) 0%, transparent 100%);
           pointer-events:none;
         }
         .hdc-body-inner {
           position: relative; z-index: 1;
           max-width: var(--page-max);
           margin: 0 auto;
-          padding: 2.5rem var(--page-pad) 4rem;
+          padding: 1.25rem var(--page-pad) 4rem;
           width: 100%;
         }
 
@@ -271,11 +271,11 @@ export function HospitalDetailClient({ hospital, packages }: Props) {
         }
         .hdc-div-l {
           flex:1; height:1px;
-          background:linear-gradient(90deg, rgba(200,169,110,.4) 0%, transparent 100%);
+          background:linear-gradient(90deg, rgba(224,145,58,.4) 0%, transparent 100%);
         }
         .hdc-div-r {
           flex:1; height:1px;
-          background:linear-gradient(90deg, transparent 0%, rgba(200,169,110,.4) 100%);
+          background:linear-gradient(90deg, transparent 0%, rgba(224,145,58,.4) 100%);
         }
         .hdc-div-mid {
           display:flex; flex-direction:column; align-items:center; gap:.3rem;
