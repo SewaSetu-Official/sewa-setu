@@ -13,6 +13,7 @@ export type ApiHospital = {
   fromPrice: number | null;
   currency: string;
   emergencyAvailable?: boolean;
+  verified?: boolean;
 };
 
 export type ApiDoctor = {
@@ -30,6 +31,10 @@ export type ApiDoctor = {
   currency: string | null;
   verified: boolean;
   image: string | null;
+
+  // Doctor-level review aggregates (present on hospital-detail doctor lists).
+  rating?: number;
+  reviewCount?: number;
 
   specialties: {
     id: string;

@@ -68,10 +68,27 @@ export async function getHospitalBySlug(slug: string): Promise<ApiHospitalDetail
     _count: { rating: true },
   });
 
+  // Per-doctor review aggregates for the doctors shown on this hospital page.
+  const doctorIds = hospital.doctors.map((dh) => dh.doctor.id);
+  const doctorReviewAggs = doctorIds.length > 0
+    ? await db.review.groupBy({
+        by: ["doctorId"],
+        where: { doctorId: { in: doctorIds } },
+        _avg: { rating: true },
+        _count: { rating: true },
+      })
+    : [];
+  const doctorReviewMap = Object.fromEntries(
+    doctorReviewAggs.map((a) => [a.doctorId, a])
+  );
+
   const doctors = hospital.doctors.map((dh) => {
     const d = dh.doctor;
+    const dAgg = doctorReviewMap[d.id];
     return {
       id: d.id,
+      rating: dAgg?._avg.rating ? Math.round(dAgg._avg.rating * 10) / 10 : 0,
+      reviewCount: dAgg?._count.rating ?? 0,
       fullName: d.fullName,
       gender: d.gender ?? null,
       experienceYears: d.experienceYears ?? null,

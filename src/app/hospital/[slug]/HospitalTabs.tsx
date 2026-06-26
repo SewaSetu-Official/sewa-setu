@@ -42,12 +42,6 @@ function initialsOf(name: string): string {
 function withDr(name: string) {
   return /^(dr\.?|prof\.?)/i.test(name.trim()) ? name : `Dr. ${name}`;
 }
-// MOCK rating — no doctor-level ratings backend yet. Stable per doctor (4.4–5.0), wired in a later pass.
-function mockRating(id: string): string {
-  let h = 0;
-  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0;
-  return (4.4 + (h % 7) * 0.1).toFixed(1);
-}
 function feeText(cents?: number | null, currency?: string | null) {
   return cents == null ? null : formatMoneyCents(cents, currency ?? "EUR");
 }
@@ -178,12 +172,16 @@ export function HospitalTabs({ hospital, packages, initialDepartmentId, hospital
           </div>
           <div className="mt-0.5 text-[12.5px] font-semibold text-brand">{spec}</div>
           <div className="mt-1 text-[12px] text-ink-muted">{[edu, d.experienceYears != null ? `${d.experienceYears} yrs` : null].filter(Boolean).join(" · ")}</div>
-          {/* rating is MOCK — doctor-level ratings backend not built yet */}
           <div className="mt-2.5 flex items-center gap-1.5 text-[12.5px] text-ink-soft">
-            <span className="flex items-center gap-1">
-              <Star className="h-[13px] w-[13px]" style={{ fill: "#E0913A", color: "#E0913A", strokeWidth: 0 }} />
-              {mockRating(d.id)}
-            </span>
+            {(d.reviewCount ?? 0) > 0 ? (
+              <span className="flex items-center gap-1">
+                <Star className="h-[13px] w-[13px]" style={{ fill: "#E0913A", color: "#E0913A", strokeWidth: 0 }} />
+                {d.rating?.toFixed(1)}
+                <span className="text-[#9AA39E]">({d.reviewCount})</span>
+              </span>
+            ) : (
+              <span className="text-[#9AA39E]">New</span>
+            )}
             {fee && (
               <>
                 <span className="text-[#D8D2C6]">·</span>

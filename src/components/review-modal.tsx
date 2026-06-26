@@ -10,8 +10,10 @@ interface ReviewResult {
 }
 
 interface Props {
-  hospitalId: string;
-  hospitalName: string;
+  hospitalId?: string;     // hospital review target …
+  doctorId?: string;       // … or doctor review target (one of the two)
+  hospitalName?: string;
+  doctorName?: string;
   reviewId?: string;       // set → edit mode
   initialRating?: number;
   initialComment?: string;
@@ -28,11 +30,12 @@ const LABELS: Record<number, { text: string; color: string }> = {
 };
 
 export function ReviewModal({
-  hospitalId, hospitalName,
+  hospitalId, doctorId, hospitalName, doctorName,
   reviewId, initialRating = 0, initialComment = "",
   onClose, onSuccess,
 }: Props) {
   const isEdit = Boolean(reviewId);
+  const targetName = doctorName || hospitalName || "";
 
   const [rating, setRating]   = useState(initialRating);
   const [hovered, setHovered] = useState(0);
@@ -57,7 +60,7 @@ export function ReviewModal({
         : await fetch("/api/reviews", {
             method:  "POST",
             headers: { "Content-Type": "application/json" },
-            body:    JSON.stringify({ hospitalId, rating, comment }),
+            body:    JSON.stringify(doctorId ? { doctorId, rating, comment } : { hospitalId, rating, comment }),
           });
 
       const data = await res.json();
@@ -96,7 +99,7 @@ export function ReviewModal({
             <p className="text-sm text-ink-soft leading-relaxed max-w-[260px]">
               {isEdit
                 ? "Your review has been updated."
-                : <>Your review for <span className="font-semibold text-ink">{hospitalName}</span> helps families make better decisions.</>
+                : <>Your review for <span className="font-semibold text-ink">{targetName}</span> helps families make better decisions.</>
               }
             </p>
             <div className="flex gap-1 mt-5">
@@ -116,7 +119,7 @@ export function ReviewModal({
                 <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#C0763A]">
                   {isEdit ? "Edit review" : "Leave a review"}
                 </p>
-                <p className="text-sm font-bold text-ink mt-0.5 leading-tight line-clamp-1">{hospitalName}</p>
+                <p className="text-sm font-bold text-ink mt-0.5 leading-tight line-clamp-1">{targetName}</p>
               </div>
               <button
                 onClick={onClose}

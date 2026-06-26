@@ -72,7 +72,9 @@ interface Review {
 }
 
 interface Props {
-  hospitalId: string;
+  hospitalId?: string;   // hospital reviews …
+  doctorId?: string;     // … or doctor reviews (pass one)
+  doctorName?: string;   // shown in the write/edit modal for doctor reviews
   initialAverage: number;
   initialCount: number;
 }
@@ -138,12 +140,16 @@ function sortReviews(list: Review[], sort: SortKey): Review[] {
   });
 }
 
-export function ReviewsSection({ hospitalId, initialAverage, initialCount }: Props) {
+export function ReviewsSection({ hospitalId, doctorId, doctorName, initialAverage, initialCount }: Props) {
   const { isSignedIn } = useAuth();
+  // A doctorId routes the whole section to doctor-level reviews; otherwise hospital.
+  const query = doctorId ? `doctorId=${doctorId}` : `hospitalId=${hospitalId}`;
   const [reviews, setReviews]             = useState<Review[]>([]);
   const [average, setAverage]             = useState(initialAverage);
   const [count,   setCount]               = useState(initialCount);
+  const [canReview, setCanReview]         = useState(false);
   const [loading, setLoading]             = useState(true);
+  const isDoctorTarget = Boolean(doctorId);
   const [showModal, setShowModal]         = useState(false);
   const [editingReview, setEditingReview] = useState<Review | null>(null);
   const [deletingId, setDeletingId]       = useState<string | null>(null);
@@ -152,15 +158,16 @@ export function ReviewsSection({ hospitalId, initialAverage, initialCount }: Pro
   const [visibleCount, setVisibleCount]   = useState(PAGE_SIZE);
 
   useEffect(() => {
-    fetch(`/api/reviews?hospitalId=${hospitalId}`)
+    fetch(`/api/reviews?${query}`)
       .then((r) => r.json())
-      .then((data: { reviews: Review[]; average: number | null; count: number }) => {
+      .then((data: { reviews: Review[]; average: number | null; count: number; canReview?: boolean }) => {
         setReviews(data.reviews ?? []);
         setAverage(data.average ?? 0);
         setCount(data.count ?? 0);
+        setCanReview(Boolean(data.canReview));
       })
       .finally(() => setLoading(false));
-  }, [hospitalId]);
+  }, [query]);
 
   const recalcAverage = (list: Review[]) =>
     list.length > 0
@@ -230,14 +237,16 @@ export function ReviewsSection({ hospitalId, initialAverage, initialCount }: Pro
             <p className="font-display text-[16px] font-bold text-ink">No reviews yet</p>
             <p className="mt-0.5 text-sm text-ink-muted">Reviews from verified patients appear here after their visit.</p>
           </div>
-          {isSignedIn && (
+          {canReview ? (
             <button
               onClick={openWrite}
               className="mt-1 flex items-center gap-1.5 rounded-[10px] bg-brand px-4 py-2 text-[13px] font-semibold text-white transition-colors hover:bg-brand-dark"
             >
               <PenLine size={13} /> Be the first to review
             </button>
-          )}
+          ) : isDoctorTarget && isSignedIn ? (
+            <p className="mt-1 text-[12.5px] text-ink-muted">You can review this doctor after a completed appointment.</p>
+          ) : null}
         </div>
 
       ) : (
@@ -281,14 +290,16 @@ export function ReviewsSection({ hospitalId, initialAverage, initialCount }: Pro
               <h2 className="font-display text-[20px] font-bold tracking-[-0.02em] text-ink">
                 Patient reviews <span className="text-[14px] font-semibold text-[#9AA39E]">({count})</span>
               </h2>
-              {isSignedIn && (
+              {canReview ? (
                 <button
                   onClick={openWrite}
                   className="flex shrink-0 items-center gap-1.5 rounded-[10px] bg-brand px-4 py-2 text-[13px] font-semibold text-white shadow-[0_10px_22px_-12px_rgba(12,107,87,0.8)] transition-colors hover:bg-brand-dark"
                 >
                   <PenLine size={14} /> Write a review
                 </button>
-              )}
+              ) : isDoctorTarget && isSignedIn ? (
+                <span className="shrink-0 text-[12px] text-ink-muted">Complete a visit to review</span>
+              ) : null}
             </div>
 
             {/* Sort segmented control */}
@@ -381,6 +392,8 @@ export function ReviewsSection({ hospitalId, initialAverage, initialCount }: Pro
       {showModal && (
         <ReviewModal
           hospitalId={hospitalId}
+          doctorId={doctorId}
+          doctorName={doctorName}
           hospitalName=""
           reviewId={editingReview?.id}
           initialRating={editingReview?.rating ?? 0}

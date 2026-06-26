@@ -97,7 +97,7 @@ export default async function HospitalDetails({ params }: PageProps) {
                 )}
               </div>
             </div>
-            <HospitalHeroActions />
+            <HospitalHeroActions hospitalId={hospital.id} />
           </div>
         </div>
 

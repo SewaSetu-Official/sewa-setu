@@ -7,10 +7,11 @@ import Link from "next/link";
 import {
   CheckCircle2, MapPin, Loader2, AlertCircle, Building2, Monitor, User,
   ChevronLeft, GraduationCap, Briefcase, Globe, Clock, Sparkles, ArrowRight, Heart,
-  Stethoscope, Share2, Star,
+  Stethoscope, Share2,
 } from "lucide-react";
 import { Navbar } from "@/components/navbar";
 import { AvailabilityModal } from "@/components/availability-modal";
+import { ReviewsSection } from "@/components/reviews-section";
 import { cleanEducation } from "@/components/doctor-card";
 import type { ApiAvailabilitySlot } from "@/types/hospital";
 import { formatMoneyCents } from "@/lib/money";
@@ -38,6 +39,8 @@ type DoctorData = {
   currency: string;
   verified: boolean;
   image: string | null;
+  reviewAverage: number;
+  reviewCount: number;
   specialties: { id: string; name: string; slug: string; isPrimary: boolean }[];
   hospitals: {
     id: string; slug: string; name: string;
@@ -59,25 +62,6 @@ function withDr(name: string) {
 
 const cardCls = "bg-white border border-[rgba(20,33,29,0.07)] rounded-[20px]";
 
-const AVATAR_GRAD = [
-  "linear-gradient(140deg,#1C7A64,#0C6B57)",
-  "linear-gradient(140deg,#CF6E83,#C0556B)",
-  "linear-gradient(140deg,#9356A6,#7A3E8E)",
-  "linear-gradient(140deg,#566B7A,#3C4742)",
-];
-
-// MOCK reviews — doctor-level reviews backend not built yet; wired in a later pass.
-const MOCK_REVIEW_AVG = 4.9;
-const MOCK_REVIEW_COUNT = 328;
-const MOCK_BREAKDOWN = [
-  { star: 5, pct: "88%" }, { star: 4, pct: "9%" }, { star: 3, pct: "2%" }, { star: 2, pct: "1%" }, { star: 1, pct: "0%" },
-];
-const MOCK_REVIEWS = [
-  { initials: "RM", name: "Rajesh Maharjan", time: "3 days ago", rating: 5, text: "Dr. Sharma explained my angiogram results in plain Nepali and never rushed. The angioplasty went smoothly and I was home in two days. Truly grateful." },
-  { initials: "SK", name: "Sita Karki", time: "2 weeks ago", rating: 5, text: "I came in with chest pain and high anxiety. She was calm, thorough, and ordered exactly the tests I needed — nothing extra. Honest and caring doctor." },
-  { initials: "PG", name: "Prabin Gauchan", time: "1 month ago", rating: 4, text: "Excellent cardiologist. Booking through SewaSetu meant no waiting in line. Consultation started right on time." },
-];
-
 export default function DoctorProfilePage() {
   const params = useParams();
   const id = params?.id as string;
@@ -89,7 +73,8 @@ export default function DoctorProfilePage() {
   const [mode, setMode] = useState<"PHYSICAL" | "ONLINE">("PHYSICAL");
   const [dateIdx, setDateIdx] = useState(0);
   const [time, setTime] = useState<string | null>(null);
-  const [saved, setSaved] = useState(false); // mocked — wired up in a later pass
+  const [saved, setSaved] = useState(false);
+  const [savePending, setSavePending] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -101,6 +86,36 @@ export default function DoctorProfilePage() {
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
   }, [id]);
+
+  // Hydrate the saved/favorite state for the signed-in user (false for anon).
+  useEffect(() => {
+    if (!id) return;
+    fetch(`/api/favorites?doctorId=${id}`)
+      .then((r) => r.json())
+      .then((d: { saved?: boolean }) => setSaved(Boolean(d.saved)))
+      .catch(() => {});
+  }, [id]);
+
+  const toggleSave = async () => {
+    if (savePending) return;
+    setSavePending(true);
+    const prev = saved;
+    setSaved(!prev); // optimistic
+    try {
+      const res = await fetch("/api/favorites", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ doctorId: id }),
+      });
+      if (!res.ok) { setSaved(prev); return; } // e.g. 401 not signed in → revert
+      const d = await res.json();
+      setSaved(Boolean(d.saved));
+    } catch {
+      setSaved(prev);
+    } finally {
+      setSavePending(false);
+    }
+  };
 
   const today = useMemo(() => { const d = new Date(); d.setHours(0, 0, 0, 0); return d; }, []);
 
@@ -220,14 +235,15 @@ export default function DoctorProfilePage() {
                     </div>
                   </div>
                 )}
-                {/* Save / Share — mocked for now, wired up in a later pass */}
+                {/* Save / Share — save persists to favorites for signed-in users */}
                 <div className="absolute right-[18px] top-8 flex gap-2.5">
                   <button
                     type="button"
                     aria-label={saved ? "Remove from saved" : "Save doctor"}
                     aria-pressed={saved}
-                    onClick={() => setSaved((s) => !s)}
-                    className="flex h-10 w-10 items-center justify-center rounded-[12px] bg-white/[0.16] backdrop-blur-sm transition-colors hover:bg-white/25"
+                    onClick={toggleSave}
+                    disabled={savePending}
+                    className="flex h-10 w-10 items-center justify-center rounded-[12px] bg-white/[0.16] backdrop-blur-sm transition-colors hover:bg-white/25 disabled:opacity-60"
                   >
                     <Heart className={`h-[18px] w-[18px] text-white ${saved ? "fill-white" : ""}`} />
                   </button>
@@ -327,67 +343,14 @@ export default function DoctorProfilePage() {
               </div>
             )}
 
-            {/* REVIEWS — MOCK data; doctor-level reviews backend not built yet, wired in a later pass */}
-            <div className={`${cardCls} mt-[18px] rounded-[22px] p-6 sm:p-7`}>
-              <div className="grid gap-8 lg:grid-cols-[230px_1fr] lg:items-start">
-                {/* score panel */}
-                <div className="text-center lg:border-r lg:border-[rgba(20,33,29,0.07)] lg:pr-6">
-                  <div className="font-display text-[52px] font-bold leading-none tracking-[-0.03em] text-ink">{MOCK_REVIEW_AVG.toFixed(1)}</div>
-                  <div className="mt-2 flex justify-center gap-0.5">
-                    {[1, 2, 3, 4, 5].map((s) => (
-                      <Star key={s} className="h-[17px] w-[17px]" style={{ fill: "#E0913A", color: "#E0913A", strokeWidth: 0 }} />
-                    ))}
-                  </div>
-                  <p className="mt-2 text-[13px] text-ink-muted">{MOCK_REVIEW_COUNT} patient reviews</p>
-                  <div className="mt-[18px] space-y-[7px]">
-                    {MOCK_BREAKDOWN.map((b) => (
-                      <div key={b.star} className="flex items-center gap-[9px]">
-                        <span className="w-2.5 text-[12px] text-ink-muted">{b.star}</span>
-                        <span className="h-[7px] flex-1 overflow-hidden rounded-full" style={{ background: "#EFEAE0" }}>
-                          <span className="block h-full rounded-full" style={{ width: b.pct, background: "#E0913A" }} />
-                        </span>
-                        <span className="w-[30px] text-right text-[11.5px] text-[#9AA39E]">{b.pct}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* list */}
-                <div className="min-w-0">
-                  <h2 className="font-display mb-4 text-[20px] font-bold tracking-[-0.02em] text-ink">Patient reviews</h2>
-                  <div className="flex flex-col gap-4">
-                    {MOCK_REVIEWS.map((r, i) => (
-                      <div key={r.name} className="border-b border-[rgba(20,33,29,0.06)] pb-4 last:border-b-0 last:pb-0">
-                        <div className="flex items-start gap-[11px]">
-                          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-[14px] font-bold text-white" style={{ background: AVATAR_GRAD[i % AVATAR_GRAD.length], fontFamily: "var(--font-bricolage), sans-serif" }}>
-                            {r.initials}
-                          </span>
-                          <div className="min-w-0 flex-1">
-                            <div className="flex items-center gap-2">
-                              <span className="text-[14px] font-bold text-ink">{r.name}</span>
-                              <span className="flex items-center gap-1 rounded-full bg-brand-soft px-[7px] py-0.5 text-[10.5px] font-bold text-brand">
-                                <CheckCircle2 className="h-3 w-3" /> Verified patient
-                              </span>
-                            </div>
-                            <div className="mt-[3px] flex items-center gap-2">
-                              <span className="flex gap-px">
-                                {Array.from({ length: r.rating }).map((_, j) => (
-                                  <Star key={j} className="h-3 w-3" style={{ fill: "#E0913A", color: "#E0913A", strokeWidth: 0 }} />
-                                ))}
-                              </span>
-                              <span className="text-[11.5px] text-[#9AA39E]">{r.time}</span>
-                            </div>
-                          </div>
-                        </div>
-                        <p className="mt-[11px] text-[13.5px] leading-[1.6] text-ink-soft">{r.text}</p>
-                      </div>
-                    ))}
-                  </div>
-                  <button className="mt-[18px] rounded-[11px] border border-[rgba(20,33,29,0.12)] bg-white px-5 py-2.5 text-[13.5px] font-bold text-ink transition-colors hover:bg-page">
-                    Show all {MOCK_REVIEW_COUNT} reviews
-                  </button>
-                </div>
-              </div>
+            {/* REVIEWS — real doctor-level reviews */}
+            <div className="mt-[18px]">
+              <ReviewsSection
+                doctorId={doctor.id}
+                doctorName={withDr(doctor.fullName)}
+                initialAverage={doctor.reviewAverage}
+                initialCount={doctor.reviewCount}
+              />
             </div>
           </div>
 

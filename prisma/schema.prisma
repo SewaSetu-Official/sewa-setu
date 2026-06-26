@@ -146,6 +146,7 @@ model User {
   patients                         Patient[]
   bookings                         Booking[]
   reviews                          Review[]
+  favorites                        Favorite[]
   doctorProfile                    Doctor?
   memberships                      HospitalMembership[]
   supportAssignments               SupportAssignment[]
@@ -175,6 +176,8 @@ model Patient {
   phone       String?
   disability  String?
   notes       String?
+
+  archivedAt DateTime? // soft-remove: hidden from the family list/picker but bookings are preserved
 
   locationId String?
   location   Location? @relation(fields: [locationId], references: [id], onDelete: SetNull)
@@ -288,6 +291,7 @@ model Hospital {
   media              HospitalMedia[]
   bookings           Booking[]
   reviews            Review[]
+  favorites          Favorite[]
   availabilitySlots  AvailabilitySlot[]
   memberships        HospitalMembership[]
   supportAssignments SupportAssignment[]
@@ -397,6 +401,8 @@ model Doctor {
   media        DoctorMedia[]
   bookings     Booking[]
   invites      DoctorInvite[]
+  reviews      Review[]
+  favorites    Favorite[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -639,7 +645,8 @@ model HospitalMedia {
 model Review {
   id         String  @id @default(cuid())
   userId     String
-  hospitalId String
+  hospitalId String? // nullable: a review may target a doctor instead of (or as well as) a hospital
+  doctorId   String? // set for doctor-level reviews; app layer enforces at least one of hospitalId/doctorId
   rating     Int
   comment    String?
 
@@ -647,14 +654,41 @@ model Review {
   hiddenById String? // userId of staff/admin who hid it
   hiddenAt   DateTime?
 
-  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  hospital Hospital @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  hospital Hospital? @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  doctor   Doctor?   @relation(fields: [doctorId], references: [id], onDelete: Cascade)
 
   createdAt DateTime @default(now())
 
   @@index([hospitalId])
+  @@index([doctorId])
   @@index([userId])
   @@index([hidden])
+}
+
+/**
+ * =========================
+ * FAVORITES (SAVED DOCTORS)
+ * =========================
+ */
+
+model Favorite {
+  id         String  @id @default(cuid())
+  userId     String
+  doctorId   String? // a favorite targets a doctor …
+  hospitalId String? // … or a hospital (app layer enforces exactly one)
+
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  doctor   Doctor?   @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  hospital Hospital? @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([userId, doctorId])
+  @@unique([userId, hospitalId])
+  @@index([userId])
+  @@index([doctorId])
+  @@index([hospitalId])
 }
 
 /**

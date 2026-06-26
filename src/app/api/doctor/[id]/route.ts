@@ -37,8 +37,16 @@ export async function GET(
 
   const primaryImage = doctor.media.find((m) => m.isPrimary)?.url ?? doctor.media[0]?.url ?? null;
 
+  const reviewAgg = await db.review.aggregate({
+    where: { doctorId: doctor.id },
+    _avg: { rating: true },
+    _count: { rating: true },
+  });
+
   return NextResponse.json({
     id: doctor.id,
+    reviewAverage: reviewAgg._avg.rating ? Math.round(reviewAgg._avg.rating * 10) / 10 : 0,
+    reviewCount: reviewAgg._count.rating,
     fullName: doctor.fullName,
     gender: doctor.gender,
     experienceYears: doctor.experienceYears,
