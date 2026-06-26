@@ -104,12 +104,13 @@ export async function provisionBooking(
             dateOfBirth,
           },
         });
-      } else if (meta.patientGender || meta.patientDisability) {
+      } else if (meta.patientGender || meta.patientDisability || patient.archivedAt) {
         patient = await tx.patient.update({
           where: { id: patient.id },
           data: {
             ...(meta.patientGender    && !patient.gender     && { gender:     meta.patientGender }),
             ...(meta.patientDisability && !patient.disability && { disability: meta.patientDisability }),
+            ...(patient.archivedAt && { archivedAt: null }), // booking for them again revives the profile
           },
         });
       }

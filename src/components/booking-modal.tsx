@@ -8,6 +8,7 @@ import { X, ChevronLeft, ChevronRight, Package, Lock, AlertCircle } from "lucide
 import { AnimatePresence, motion } from "framer-motion";
 import type { UiPackage } from "@/types/package";
 import { formatMoneyCents } from "@/lib/money";
+import { FamilyMemberPicker } from "@/components/family-member-picker";
 
 interface BookingModalProps {
   isOpen: boolean;
@@ -92,6 +93,7 @@ function BookingModalDialog({ onClose, hospitalName, hospitalId, selectedPackage
   const [isLoading, setIsLoading] = useState(false);
   const [touched, setTouched] = useState<Record<string, boolean>>({});
   const [formData, setFormData] = useState(() => createInitialFormData(signedInEmail));
+  const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null);
   const [pageStart, setPageStart] = useState<Date>(() => {
     const d = new Date();
     d.setHours(0,0,0,0);
@@ -502,6 +504,15 @@ function BookingModalDialog({ onClose, hospitalName, hospitalId, selectedPackage
 
                     <div style={{ display: "flex", flexDirection: "column", gap: 18, maxWidth: 520 }}>
 
+                      {/* Quick-pick a saved family member to prefill the form */}
+                      <FamilyMemberPicker
+                        activeId={selectedMemberId}
+                        onSelect={(m, pre) => {
+                          setSelectedMemberId(m.id);
+                          setFormData(p => ({ ...p, patientName: pre.fullName, patientAge: pre.age, patientPhone: pre.phone, patientGender: pre.gender }));
+                        }}
+                      />
+
                       {/* Full Name */}
                       <div>
                         <label htmlFor="bm-name" style={{ display: "block", fontSize: "0.75rem", fontWeight: 600, color: "#46524D", marginBottom: 6 }}>
@@ -510,7 +521,7 @@ function BookingModalDialog({ onClose, hospitalName, hospitalId, selectedPackage
                         <Input
                           id="bm-name"
                           value={formData.patientName}
-                          onChange={(e) => setFormData(p => ({ ...p, patientName: e.target.value }))}
+                          onChange={(e) => { setSelectedMemberId(null); setFormData(p => ({ ...p, patientName: e.target.value })); }}
                           onBlur={() => handleBlur("patientName")}
                           placeholder="Your full name"
                           required

@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 
 import type { ApiDoctor, ApiAvailabilitySlot } from "@/types/hospital";
 import { formatMoneyCents } from "@/lib/money";
+import { FamilyMemberPicker } from "@/components/family-member-picker";
 import {
   buildRollingOccurrences,
   formatDate,
@@ -92,6 +93,7 @@ function AvailabilityModalDialog({
   const [bookedSet, setBookedSet] = useState<Set<string>>(new Set());
   const [yourSet, setYourSet] = useState<Set<string>>(new Set());
   const [formData, setFormData] = useState(createInitialFormData);
+  const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null);
   const [pageStart, setPageStart] = useState<Date>(() => {
     const d = new Date();
     d.setHours(0, 0, 0, 0);
@@ -366,13 +368,20 @@ function AvailabilityModalDialog({
                 </h3>
 
                 <div style={{ display: "flex", flexDirection: "column", gap: 16, maxWidth: 540 }}>
+                  <FamilyMemberPicker
+                    activeId={selectedMemberId}
+                    onSelect={(m, pre) => {
+                      setSelectedMemberId(m.id);
+                      setFormData(prev => ({ ...prev, patientName: pre.fullName, patientAge: pre.age, patientPhone: pre.phone, patientGender: pre.gender }));
+                    }}
+                  />
                   <div>
                     <label style={{ display: "block", fontSize: "0.75rem", fontWeight: 600, color: "#46524D", marginBottom: 6 }}>
                       Full name
                     </label>
                     <Input
                       value={formData.patientName}
-                      onChange={(e) => setFormData(prev => ({ ...prev, patientName: e.target.value }))}
+                      onChange={(e) => { setSelectedMemberId(null); setFormData(prev => ({ ...prev, patientName: e.target.value })); }}
                       placeholder="Your full name"
                       required
                       style={{ background: "#fff", border: "1px solid rgba(20,33,29,.14)", borderRadius: 11, height: 44 }}

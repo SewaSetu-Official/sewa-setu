@@ -58,6 +58,99 @@ export default async function ProfilePage() {
     refundedAt: b.refundedAt?.toISOString() ?? null,
   }));
 
+  const rawFavorites = dbUser
+    ? await db.favorite.findMany({
+        where: { userId: dbUser.id },
+        orderBy: { createdAt: "desc" },
+        include: {
+          doctor: {
+            include: {
+              media: { orderBy: { isPrimary: "desc" }, take: 1 },
+              specialties: { include: { specialty: { select: { name: true } } } },
+              hospitals: {
+                include: { hospital: { select: { slug: true, name: true, location: { select: { city: true } } } } },
+              },
+            },
+          },
+          hospital: {
+            include: {
+              media: { where: { isPrimary: true }, take: 1 },
+              location: { select: { city: true, district: true } },
+              packages: { where: { isActive: true }, orderBy: { price: "asc" }, take: 1 },
+            },
+          },
+        },
+      })
+    : [];
+
+  const savedDoctors = rawFavorites
+    .filter((f) => f.doctor)
+    .map((f) => {
+      const d = f.doctor!;
+      const primarySpec = d.specialties.find((s) => s.isPrimary) ?? d.specialties[0];
+      const primaryHosp = d.hospitals.find((h) => h.isPrimary) ?? d.hospitals[0];
+      return {
+        id: d.id,
+        fullName: d.fullName,
+        image: d.media[0]?.url ?? null,
+        specialty: primarySpec?.specialty.name ?? "Doctor",
+        hospitalName: primaryHosp?.hospital.name ?? null,
+        hospitalSlug: primaryHosp?.hospital.slug ?? null,
+        city: primaryHosp?.hospital.location.city ?? null,
+        feeMin: d.feeMin ?? null,
+        currency: d.currency ?? null,
+      };
+    });
+
+  const savedHospitals = rawFavorites
+    .filter((f) => f.hospital)
+    .map((f) => {
+      const h = f.hospital!;
+      return {
+        id: h.id,
+        slug: h.slug,
+        name: h.name,
+        type: h.type,
+        image: h.media[0]?.url ?? null,
+        city: h.location.city,
+        district: h.location.district,
+        fromPrice: h.packages[0]?.price ?? null,
+        currency: h.packages[0]?.currency ?? "EUR",
+      };
+    });
+
+  const rawPatients = dbUser
+    ? await db.patient.findMany({
+        where: { userId: dbUser.id, archivedAt: null },
+        orderBy: { createdAt: "asc" },
+        select: {
+          id: true, fullName: true, gender: true, dateOfBirth: true, phone: true, notes: true,
+          _count: { select: { bookings: true } },
+        },
+      })
+    : [];
+
+  const patientIds = rawPatients.map((p) => p.id);
+  const activeAgg = patientIds.length
+    ? await db.booking.groupBy({
+        by: ["patientId"],
+        where: { patientId: { in: patientIds }, status: { in: ["REQUESTED", "CONFIRMED"] } },
+        _count: { _all: true },
+      })
+    : [];
+  const activeMap = Object.fromEntries(activeAgg.map((a) => [a.patientId, a._count._all]));
+
+  const familyMembers = rawPatients.map((p) => ({
+    id: p.id,
+    fullName: p.fullName,
+    gender: p.gender,
+    dateOfBirth: p.dateOfBirth ? p.dateOfBirth.toISOString() : null,
+    phone: p.phone,
+    notes: p.notes,
+    bookingCount: p._count.bookings,
+    activeBookingCount: activeMap[p.id] ?? 0,
+  }));
+
   const profileUser = {
     fullName: user.fullName,
     imageUrl: user.imageUrl,
@@ -72,7 +165,7 @@ export default async function ProfilePage() {
   return (
     <main className="min-h-screen bg-page">
       <Navbar />
-      <ProfileClient user={profileUser} bookings={serializedBookings} />
+      <ProfileClient user={profileUser} bookings={serializedBookings} savedDoctors={savedDoctors} savedHospitals={savedHospitals} familyMembers={familyMembers} />
     </main>
   );
 }

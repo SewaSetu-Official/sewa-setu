@@ -1,4 +1,5 @@
-import { Check, Plus } from "lucide-react";
+import { Check } from "lucide-react";
+import { AddFamilyCta } from "@/components/add-family-cta";
 
 const WaveEyebrow = ({ children }: { children: React.ReactNode }) => (
   <span className="inline-flex items-center gap-2.5 text-[12.5px] font-extrabold uppercase tracking-[0.12em] text-brand">
@@ -52,13 +53,7 @@ export function FamilyBooking() {
                     )}
                   </div>
                 ))}
-                <button
-                  type="button"
-                  className="flex items-center justify-center gap-1.5 rounded-[13px] border-[1.5px] border-dashed border-[rgba(20,33,29,0.18)] py-2.5 text-[14px] font-semibold text-ink-soft transition-colors hover:border-brand/50 hover:text-brand"
-                >
-                  <Plus className="h-4 w-4" />
-                  Add family member
-                </button>
+                <AddFamilyCta />
               </div>
             </div>
           </div>

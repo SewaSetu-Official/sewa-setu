@@ -8,10 +8,13 @@ import {
   LayoutGrid, CalendarDays, Users, FileText, Settings as SettingsIcon,
   CheckCircle2, Clock, Mail, Phone,
   Pencil, Plus, ChevronRight, Navigation, XCircle,
+  Heart, Trash2, MapPin, Building2,
 } from "lucide-react";
 import { BookingDetailPopup, type SerializedBooking } from "@/components/booking-detail-modal";
+import { FamilyMemberModal, type FamilyMember } from "@/components/family-member-modal";
+import { formatMoneyCents } from "@/lib/money";
 
-type TabKey = "overview" | "appointments" | "family" | "records" | "settings";
+type TabKey = "overview" | "appointments" | "saved" | "family" | "records" | "settings";
 
 type ProfileUser = {
   fullName: string | null;
@@ -22,9 +25,36 @@ type ProfileUser = {
   memberSince: string;
 };
 
+type SavedDoctor = {
+  id: string;
+  fullName: string;
+  image: string | null;
+  specialty: string;
+  hospitalName: string | null;
+  hospitalSlug: string | null;
+  city: string | null;
+  feeMin: number | null;
+  currency: string | null;
+};
+
+type SavedHospital = {
+  id: string;
+  slug: string;
+  name: string;
+  type: string;
+  image: string | null;
+  city: string;
+  district: string;
+  fromPrice: number | null;
+  currency: string;
+};
+
 type Props = {
   user: ProfileUser;
   bookings: SerializedBooking[];
+  savedDoctors: SavedDoctor[];
+  savedHospitals: SavedHospital[];
+  familyMembers: FamilyMember[];
 };
 
 const GRAD = [
@@ -51,6 +81,17 @@ function appointmentDateTime(scheduledAt: string, slotTime: string | null): Date
 
 function fmtDate(d: Date): string {
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
+function ageFromDob(iso: string | null): number | null {
+  if (!iso) return null;
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return null;
+  const now = new Date();
+  let age = now.getFullYear() - d.getFullYear();
+  const m = now.getMonth() - d.getMonth();
+  if (m < 0 || (m === 0 && now.getDate() < d.getDate())) age--;
+  return age >= 0 ? age : null;
 }
 
 function fmtTime(scheduledAt: string, slotTime: string | null): string {
@@ -92,9 +133,73 @@ function mapsHref(b: SerializedBooking): string | null {
 
 const card = "bg-white border border-[rgba(20,33,29,0.07)] rounded-[18px]";
 
-export function ProfileClient({ user, bookings: initialBookings }: Props) {
-  const [tab, setTab] = useState<TabKey>("overview");
+export function ProfileClient({ user, bookings: initialBookings, savedDoctors, savedHospitals, familyMembers }: Props) {
+  const [tab, setTab] = useState<TabKey>(() => {
+    if (typeof window === "undefined") return "overview";
+    const t = new URLSearchParams(window.location.search).get("tab");
+    const valid: TabKey[] = ["overview", "appointments", "saved", "family", "records", "settings"];
+    return valid.includes(t as TabKey) ? (t as TabKey) : "overview";
+  });
+  const [family, setFamily] = useState<FamilyMember[]>(familyMembers);
+  const [showFamilyModal, setShowFamilyModal] = useState(false);
+  const [editingMember, setEditingMember] = useState<FamilyMember | null>(null);
+  const [confirmRemoveId, setConfirmRemoveId] = useState<string | null>(null);
+
+  const handleFamilySuccess = (m: FamilyMember) => {
+    setFamily((prev) => (prev.some((x) => x.id === m.id) ? prev.map((x) => (x.id === m.id ? m : x)) : [...prev, m]));
+    setShowFamilyModal(false);
+    setEditingMember(null);
+  };
+
+  const removeFamilyMember = async (id: string) => {
+    const prev = family;
+    setFamily((p) => p.filter((m) => m.id !== id)); // optimistic
+    setConfirmRemoveId(null);
+    try {
+      const res = await fetch(`/api/patients/${id}`, { method: "DELETE" });
+      if (!res.ok) setFamily(prev); // revert (e.g. still has appointments)
+    } catch {
+      setFamily(prev);
+    }
+  };
+
+  // The patient record that represents the account holder (created when booking for yourself).
+  const isSelf = (m: FamilyMember) =>
+    Boolean(user.fullName && m.fullName.trim().toLowerCase() === user.fullName.trim().toLowerCase());
   const [apptFilter, setApptFilter] = useState<"upcoming" | "past">("upcoming");
+  const [saved, setSaved] = useState<SavedDoctor[]>(savedDoctors);
+  const [savedH, setSavedH] = useState<SavedHospital[]>(savedHospitals);
+  const [savedFilter, setSavedFilter] = useState<"doctors" | "hospitals">("doctors");
+
+  const removeSaved = async (id: string) => {
+    const prev = saved;
+    setSaved((p) => p.filter((d) => d.id !== id)); // optimistic
+    try {
+      const res = await fetch("/api/favorites", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ doctorId: id }),
+      });
+      if (!res.ok) setSaved(prev); // revert on failure
+    } catch {
+      setSaved(prev);
+    }
+  };
+
+  const removeSavedHospital = async (id: string) => {
+    const prev = savedH;
+    setSavedH((p) => p.filter((h) => h.id !== id)); // optimistic
+    try {
+      const res = await fetch("/api/favorites", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ hospitalId: id }),
+      });
+      if (!res.ok) setSavedH(prev); // revert on failure
+    } catch {
+      setSavedH(prev);
+    }
+  };
   const [toggles, setToggles] = useState([true, true, false]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [overrides, setOverrides] = useState<Record<string, Pick<SerializedBooking, "scheduledAt" | "slotTime" | "rescheduleCount">>>({});
@@ -137,6 +242,7 @@ export function ProfileClient({ user, bookings: initialBookings }: Props) {
   const menu: { key: TabKey; label: string; icon: typeof LayoutGrid; badge?: string }[] = [
     { key: "overview", label: "Overview", icon: LayoutGrid },
     { key: "appointments", label: "Appointments", icon: CalendarDays, badge: upcoming.length ? String(upcoming.length) : undefined },
+    { key: "saved", label: "Saved", icon: Heart, badge: saved.length + savedH.length ? String(saved.length + savedH.length) : undefined },
     { key: "family", label: "Family members", icon: Users },
     { key: "records", label: "Medical records", icon: FileText },
     { key: "settings", label: "Settings", icon: SettingsIcon },
@@ -144,7 +250,7 @@ export function ProfileClient({ user, bookings: initialBookings }: Props) {
 
   const stats = [
     { value: String(upcoming.length), label: "Upcoming visits", icon: CalendarDays, bg: "#E6F0EC", fg: "#0C6B57" },
-    { value: "0", label: "Family profiles", icon: Users, bg: "#FAEBD9", fg: "#C0763A" },
+    { value: String(family.length), label: "Family profiles", icon: Users, bg: "#FAEBD9", fg: "#C0763A" },
     { value: String(past.filter((b) => b.status.toUpperCase() === "COMPLETED").length), label: "Past consultations", icon: CheckCircle2, bg: "#F0E9F4", fg: "#7A3E8E" },
   ];
 
@@ -403,15 +509,183 @@ export function ProfileClient({ user, bookings: initialBookings }: Props) {
             </div>
           )}
 
-          {/* FAMILY — no backend yet */}
+          {/* SAVED — doctors & hospitals */}
+          {tab === "saved" && (
+            <div>
+              {/* sub-toggle */}
+              <div className="mb-[18px] flex gap-2">
+                {([["doctors", "Doctors", saved.length], ["hospitals", "Hospitals", savedH.length]] as const).map(([key, label, n]) => {
+                  const active = savedFilter === key;
+                  return (
+                    <button key={key} onClick={() => setSavedFilter(key)}
+                      className="flex items-center gap-2 rounded-[10px] px-4 py-2.5 text-[13.5px] font-semibold transition-colors"
+                      style={{ border: `1.5px solid ${active ? "#0C6B57" : "rgba(20,33,29,.14)"}`, background: active ? "#0C6B57" : "#fff", color: active ? "#fff" : "#46524D" }}>
+                      {label}
+                      <span className="rounded-full px-2 py-0.5 text-[11px] font-bold" style={{ background: active ? "rgba(255,255,255,0.2)" : "#E6F0EC", color: active ? "#fff" : "#0C6B57" }}>{n}</span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* DOCTORS */}
+              {savedFilter === "doctors" && (saved.length ? (
+                <div className="flex flex-col gap-3.5">
+                  {saved.map((d, i) => (
+                    <div key={d.id} className={`${card} flex flex-wrap items-center gap-4 rounded-[18px] p-5`}>
+                      <span className="flex h-[54px] w-[54px] shrink-0 items-center justify-center overflow-hidden rounded-[15px] text-[18px] font-bold text-white" style={{ background: GRAD[i % GRAD.length], fontFamily: "var(--font-bricolage)" }}>
+                        {d.image ? (
+                          <Image loader={({ src }) => src} unoptimized src={d.image} alt={d.fullName} width={54} height={54} className="h-full w-full object-cover object-top" />
+                        ) : initials(d.fullName)}
+                      </span>
+                      <div className="min-w-[170px] flex-1">
+                        <div className="font-display text-[16px] font-bold text-ink">{d.fullName}</div>
+                        <div className="mt-1 text-[12.5px] font-semibold text-brand">{d.specialty}</div>
+                        {d.hospitalName && (
+                          <div className="mt-1 flex items-center gap-1.5 text-[12.5px] text-ink-muted">
+                            <MapPin className="h-3.5 w-3.5" />{d.hospitalName}{d.city ? `, ${d.city}` : ""}
+                          </div>
+                        )}
+                        {d.feeMin != null && (
+                          <div className="mt-1 text-[12.5px] text-ink-soft">Consultation <strong className="font-display text-[14px] text-ink">{formatMoneyCents(d.feeMin, d.currency ?? "EUR")}</strong></div>
+                        )}
+                      </div>
+                      <div className="flex flex-col items-stretch gap-2">
+                        <Link href={`/doctor/${d.id}`} className="whitespace-nowrap rounded-[10px] bg-brand px-[18px] py-2.5 text-center text-[12.5px] font-semibold text-white transition-colors hover:bg-brand-dark">View profile</Link>
+                        <button type="button" onClick={() => removeSaved(d.id)} className="flex items-center justify-center gap-1.5 whitespace-nowrap rounded-[10px] border border-[rgba(192,85,107,0.3)] bg-[#FBEAEE] px-[18px] py-2.5 text-center text-[12.5px] font-semibold text-[#C0556B] transition-colors hover:bg-[#f7dde3]">
+                          <Trash2 className="h-3.5 w-3.5" /> Remove
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className={`${card} flex flex-col items-center rounded-[18px] px-6 py-14 text-center`}>
+                  <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#FBEAEE] text-[#C0556B]"><Heart className="h-6 w-6" /></span>
+                  <p className="font-display mt-4 text-[17px] font-bold text-ink">No saved doctors yet</p>
+                  <p className="mt-1.5 max-w-sm text-sm text-ink-muted">Tap the heart on any doctor’s profile to save them here for quick booking later.</p>
+                  <Link href="/search" className="mt-4 inline-flex rounded-[11px] bg-brand px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-dark">Browse doctors</Link>
+                </div>
+              ))}
+
+              {/* HOSPITALS */}
+              {savedFilter === "hospitals" && (savedH.length ? (
+                <div className="flex flex-col gap-3.5">
+                  {savedH.map((h, i) => (
+                    <div key={h.id} className={`${card} flex flex-wrap items-center gap-4 rounded-[18px] p-5`}>
+                      <span className="flex h-[54px] w-[54px] shrink-0 items-center justify-center overflow-hidden rounded-[15px] text-white" style={{ background: GRAD[i % GRAD.length], fontFamily: "var(--font-bricolage)" }}>
+                        {h.image ? (
+                          <Image loader={({ src }) => src} unoptimized src={h.image} alt={h.name} width={54} height={54} className="h-full w-full object-cover" />
+                        ) : <Building2 className="h-6 w-6" />}
+                      </span>
+                      <div className="min-w-[170px] flex-1">
+                        <div className="font-display text-[16px] font-bold text-ink">{h.name}</div>
+                        <div className="mt-1 text-[12.5px] font-semibold capitalize text-brand">{h.type.toLowerCase()}</div>
+                        <div className="mt-1 flex items-center gap-1.5 text-[12.5px] text-ink-muted">
+                          <MapPin className="h-3.5 w-3.5" />{h.city}{h.district && h.district !== h.city ? `, ${h.district}` : ""}
+                        </div>
+                        {h.fromPrice != null && (
+                          <div className="mt-1 text-[12.5px] text-ink-soft">From <strong className="font-display text-[14px] text-ink">{formatMoneyCents(h.fromPrice, h.currency)}</strong></div>
+                        )}
+                      </div>
+                      <div className="flex flex-col items-stretch gap-2">
+                        <Link href={`/hospital/${h.slug}`} className="whitespace-nowrap rounded-[10px] bg-brand px-[18px] py-2.5 text-center text-[12.5px] font-semibold text-white transition-colors hover:bg-brand-dark">View hospital</Link>
+                        <button type="button" onClick={() => removeSavedHospital(h.id)} className="flex items-center justify-center gap-1.5 whitespace-nowrap rounded-[10px] border border-[rgba(192,85,107,0.3)] bg-[#FBEAEE] px-[18px] py-2.5 text-center text-[12.5px] font-semibold text-[#C0556B] transition-colors hover:bg-[#f7dde3]">
+                          <Trash2 className="h-3.5 w-3.5" /> Remove
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className={`${card} flex flex-col items-center rounded-[18px] px-6 py-14 text-center`}>
+                  <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#FBEAEE] text-[#C0556B]"><Heart className="h-6 w-6" /></span>
+                  <p className="font-display mt-4 text-[17px] font-bold text-ink">No saved hospitals yet</p>
+                  <p className="mt-1.5 max-w-sm text-sm text-ink-muted">Tap the heart on any hospital page to save it here for quick access.</p>
+                  <Link href="/search" className="mt-4 inline-flex rounded-[11px] bg-brand px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-dark">Browse hospitals</Link>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* FAMILY MEMBERS */}
           {tab === "family" && (
             <div>
-              <p className="mb-4 text-sm text-ink-muted">Manage profiles for everyone you care for — book in seconds without re-typing details.</p>
-              <div className={`${card} flex flex-col items-center rounded-[18px] px-6 py-14 text-center`}>
-                <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-accent-soft text-[#C0763A]"><Users className="h-6 w-6" /></span>
-                <p className="font-display mt-4 text-[17px] font-bold text-ink">Family members coming soon</p>
-                <p className="mt-1.5 max-w-sm text-sm text-ink-muted">Soon you’ll be able to add parents, children and dependents to book on their behalf in one tap.</p>
+              <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                <p className="text-sm text-ink-muted">Profiles for everyone you care for — book on their behalf without re-typing details.</p>
+                {family.length > 0 && (
+                  <button
+                    onClick={() => { setEditingMember(null); setShowFamilyModal(true); }}
+                    className="flex shrink-0 items-center gap-1.5 rounded-[11px] bg-brand px-4 py-2.5 text-sm font-semibold text-white shadow-[0_10px_22px_-12px_rgba(12,107,87,0.8)] transition-colors hover:bg-brand-dark"
+                  >
+                    <Plus className="h-[15px] w-[15px]" /> Add member
+                  </button>
+                )}
               </div>
+
+              {family.length ? (
+                <div className="flex flex-col gap-3.5">
+                  {family.map((m, i) => {
+                    const age = ageFromDob(m.dateOfBirth);
+                    const meta = [m.gender, age != null ? `${age} yrs` : null, m.phone].filter(Boolean).join(" · ");
+                    return (
+                      <div key={m.id} className={`${card} flex flex-wrap items-center gap-4 rounded-[18px] p-5`}>
+                        <span className="flex h-[54px] w-[54px] shrink-0 items-center justify-center rounded-[15px] text-[18px] font-bold text-white" style={{ background: GRAD[i % GRAD.length], fontFamily: "var(--font-bricolage)" }}>
+                          {initials(m.fullName)}
+                        </span>
+                        <div className="min-w-[170px] flex-1">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="font-display text-[16px] font-bold text-ink">{m.fullName}</span>
+                            {isSelf(m) && <span className="rounded-full bg-brand-soft px-2 py-0.5 text-[10.5px] font-bold text-brand">You</span>}
+                          </div>
+                          {meta && <div className="mt-1 text-[12.5px] text-ink-soft">{meta}</div>}
+                          {m.notes && <div className="mt-1 text-[12.5px] font-semibold text-brand">{m.notes}</div>}
+                          {m.bookingCount > 0 && <div className="mt-1 text-[12px] text-ink-muted">{m.bookingCount} appointment{m.bookingCount !== 1 ? "s" : ""}</div>}
+                        </div>
+
+                        {isSelf(m) ? (
+                          <div className="flex flex-col items-stretch gap-2">
+                            <Link href="/profile/manage" className="flex items-center justify-center gap-1.5 whitespace-nowrap rounded-[10px] border border-[rgba(20,33,29,0.14)] bg-white px-[18px] py-2.5 text-[12.5px] font-semibold text-ink transition-colors hover:bg-page">
+                              <Pencil className="h-3.5 w-3.5" /> Edit profile
+                            </Link>
+                            <span className="text-center text-[11px] text-ink-muted">From your account</span>
+                          </div>
+                        ) : confirmRemoveId === m.id ? (
+                          <div className="flex flex-col items-stretch gap-2">
+                            <span className="text-center text-[12px] font-semibold text-ink-soft">Remove {m.fullName.split(" ")[0]}?</span>
+                            {m.bookingCount > 0 && <span className="text-center text-[11px] text-ink-muted">Their appointments stay in your history.</span>}
+                            <div className="flex gap-2">
+                              <button type="button" onClick={() => setConfirmRemoveId(null)} className="rounded-[10px] border border-[rgba(20,33,29,0.14)] bg-white px-3.5 py-2 text-[12.5px] font-semibold text-ink-soft">Keep</button>
+                              <button type="button" onClick={() => removeFamilyMember(m.id)} className="rounded-[10px] px-3.5 py-2 text-[12.5px] font-bold text-white" style={{ background: "#C0556B" }}>Remove</button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="flex flex-col items-stretch gap-2">
+                            <button type="button" onClick={() => { setEditingMember(m); setShowFamilyModal(true); }} className="flex items-center justify-center gap-1.5 whitespace-nowrap rounded-[10px] border border-[rgba(20,33,29,0.14)] bg-white px-[18px] py-2.5 text-[12.5px] font-semibold text-ink transition-colors hover:bg-page">
+                              <Pencil className="h-3.5 w-3.5" /> Edit
+                            </button>
+                            {(m.activeBookingCount ?? 0) > 0 ? (
+                              <span className="text-center text-[11px] text-ink-muted">Upcoming appointment</span>
+                            ) : (
+                              <button type="button" onClick={() => setConfirmRemoveId(m.id)} className="flex items-center justify-center gap-1.5 whitespace-nowrap rounded-[10px] border border-[rgba(192,85,107,0.3)] bg-[#FBEAEE] px-[18px] py-2.5 text-[12.5px] font-semibold text-[#C0556B] transition-colors hover:bg-[#f7dde3]">
+                                <Trash2 className="h-3.5 w-3.5" /> Remove
+                              </button>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className={`${card} flex flex-col items-center rounded-[18px] px-6 py-14 text-center`}>
+                  <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-accent-soft text-[#C0763A]"><Users className="h-6 w-6" /></span>
+                  <p className="font-display mt-4 text-[17px] font-bold text-ink">No family members yet</p>
+                  <p className="mt-1.5 max-w-sm text-sm text-ink-muted">Add parents, children or dependents so you can book on their behalf in one tap.</p>
+                  <button onClick={() => { setEditingMember(null); setShowFamilyModal(true); }} className="mt-4 inline-flex items-center gap-1.5 rounded-[11px] bg-brand px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-dark">
+                    <Plus className="h-[15px] w-[15px]" /> Add family member
+                  </button>
+                </div>
+              )}
             </div>
           )}
 
@@ -470,9 +744,11 @@ export function ProfileClient({ user, bookings: initialBookings }: Props) {
 
               <div className="flex flex-wrap gap-3">
                 <Link href="/profile/manage" className="rounded-[11px] border border-[rgba(20,33,29,0.14)] bg-white px-[18px] py-2.5 text-[13.5px] font-semibold text-ink-soft">Privacy &amp; data</Link>
-                <button className="rounded-[11px] border border-[rgba(192,85,107,0.3)] bg-[#FBEAEE] px-[18px] py-2.5 text-[13.5px] font-semibold text-[#C0556B]">
-                  <SignOutButton redirectUrl="/">Log out</SignOutButton>
-                </button>
+                <SignOutButton redirectUrl="/">
+                  <button className="rounded-[11px] border border-[rgba(192,85,107,0.3)] bg-[#FBEAEE] px-[18px] py-2.5 text-[13.5px] font-semibold text-[#C0556B]">
+                    Log out
+                  </button>
+                </SignOutButton>
               </div>
             </div>
           )}
@@ -484,6 +760,14 @@ export function ProfileClient({ user, bookings: initialBookings }: Props) {
           booking={selected}
           onClose={() => setSelectedId(null)}
           onReschedule={handleReschedule}
+        />
+      )}
+
+      {showFamilyModal && (
+        <FamilyMemberModal
+          member={editingMember ?? undefined}
+          onClose={() => { setShowFamilyModal(false); setEditingMember(null); }}
+          onSuccess={handleFamilySuccess}
         />
       )}
     </div>
