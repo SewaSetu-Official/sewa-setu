@@ -43,7 +43,7 @@ export default function SearchPage() {
   const [emergencyOnly, setEmergencyOnly] = useState(false);
   const [priceMax, setPriceMax] = useState(200); // EUR; 200 = no max
   const [minRating, setMinRating] = useState(0); // client-side refine
-  const [verifiedOnly, setVerifiedOnly] = useState(false); // mocked — no backing field yet
+  const [verifiedOnly, setVerifiedOnly] = useState(false); // refines client-side against ApiHospital.verified
   const [sortBy, setSortBy] = useState<SortOption>("recent");
   const [showAISearch, setShowAISearch] = useState(false);
 
@@ -95,7 +95,7 @@ export default function SearchPage() {
     }, 0);
 
     return () => window.clearTimeout(timeoutId);
-  }, [debouncedQuery, selectedCity, selectedType, emergencyOnly, priceMax, sortBy]);
+  }, [debouncedQuery, selectedCity, selectedType, emergencyOnly, priceMax, minRating, verifiedOnly, sortBy]);
 
   // ✅ Fetch when filters or page changes
   useEffect(() => {
@@ -113,6 +113,8 @@ export default function SearchPage() {
         if (selectedCity !== "All Cities") params.set("city", selectedCity);
         if (selectedType !== "ALL") params.set("type", selectedType);
         if (emergencyOnly) params.set("emergency", "true");
+        if (verifiedOnly) params.set("verified", "true");
+        if (minRating > 0) params.set("minRating", String(minRating));
         if (priceMax < 200) params.set("maxPrice", String(priceMax));
         if (sortBy) params.set("sortBy", sortBy);
         params.set("page", String(page));
@@ -142,13 +144,10 @@ export default function SearchPage() {
 
     load();
 
-  }, [page, debouncedQuery, selectedCity, selectedType, emergencyOnly, priceMax, sortBy]);
+  }, [page, debouncedQuery, selectedCity, selectedType, emergencyOnly, priceMax, minRating, verifiedOnly, sortBy]);
 
-  // Client-side refine: minimum rating
-  const displayed = useMemo(
-    () => hospitals.filter((h) => minRating === 0 || (h.rating ?? 0) >= minRating),
-    [hospitals, minRating]
-  );
+  // Rating + verified are now applied server-side, so the fetched list is already the final set.
+  const displayed = hospitals;
 
   const clearAllFilters = () => {
     setSearchQuery("");
