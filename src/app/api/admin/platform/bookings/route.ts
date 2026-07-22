@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requirePlatformStaff } from "@/lib/admin-auth";
 import { db } from "@/lib/db";
 import { BookingStatus } from "@prisma/client";
+import { apiError } from "@/lib/api-errors";
 
 export const dynamic = "force-dynamic";
 
@@ -11,10 +12,7 @@ const BOOKING_STATUSES: BookingStatus[] = ["DRAFT", "REQUESTED", "CONFIRMED", "C
 export async function GET(req: NextRequest) {
   let ctx;
   try { ctx = await requirePlatformStaff({ apiMode: true }); }
-  catch (e: unknown) {
-    const msg = e instanceof Error ? e.message : "UNAUTHORIZED";
-    return NextResponse.json({ error: msg }, { status: msg === "FORBIDDEN" ? 403 : 401 });
-  }
+  catch (e: unknown) { return apiError(e); }
 
   const { searchParams } = new URL(req.url);
   const page       = Math.max(1, Number(searchParams.get("page") ?? 1));

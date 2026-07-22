@@ -60,6 +60,13 @@ enum PartnerInquiryStatus {
   REJECTED
 }
 
+enum InquiryActivityType {
+  STATUS_CHANGED
+  NOTE_ADDED
+  ASSIGNED
+  UNASSIGNED
+}
+
 enum DoctorInviteStatus {
   PENDING
   ACCEPTED
@@ -158,6 +165,8 @@ model User {
   authoredHospitalOnboardingNotes  HospitalOnboardingNote[]          @relation("HospitalOnboardingNoteAuthor")
   completedHospitalOnboardingItems HospitalOnboardingChecklistItem[] @relation("HospitalOnboardingChecklistCompleter")
   uploadedHospitalImportBatches    HospitalImportBatch[]             @relation("HospitalImportBatchUploader")
+  assignedInquiries                PartnerInquiry[]                  @relation("InquiryAssignee")
+  inquiryActivities                InquiryActivity[]                 @relation("InquiryActivityActor")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -801,8 +810,12 @@ model PartnerInquiry {
   reviewNotes  String?
   reviewedAt   DateTime?
 
+  assignedToUserId String?
+  assignedTo       User?   @relation("InquiryAssignee", fields: [assignedToUserId], references: [id], onDelete: SetNull)
+
   hospital   Hospital?           @relation(fields: [hospitalId], references: [id], onDelete: SetNull)
   onboarding HospitalOnboarding?
+  activities InquiryActivity[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -810,7 +823,24 @@ model PartnerInquiry {
   @@index([hospitalId])
   @@index([status])
   @@index([email])
+  @@index([assignedToUserId])
   @@index([createdAt])
+}
+
+// Per-inquiry activity timeline: status moves, notes, (un)assignments.
+model InquiryActivity {
+  id          String                @id @default(cuid())
+  inquiryId   String
+  inquiry     PartnerInquiry        @relation(fields: [inquiryId], references: [id], onDelete: Cascade)
+  actorUserId String?
+  actor       User?                 @relation("InquiryActivityActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+  type        InquiryActivityType
+  note        String?
+  fromStatus  PartnerInquiryStatus?
+  toStatus    PartnerInquiryStatus?
+  createdAt   DateTime              @default(now())
+
+  @@index([inquiryId, createdAt])
 }
 
 /**
@@ -1023,4 +1053,13 @@ model DoctorInvite {
   @@index([doctorId, status])
   @@index([email, status])
   @@index([expiresAt])
+}
+
+// Key-value platform configuration set by platform admins (onboarding checklist
+// template, platform defaults, etc.). One row per setting key; value is JSON.
+model PlatformSetting {
+  key       String   @id
+  value     Json
+  updatedAt DateTime @updatedAt
+  updatedById String?
 }

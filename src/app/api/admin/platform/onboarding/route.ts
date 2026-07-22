@@ -6,24 +6,17 @@ import {
 } from "@prisma/client";
 import { requirePlatformStaff, writeAuditLog } from "@/lib/admin-auth";
 import { db } from "@/lib/db";
+import { apiError } from "@/lib/api-errors";
+import { hasPlatformPermission } from "@/lib/admin-permissions";
+import { z } from "@/lib/api-validation";
+import { getChecklistTemplate } from "@/lib/platform-settings";
 
 export const dynamic = "force-dynamic";
 
-const DEFAULT_CHECKLIST = [
-  "Hospital basic info added",
-  "Location verified",
-  "Departments added",
-  "Doctors added",
-  "Schedules configured",
-  "Packages configured",
-  "Hospital media added",
-  "Owner account linked",
-  "Hospital confirmation received",
-];
-
+// Delegates to the shared handler so guard errors map consistently
+// (UNAUTHORIZED/FORBIDDEN/NOT_FOUND) and unexpected errors never leak.
 function jsonError(error: unknown) {
-  const message = error instanceof Error ? error.message : "UNAUTHORIZED";
-  return NextResponse.json({ error: message }, { status: message === "FORBIDDEN" ? 403 : 401 });
+  return apiError(error);
 }
 
 function slugifyHospitalName(name: string) {
@@ -83,6 +76,17 @@ function queueAuditLog(entry: Parameters<typeof writeAuditLog>[0]) {
   });
 }
 
+/**
+ * Parse an optional numeric body field safely. Absent/empty → null, and a
+ * non-numeric value (e.g. "abc") → null rather than NaN, which would otherwise
+ * reach Prisma and throw an unhandled 500.
+ */
+function toNumberOrNull(value: unknown): number | null {
+  if (value === null || value === undefined || value === "") return null;
+  const n = Number(value);
+  return Number.isFinite(n) ? n : null;
+}
+
 function timeToMinutes(value: string) {
   const [hour, minute] = value.split(":").map(Number);
   if (
@@ -114,7 +118,115 @@ async function canAccessOnboarding(
   return null;
 }
 
-// GET /api/admin/platform/onboarding
+// Full per-hospital onboarding payload — shared by the list and the single
+// detail fetch (the redesigned setup workspace).
+const ONBOARDING_INCLUDE = {
+  hospital: {
+    select: {
+      id: true,
+      slug: true,
+      name: true,
+      type: true,
+      verified: true,
+      isActive: true,
+      phone: true,
+      email: true,
+      website: true,
+      openingHours: true,
+      emergencyAvailable: true,
+      servicesSummary: true,
+      location: {
+        select: {
+          country: true,
+          province: true,
+          district: true,
+          city: true,
+          area: true,
+          addressLine: true,
+          lat: true,
+          lng: true,
+        },
+      },
+      departments: {
+        where: { isActive: true },
+        select: { id: true, name: true, overview: true, sortOrder: true },
+        orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+      },
+      doctors: {
+        select: {
+          doctor: {
+            select: {
+              id: true,
+              fullName: true,
+              licenseNumber: true,
+              experienceYears: true,
+              feeMin: true,
+              feeMax: true,
+              currency: true,
+              media: {
+                select: { id: true, url: true, altText: true, isPrimary: true },
+                orderBy: [{ isPrimary: "desc" }, { createdAt: "desc" }],
+                take: 1,
+              },
+              departments: {
+                where: { isActive: true, department: { isActive: true } },
+                select: { departmentId: true },
+                take: 1,
+              },
+            },
+          },
+          positionTitle: true,
+        },
+        orderBy: { doctor: { fullName: "asc" } },
+      },
+      availabilitySlots: {
+        where: { isActive: true },
+        select: {
+          id: true,
+          doctorId: true,
+          dayOfWeek: true,
+          mode: true,
+          startTime: true,
+          endTime: true,
+          slotDurationMinutes: true,
+          doctor: { select: { fullName: true } },
+        },
+        orderBy: [{ dayOfWeek: "asc" }, { startTime: "asc" }],
+      },
+      packages: {
+        where: { isActive: true },
+        select: { id: true, title: true, description: true, price: true, currency: true },
+        orderBy: { createdAt: "desc" },
+        take: 8,
+      },
+      media: {
+        select: { id: true, url: true, altText: true, isPrimary: true },
+        orderBy: [{ isPrimary: "desc" }, { createdAt: "desc" }],
+        take: 12,
+      },
+      memberships: {
+        where: { role: "OWNER", status: "APPROVED" },
+        select: { id: true, user: { select: { id: true, fullName: true, email: true } } },
+        orderBy: { createdAt: "asc" },
+      },
+    },
+  },
+  partnerInquiry: {
+    select: { id: true, hospitalName: true, type: true, contactName: true, email: true, phone: true, city: true, status: true },
+  },
+  assignedTo: { select: { id: true, fullName: true, email: true, role: true } },
+  createdBy: { select: { fullName: true } },
+  checklist: { orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }] },
+  notes: {
+    include: { author: { select: { fullName: true } } },
+    orderBy: { createdAt: "desc" },
+    take: 3,
+  },
+  imports: { orderBy: { createdAt: "desc" }, take: 3 },
+  _count: { select: { files: true, imports: true, notes: true } },
+} satisfies Prisma.HospitalOnboardingInclude;
+
+// GET /api/admin/platform/onboarding  → list
 export async function GET(req: NextRequest) {
   let ctx;
   try { ctx = await requirePlatformStaff({ apiMode: true }); }
@@ -160,111 +272,7 @@ export async function GET(req: NextRequest) {
     db.hospitalOnboarding.count({ where }),
     db.hospitalOnboarding.findMany({
       where,
-      include: {
-        hospital: {
-          select: {
-            id: true,
-            slug: true,
-            name: true,
-            type: true,
-            verified: true,
-            isActive: true,
-            phone: true,
-            email: true,
-            website: true,
-            openingHours: true,
-            emergencyAvailable: true,
-            servicesSummary: true,
-            location: {
-              select: {
-                country: true,
-                province: true,
-                district: true,
-                city: true,
-                area: true,
-                addressLine: true,
-                lat: true,
-                lng: true,
-              },
-            },
-            departments: {
-              where: { isActive: true },
-              select: { id: true, name: true, overview: true, sortOrder: true },
-              orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
-            },
-            doctors: {
-              select: {
-                doctor: {
-                  select: {
-                    id: true,
-                    fullName: true,
-                    licenseNumber: true,
-                    experienceYears: true,
-                    feeMin: true,
-                    feeMax: true,
-                    currency: true,
-                    media: {
-                      select: { id: true, url: true, altText: true, isPrimary: true },
-                      orderBy: [{ isPrimary: "desc" }, { createdAt: "desc" }],
-                      take: 1,
-                    },
-                    departments: {
-                      where: { isActive: true, department: { isActive: true } },
-                      select: { departmentId: true },
-                      take: 1,
-                    },
-                  },
-                },
-                positionTitle: true,
-              },
-              orderBy: { doctor: { fullName: "asc" } },
-            },
-            availabilitySlots: {
-              where: { isActive: true },
-              select: {
-                id: true,
-                doctorId: true,
-                dayOfWeek: true,
-                mode: true,
-                startTime: true,
-                endTime: true,
-                slotDurationMinutes: true,
-                doctor: { select: { fullName: true } },
-              },
-              orderBy: [{ dayOfWeek: "asc" }, { startTime: "asc" }],
-            },
-            packages: {
-              where: { isActive: true },
-              select: { id: true, title: true, description: true, price: true, currency: true },
-              orderBy: { createdAt: "desc" },
-              take: 8,
-            },
-            media: {
-              select: { id: true, url: true, altText: true, isPrimary: true },
-              orderBy: [{ isPrimary: "desc" }, { createdAt: "desc" }],
-              take: 12,
-            },
-            memberships: {
-              where: { role: "OWNER", status: "APPROVED" },
-              select: { id: true, user: { select: { id: true, fullName: true, email: true } } },
-              orderBy: { createdAt: "asc" },
-            },
-          },
-        },
-        partnerInquiry: {
-          select: { id: true, hospitalName: true, type: true, contactName: true, email: true, phone: true, city: true, status: true },
-        },
-        assignedTo: { select: { id: true, fullName: true, email: true, role: true } },
-        createdBy: { select: { fullName: true } },
-        checklist: { orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }] },
-        notes: {
-          include: { author: { select: { fullName: true } } },
-          orderBy: { createdAt: "desc" },
-          take: 3,
-        },
-        imports: { orderBy: { createdAt: "desc" }, take: 3 },
-        _count: { select: { files: true, imports: true, notes: true } },
-      },
+      include: ONBOARDING_INCLUDE,
       orderBy: [{ updatedAt: "desc" }, { createdAt: "desc" }],
       skip: (page - 1) * PAGE_SIZE,
       take: PAGE_SIZE,
@@ -305,9 +313,11 @@ export async function POST(req: NextRequest) {
   try { ctx = await requirePlatformStaff({ apiMode: true }); }
   catch (error: unknown) { return jsonError(error); }
 
-  if (!ctx.isAdmin) return NextResponse.json({ error: "FORBIDDEN" }, { status: 403 });
+  if (!hasPlatformPermission(ctx.user.role, "CREATE_ONBOARDING")) {
+    return NextResponse.json({ error: "FORBIDDEN" }, { status: 403 });
+  }
 
-  const body: {
+  let body: {
     source?: "inquiry" | "direct";
     partnerInquiryId?: string;
     hospitalId?: string;
@@ -321,7 +331,9 @@ export async function POST(req: NextRequest) {
       phone?: string;
       city?: string;
     };
-  } = await req.json();
+  };
+  try { body = await req.json(); }
+  catch { return NextResponse.json({ error: "Invalid JSON" }, { status: 400 }); }
 
   const directContact = body.source === "direct" ? body.directContact : undefined;
   const directHospitalName = directContact?.hospitalName?.trim();
@@ -340,6 +352,8 @@ export async function POST(req: NextRequest) {
   if (!body.partnerInquiryId && !body.hospitalId && body.source !== "direct") {
     return NextResponse.json({ error: "Select an inquiry or hospital" }, { status: 400 });
   }
+
+  const checklistTemplate = await getChecklistTemplate();
 
   const onboarding = await db.$transaction(async (tx) => {
     let partnerInquiryId = body.partnerInquiryId || null;
@@ -368,10 +382,10 @@ export async function POST(req: NextRequest) {
         createdById: ctx.user.id,
         internalNotes: body.internalNotes?.trim() || null,
         checklist: {
-          create: DEFAULT_CHECKLIST.map((title, index) => ({
-            title,
+          create: checklistTemplate.map((item, index) => ({
+            title: item.title,
             sortOrder: index,
-            isRequired: true,
+            isRequired: item.isRequired,
           })),
         },
       },
@@ -399,70 +413,59 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({ success: true, id: onboarding.id }, { status: 201 });
 }
 
+// Coerced numeric input — accepts number, numeric string, or null (the handlers
+// normalise with toNumberOrNull / Number()). Kept permissive so existing
+// payloads validate unchanged; only the shape/type is enforced.
+const numLike = z.union([z.number(), z.string()]).nullable().optional();
+const strN = z.string().nullable().optional();
+const oid = z.string().min(1, "onboardingId is required");
+
+// One variant per action. Required fields mirror the handlers' existing checks
+// (no stricter), so validation never rejects a body that worked before — it
+// just guarantees types and a known action up front.
+const onboardingPatchSchema = z.discriminatedUnion("action", [
+  z.object({ action: z.literal("UPDATE"), onboardingId: oid, status: z.enum(HospitalOnboardingStatus).optional(), assignedToUserId: strN, meetingDate: strN, meetingNotes: strN, internalNotes: strN, hospitalConfirmationNotes: strN }),
+  z.object({ action: z.literal("SAVE_PROFILE"), onboardingId: oid, phone: strN, email: strN, website: strN, openingHours: strN, emergencyAvailable: z.boolean().optional(), servicesSummary: strN, country: strN, province: strN, district: strN, city: strN, area: strN, addressLine: strN, lat: numLike, lng: numLike }),
+  z.object({ action: z.literal("ADD_DEPARTMENT"), onboardingId: oid, name: z.string().optional(), overview: strN, sortOrder: numLike }),
+  z.object({ action: z.literal("UPDATE_DEPARTMENT"), onboardingId: oid, entityId: z.string().optional(), name: z.string().optional(), overview: strN, sortOrder: numLike }),
+  z.object({ action: z.literal("DELETE_DEPARTMENT"), onboardingId: oid, entityId: z.string().optional() }),
+  z.object({ action: z.literal("ADD_DOCTOR"), onboardingId: oid, fullName: z.string().optional(), licenseNumber: strN, experienceYears: numLike, feeMin: numLike, feeMax: numLike, currency: strN, positionTitle: strN, departmentId: strN, photoUrl: strN }),
+  z.object({ action: z.literal("UPDATE_DOCTOR"), onboardingId: oid, entityId: z.string().optional(), fullName: z.string().optional(), licenseNumber: strN, experienceYears: numLike, feeMin: numLike, feeMax: numLike, currency: strN, positionTitle: strN, departmentId: strN, photoUrl: strN }),
+  z.object({ action: z.literal("DELETE_DOCTOR"), onboardingId: oid, entityId: z.string().optional() }),
+  z.object({ action: z.literal("ADD_SCHEDULE"), onboardingId: oid, doctorId: z.string().optional(), mode: z.enum(["ONLINE", "PHYSICAL"]).optional(), dayOfWeek: numLike, startTime: z.string().optional(), endTime: z.string().optional(), slotDurationMinutes: numLike }),
+  z.object({ action: z.literal("UPDATE_SCHEDULE"), onboardingId: oid, entityId: z.string().optional(), doctorId: z.string().optional(), mode: z.enum(["ONLINE", "PHYSICAL"]).optional(), dayOfWeek: numLike, startTime: z.string().optional(), endTime: z.string().optional(), slotDurationMinutes: numLike }),
+  z.object({ action: z.literal("DELETE_SCHEDULE"), onboardingId: oid, entityId: z.string().optional() }),
+  z.object({ action: z.literal("ADD_PACKAGE"), onboardingId: oid, title: z.string().optional(), description: strN, price: numLike, currency: strN }),
+  z.object({ action: z.literal("UPDATE_PACKAGE"), onboardingId: oid, entityId: z.string().optional(), title: z.string().optional(), description: strN, price: numLike, currency: strN }),
+  z.object({ action: z.literal("DELETE_PACKAGE"), onboardingId: oid, entityId: z.string().optional() }),
+  z.object({ action: z.literal("ADD_MEDIA"), onboardingId: oid, url: z.string().optional(), altText: strN, isPrimary: z.boolean().optional() }),
+  z.object({ action: z.literal("UPDATE_MEDIA"), onboardingId: oid, entityId: z.string().optional(), url: z.string().optional(), altText: strN, isPrimary: z.boolean().optional() }),
+  z.object({ action: z.literal("DELETE_MEDIA"), onboardingId: oid, entityId: z.string().optional() }),
+  z.object({ action: z.literal("ASSIGN_OWNER"), onboardingId: oid, ownerEmail: strN }),
+  z.object({ action: z.literal("ADD_NOTE"), onboardingId: oid, title: strN, body: z.string().optional() }),
+  z.object({ action: z.literal("ADD_CHECKLIST"), onboardingId: oid, title: z.string().optional(), isRequired: z.boolean().optional() }),
+  z.object({ action: z.literal("SET_CHECKLIST"), onboardingId: oid, itemId: z.string().optional(), isCompleted: z.boolean().optional() }),
+  z.object({ action: z.literal("CREATE_HOSPITAL_SHELL"), onboardingId: oid }),
+  z.object({ action: z.literal("PUBLISH"), onboardingId: oid }),
+]);
+
 // PATCH /api/admin/platform/onboarding
 export async function PATCH(req: NextRequest) {
   let ctx;
   try { ctx = await requirePlatformStaff({ apiMode: true }); }
   catch (error: unknown) { return jsonError(error); }
 
-  const body: {
-    action?: string;
-    onboardingId?: string;
-    status?: HospitalOnboardingStatus;
-    assignedToUserId?: string | null;
-    meetingDate?: string | null;
-    meetingNotes?: string | null;
-    internalNotes?: string | null;
-    hospitalConfirmationNotes?: string | null;
-    title?: string;
-    body?: string;
-    itemId?: string;
-    entityId?: string;
-    isCompleted?: boolean;
-    isRequired?: boolean;
-    phone?: string | null;
-    email?: string | null;
-    website?: string | null;
-    openingHours?: string | null;
-    emergencyAvailable?: boolean;
-    servicesSummary?: string | null;
-    country?: string | null;
-    province?: string | null;
-    district?: string | null;
-    city?: string | null;
-    area?: string | null;
-    addressLine?: string | null;
-    lat?: number | null;
-    lng?: number | null;
-    name?: string;
-    overview?: string | null;
-    sortOrder?: number;
-    departmentId?: string | null;
-    fullName?: string;
-    licenseNumber?: string | null;
-    experienceYears?: number | null;
-    positionTitle?: string | null;
-    feeMin?: number | null;
-    feeMax?: number | null;
-    currency?: string | null;
-    photoUrl?: string | null;
-    doctorId?: string;
-    dayOfWeek?: number;
-    mode?: "ONLINE" | "PHYSICAL";
-    startTime?: string;
-    endTime?: string;
-    slotDurationMinutes?: number;
-    description?: string | null;
-    price?: number | null;
-    ownerEmail?: string | null;
-    url?: string | null;
-    altText?: string | null;
-    isPrimary?: boolean;
-  } = await req.json();
+  let raw: unknown;
+  try { raw = await req.json(); }
+  catch { return NextResponse.json({ error: "Invalid JSON" }, { status: 400 }); }
 
-  if (!body.action || !body.onboardingId) {
-    return NextResponse.json({ error: "action and onboardingId are required" }, { status: 400 });
+  const parsed = onboardingPatchSchema.safeParse(raw);
+  if (!parsed.success) {
+    const issue = parsed.error.issues[0];
+    const field = issue?.path.join(".") || "request";
+    return NextResponse.json({ error: issue ? `${field}: ${issue.message}` : "Invalid request" }, { status: 400 });
   }
+  const body = parsed.data;
 
   const access = await canAccessOnboarding(ctx, body.onboardingId);
   if (!access) return NextResponse.json({ error: "FORBIDDEN" }, { status: 403 });
@@ -673,9 +676,9 @@ export async function PATCH(req: NextRequest) {
         data: {
           fullName,
           licenseNumber: body.licenseNumber?.trim() || null,
-          experienceYears: body.experienceYears === null || body.experienceYears === undefined ? null : Number(body.experienceYears),
-          feeMin: body.feeMin === null || body.feeMin === undefined ? null : Number(body.feeMin),
-          feeMax: body.feeMax === null || body.feeMax === undefined ? null : Number(body.feeMax),
+          experienceYears: toNumberOrNull(body.experienceYears),
+          feeMin: toNumberOrNull(body.feeMin),
+          feeMax: toNumberOrNull(body.feeMax),
           currency: body.currency?.trim() || "EUR",
           verified: false,
           dataOrigin: "ONBOARDING",
@@ -691,9 +694,16 @@ export async function PATCH(req: NextRequest) {
       });
 
       if (body.departmentId) {
-        await tx.departmentDoctor.create({
-          data: { departmentId: body.departmentId, doctorId: created.id },
+        // Only link to a department that actually belongs to this hospital.
+        const dept = await tx.hospitalDepartment.findFirst({
+          where: { id: body.departmentId, hospitalId },
+          select: { id: true },
         });
+        if (dept) {
+          await tx.departmentDoctor.create({
+            data: { departmentId: dept.id, doctorId: created.id },
+          });
+        }
       }
 
       const photoUrl = body.photoUrl?.trim();
@@ -747,9 +757,9 @@ export async function PATCH(req: NextRequest) {
         data: {
           fullName,
           licenseNumber: body.licenseNumber?.trim() || null,
-          experienceYears: body.experienceYears === null || body.experienceYears === undefined ? null : Number(body.experienceYears),
-          feeMin: body.feeMin === null || body.feeMin === undefined ? null : Number(body.feeMin),
-          feeMax: body.feeMax === null || body.feeMax === undefined ? null : Number(body.feeMax),
+          experienceYears: toNumberOrNull(body.experienceYears),
+          feeMin: toNumberOrNull(body.feeMin),
+          feeMax: toNumberOrNull(body.feeMax),
           currency: body.currency?.trim() || "EUR",
         },
       });
@@ -766,7 +776,8 @@ export async function PATCH(req: NextRequest) {
       await tx.departmentDoctor.deleteMany({
         where: { doctorId, departmentId: { in: hospitalDepartmentIds.map((dept) => dept.id) } },
       });
-      if (body.departmentId) {
+      if (body.departmentId && hospitalDepartmentIds.some((dept) => dept.id === body.departmentId)) {
+        // Only re-link to a department that belongs to this hospital.
         await tx.departmentDoctor.create({
           data: { departmentId: body.departmentId, doctorId },
         });
@@ -987,7 +998,7 @@ export async function PATCH(req: NextRequest) {
         hospitalId,
         title,
         description: body.description?.trim() || null,
-        price: body.price === null || body.price === undefined ? null : Number(body.price),
+        price: toNumberOrNull(body.price),
         currency: body.currency?.trim() || "EUR",
         dataOrigin: "ONBOARDING",
       },
@@ -1024,7 +1035,7 @@ export async function PATCH(req: NextRequest) {
       data: {
         title,
         description: body.description?.trim() || null,
-        price: body.price === null || body.price === undefined ? null : Number(body.price),
+        price: toNumberOrNull(body.price),
         currency: body.currency?.trim() || "EUR",
       },
     });
@@ -1184,37 +1195,42 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: "This user must sign up before they can become the main hospital admin" }, { status: 404 });
     }
 
-    const membership = await db.hospitalMembership.upsert({
-      where: { userId_hospitalId: { userId: owner.id, hospitalId } },
-      update: {
-        role: "OWNER",
-        status: "APPROVED",
-        approvedAt: new Date(),
-        approvedById: ctx.user.id,
-        rejectedAt: null,
-        rejectedById: null,
-        rejectedReason: null,
-      },
-      create: {
-        userId: owner.id,
+    const membership = await db.$transaction(async (tx) => {
+      const result = await tx.hospitalMembership.upsert({
+        where: { userId_hospitalId: { userId: owner.id, hospitalId } },
+        update: {
+          role: "OWNER",
+          status: "APPROVED",
+          approvedAt: new Date(),
+          approvedById: ctx.user.id,
+          rejectedAt: null,
+          rejectedById: null,
+          rejectedReason: null,
+        },
+        create: {
+          userId: owner.id,
+          hospitalId,
+          role: "OWNER",
+          status: "APPROVED",
+          invitedBy: ctx.user.id,
+          approvedAt: new Date(),
+          approvedById: ctx.user.id,
+        },
+      });
+
+      await writeAuditLog({
+        actorUserId: ctx.user.id,
         hospitalId,
-        role: "OWNER",
-        status: "APPROVED",
-        invitedBy: ctx.user.id,
-        approvedAt: new Date(),
-        approvedById: ctx.user.id,
-      },
+        action: "ONBOARDING_OWNER_ASSIGNED",
+        entity: "HospitalMembership",
+        entityId: result.id,
+        after: { userId: owner.id, email: owner.email },
+      }, tx);
+
+      return result;
     });
 
     await markChecklist(body.onboardingId, "Owner account linked", ctx.user.id);
-    queueAuditLog({
-      actorUserId: ctx.user.id,
-      hospitalId,
-      action: "ONBOARDING_OWNER_ASSIGNED",
-      entity: "HospitalMembership",
-      entityId: membership.id,
-      after: { userId: owner.id, email: owner.email },
-    });
 
     return NextResponse.json({ success: true, membership });
   }
@@ -1279,7 +1295,9 @@ export async function PATCH(req: NextRequest) {
   }
 
   if (body.action === "CREATE_HOSPITAL_SHELL") {
-    if (!ctx.isAdmin) return NextResponse.json({ error: "FORBIDDEN" }, { status: 403 });
+    if (!hasPlatformPermission(ctx.user.role, "CREATE_ONBOARDING")) {
+      return NextResponse.json({ error: "FORBIDDEN" }, { status: 403 });
+    }
 
     const onboarding = await db.hospitalOnboarding.findUnique({
       where: { id: body.onboardingId },
@@ -1320,23 +1338,25 @@ export async function PATCH(req: NextRequest) {
         data: { hospitalId: created.id, status: "CONTACTED" },
       });
 
-      return created;
-    });
+      await writeAuditLog({
+        actorUserId: ctx.user.id,
+        hospitalId: created.id,
+        action: "HOSPITAL_SHELL_CREATED_FROM_ONBOARDING",
+        entity: "Hospital",
+        entityId: created.id,
+        after: { onboardingId: onboarding.id, inquiryId: inquiry.id, slug: created.slug },
+      }, tx);
 
-    queueAuditLog({
-      actorUserId: ctx.user.id,
-      hospitalId: hospital.id,
-      action: "HOSPITAL_SHELL_CREATED_FROM_ONBOARDING",
-      entity: "Hospital",
-      entityId: hospital.id,
-      after: { onboardingId: onboarding.id, inquiryId: inquiry.id, slug: hospital.slug },
+      return created;
     });
 
     return NextResponse.json({ success: true, hospitalId: hospital.id });
   }
 
   if (body.action === "PUBLISH") {
-    if (!ctx.isAdmin) return NextResponse.json({ error: "FORBIDDEN" }, { status: 403 });
+    if (!hasPlatformPermission(ctx.user.role, "PUBLISH_ONBOARDING")) {
+      return NextResponse.json({ error: "FORBIDDEN" }, { status: 403 });
+    }
 
     const onboarding = await db.hospitalOnboarding.findUnique({
       where: { id: body.onboardingId },
@@ -1350,9 +1370,10 @@ export async function PATCH(req: NextRequest) {
     }
 
     const now = new Date();
-    await db.$transaction([
-      db.hospital.update({
-        where: { id: onboarding.hospitalId },
+    const hospitalId = onboarding.hospitalId;
+    await db.$transaction(async (tx) => {
+      await tx.hospital.update({
+        where: { id: hospitalId },
         data: {
           isActive: true,
           verified: true,
@@ -1362,28 +1383,26 @@ export async function PATCH(req: NextRequest) {
           publishedAt: now,
           publishedById: ctx.user.id,
         },
-      }),
-      db.hospitalOnboarding.update({
+      });
+      await tx.hospitalOnboarding.update({
         where: { id: onboarding.id },
         data: { status: "PUBLISHED", publishedAt: now },
-      }),
-      ...(onboarding.partnerInquiryId
-        ? [
-            db.partnerInquiry.update({
-              where: { id: onboarding.partnerInquiryId },
-              data: { status: "ONBOARDED", hospitalId: onboarding.hospitalId },
-            }),
-          ]
-        : []),
-    ]);
+      });
+      if (onboarding.partnerInquiryId) {
+        await tx.partnerInquiry.update({
+          where: { id: onboarding.partnerInquiryId },
+          data: { status: "ONBOARDED", hospitalId },
+        });
+      }
 
-    queueAuditLog({
-      actorUserId: ctx.user.id,
-      hospitalId: onboarding.hospitalId,
-      action: "HOSPITAL_ONBOARDING_PUBLISHED",
-      entity: "HospitalOnboarding",
-      entityId: onboarding.id,
-      after: { hospitalId: onboarding.hospitalId },
+      await writeAuditLog({
+        actorUserId: ctx.user.id,
+        hospitalId,
+        action: "HOSPITAL_ONBOARDING_PUBLISHED",
+        entity: "HospitalOnboarding",
+        entityId: onboarding.id,
+        after: { hospitalId },
+      }, tx);
     });
 
     return NextResponse.json({ success: true });

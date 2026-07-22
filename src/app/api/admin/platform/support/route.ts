@@ -1,17 +1,13 @@
 import { NextResponse } from "next/server";
 import { requirePlatformAdmin } from "@/lib/admin-auth";
 import { db } from "@/lib/db";
+import { apiError } from "@/lib/api-errors";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  let actor;
-  try { actor = await requirePlatformAdmin({ apiMode: true }); }
-  catch (e: unknown) {
-    const msg = e instanceof Error ? e.message : "UNAUTHORIZED";
-    return NextResponse.json({ error: msg }, { status: msg === "FORBIDDEN" ? 403 : 401 });
-  }
-  void actor;
+  try { await requirePlatformAdmin({ apiMode: true }); }
+  catch (e: unknown) { return apiError(e); }
 
   const [supportUsers, hospitals] = await Promise.all([
     db.user.findMany({

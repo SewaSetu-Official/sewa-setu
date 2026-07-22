@@ -1,16 +1,14 @@
 import { NextResponse } from "next/server";
 import { requirePlatformStaff } from "@/lib/admin-auth";
 import { db } from "@/lib/db";
+import { apiError } from "@/lib/api-errors";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
   let ctx;
   try { ctx = await requirePlatformStaff({ apiMode: true }); }
-  catch (e: unknown) {
-    const msg = e instanceof Error ? e.message : "UNAUTHORIZED";
-    return NextResponse.json({ error: msg }, { status: msg === "FORBIDDEN" ? 403 : 401 });
-  }
+  catch (e: unknown) { return apiError(e); }
 
   const now = new Date();
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { BookingStatus, Prisma } from "@prisma/client";
 import { requirePlatformStaff, writeAuditLog } from "@/lib/admin-auth";
 import { db } from "@/lib/db";
+import { apiError } from "@/lib/api-errors";
 
 export const dynamic = "force-dynamic";
 
@@ -38,10 +39,7 @@ function parseCreatedAtRange(from: string, to: string): Prisma.DateTimeFilter | 
 export async function GET(req: Request) {
   let ctx;
   try { ctx = await requirePlatformStaff({ apiMode: true }); }
-  catch (e: unknown) {
-    const msg = e instanceof Error ? e.message : "UNAUTHORIZED";
-    return NextResponse.json({ error: msg }, { status: msg === "FORBIDDEN" ? 403 : 401 });
-  }
+  catch (e: unknown) { return apiError(e); }
 
   const { searchParams } = new URL(req.url);
   const type = searchParams.get("type") ?? "revenue";

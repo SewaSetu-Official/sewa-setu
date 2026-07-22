@@ -58,20 +58,21 @@ type Counts = {
   banned: number;
 };
 
-type RoleCounts = {
+type TabCounts = {
   all: number;
   standard: number;
-  platformSupport: number;
-  platformAdmin: number;
-  hospitalAdmin: number;
+  platform: number;
+  hospital: number;
 };
 
 type FilterValue = "all" | "pending" | "banned";
-type UserTypeValue = "all" | "standard" | "platform_support" | "platform_admin" | "hospital_admin";
+type TabValue = "standard" | "platform" | "hospital";
+type PlatformRoleFilter = "" | "PLATFORM_ADMIN" | "PLATFORM_SUPPORT";
+type HospitalRoleFilter = "" | HospitalRole;
 type SortValue = "newest" | "oldest" | "name_asc" | "name_desc" | "role" | "bookings_desc";
 
 const DEFAULT_COUNTS: Counts = { all: 0, pending: 0, banned: 0 };
-const DEFAULT_ROLE_COUNTS: RoleCounts = { all: 0, standard: 0, platformSupport: 0, platformAdmin: 0, hospitalAdmin: 0 };
+const DEFAULT_TAB_COUNTS: TabCounts = { all: 0, standard: 0, platform: 0, hospital: 0 };
 
 const STATUS_CONFIG: Record<string, { label: string; bg: string; text: string; border: string }> = {
   APPROVED: { label: "Approved", bg: "bg-emerald-50", text: "text-emerald-700", border: "border-emerald-100" },
@@ -85,12 +86,25 @@ const FILTERS: Array<{ value: FilterValue; label: string; countKey: keyof Counts
   { value: "banned", label: "Banned", countKey: "banned" },
 ];
 
-const USER_TYPE_OPTIONS: Array<{ value: UserTypeValue; label: string; countKey: keyof RoleCounts }> = [
-  { value: "all", label: "All roles", countKey: "all" },
+const TABS: Array<{ value: TabValue; label: string; countKey: keyof TabCounts }> = [
   { value: "standard", label: "Normal users", countKey: "standard" },
-  { value: "platform_support", label: "Platform support", countKey: "platformSupport" },
-  { value: "platform_admin", label: "Platform admins", countKey: "platformAdmin" },
-  { value: "hospital_admin", label: "Hospital admins", countKey: "hospitalAdmin" },
+  { value: "platform", label: "Platform team", countKey: "platform" },
+  { value: "hospital", label: "Hospital members", countKey: "hospital" },
+];
+
+const PLATFORM_SUBFILTERS: Array<{ value: PlatformRoleFilter; label: string }> = [
+  { value: "", label: "All platform" },
+  { value: "PLATFORM_ADMIN", label: "Admins" },
+  { value: "PLATFORM_SUPPORT", label: "Support" },
+];
+
+const HOSPITAL_SUBFILTERS: Array<{ value: HospitalRoleFilter; label: string }> = [
+  { value: "", label: "All roles" },
+  { value: "OWNER", label: "Owners" },
+  { value: "MANAGER", label: "Managers" },
+  { value: "RECEPTIONIST", label: "Receptionists" },
+  { value: "DOCTOR", label: "Doctors" },
+  { value: "STAFF", label: "Staff" },
 ];
 
 const SORT_OPTIONS: Array<{ value: SortValue; label: string }> = [
@@ -112,8 +126,12 @@ function getInitialFilter(value: string | null): FilterValue {
   return value === "pending" || value === "banned" ? value : "all";
 }
 
-function getInitialUserType(value: string | null): UserTypeValue {
-  return value === "standard" || value === "platform_support" || value === "platform_admin" || value === "hospital_admin" ? value : "all";
+function getInitialTab(value: string | null): TabValue {
+  if (value === "standard" || value === "platform" || value === "hospital") return value;
+  // Map legacy query values to the new tabs.
+  if (value === "platform_admin" || value === "platform_support") return "platform";
+  if (value === "hospital_admin") return "hospital";
+  return "standard"; // default tab = Normal users
 }
 
 function getInitialSort(value: string | null): SortValue {
@@ -150,7 +168,7 @@ function UsersContent() {
   const [supportHospitals, setSupportHospitals] = useState<SupportHospital[]>([]);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [counts, setCounts] = useState<Counts>(DEFAULT_COUNTS);
-  const [roleCounts, setRoleCounts] = useState<RoleCounts>(DEFAULT_ROLE_COUNTS);
+  const [tabCounts, setTabCounts] = useState<TabCounts>(DEFAULT_TAB_COUNTS);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(false);
@@ -158,19 +176,28 @@ function UsersContent() {
   const [search, setSearch] = useState("");
   const [searchInput, setSearchInput] = useState("");
   const [filter, setFilter] = useState<FilterValue>(getInitialFilter(searchParams.get("filter")));
-  const [userType, setUserType] = useState<UserTypeValue>(getInitialUserType(searchParams.get("userType")));
+  const [tab, setTab] = useState<TabValue>(getInitialTab(searchParams.get("userType")));
+  const [platformRole, setPlatformRole] = useState<PlatformRoleFilter>("");
+  const [hospitalRole, setHospitalRole] = useState<HospitalRoleFilter>("");
+  const [hospitalFilter, setHospitalFilter] = useState<string>("");
   const [sort, setSort] = useState<SortValue>(getInitialSort(searchParams.get("sort")));
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [error, setError] = useState("");
   const searchRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const fetchUsers = useCallback(async (q = search, f = filter, p = page, type = userType, sortBy = sort) => {
+  const fetchUsers = useCallback(async (
+    q = search, f = filter, p = page, type = tab, sortBy = sort,
+    pRole = platformRole, hRole = hospitalRole, hId = hospitalFilter,
+  ) => {
     setLoading(true);
     setError("");
 
     try {
       const params = new URLSearchParams({ page: String(p), filter: f, userType: type, sort: sortBy });
       if (q) params.set("search", q);
+      if (type === "platform" && pRole) params.set("platformRole", pRole);
+      if (type === "hospital" && hRole) params.set("hospitalRole", hRole);
+      if (type === "hospital" && hId) params.set("hospitalId", hId);
 
       const res = await fetch(`/api/admin/platform/users?${params}`);
       const data = await res.json();
@@ -179,7 +206,7 @@ function UsersContent() {
       setUsers(data.users ?? []);
       setTotal(data.total ?? 0);
       setCounts(data.counts ?? DEFAULT_COUNTS);
-      setRoleCounts(data.roleCounts ?? DEFAULT_ROLE_COUNTS);
+      setTabCounts(data.tabCounts ?? DEFAULT_TAB_COUNTS);
       setHasMore(Boolean(data.hasMore));
       setSupportHospitals(data.supportAssignableHospitals ?? []);
       setCurrentUserId(data.currentUserId ?? null);
@@ -188,15 +215,15 @@ function UsersContent() {
     } finally {
       setLoading(false);
     }
-  }, [search, filter, page, userType, sort]);
+  }, [search, filter, page, tab, sort, platformRole, hospitalRole, hospitalFilter]);
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
-      void fetchUsers(search, filter, page, userType, sort);
+      void fetchUsers(search, filter, page, tab, sort, platformRole, hospitalRole, hospitalFilter);
     }, 0);
 
     return () => window.clearTimeout(timeoutId);
-  }, [fetchUsers, search, filter, page, userType, sort]);
+  }, [fetchUsers, search, filter, page, tab, sort, platformRole, hospitalRole, hospitalFilter]);
 
   useEffect(() => {
     return () => {
@@ -216,6 +243,14 @@ function UsersContent() {
       setSearch(val.trim());
       setPage(1);
     }, 300);
+  };
+
+  const handleTabChange = (value: TabValue) => {
+    setTab(value);
+    setPlatformRole("");
+    setHospitalRole("");
+    setHospitalFilter("");
+    setPage(1);
   };
 
   const handleMembership = async (membershipId: string, action: "APPROVE_MEMBERSHIP" | "REJECT_MEMBERSHIP") => {
@@ -331,7 +366,77 @@ function UsersContent() {
         </button>
       </div>
 
-      <div className="admin-control-panel">
+      <div className="admin-control-panel space-y-3">
+        {/* Primary tabs: which kind of account */}
+        <div className="flex flex-wrap items-center gap-2 border-b border-slate-100 pb-3">
+          {TABS.map((item) => {
+            const active = tab === item.value;
+            return (
+              <button
+                key={item.value}
+                onClick={() => handleTabChange(item.value)}
+                className={`inline-flex h-10 cursor-pointer items-center gap-2 rounded-2xl border px-4 text-sm font-extrabold transition focus:outline-none focus:ring-2 focus:ring-[#c8a96e]/30 ${
+                  active
+                    ? "border-[#c8a96e] bg-[#fbf8f0] text-[#9c7939]"
+                    : "border-slate-200 bg-white text-[#5f6f8d] hover:border-[#c8a96e]/50"
+                }`}
+              >
+                {item.label}
+                <span className={`inline-flex h-5 min-w-[20px] items-center justify-center rounded-full px-1.5 text-[11px] font-extrabold ${active ? "bg-[#c8a96e] text-white" : "bg-slate-100 text-[#8a9ab5]"}`}>
+                  {tabCounts[item.countKey]}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Role sub-filter — only for Platform / Hospital tabs */}
+        {tab === "platform" && (
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-[11px] font-extrabold uppercase tracking-[0.16em] text-[#8a9ab5]">Role</span>
+            {PLATFORM_SUBFILTERS.map((item) => (
+              <button
+                key={item.value || "all"}
+                onClick={() => { setPlatformRole(item.value); setPage(1); }}
+                className={`admin-filter-pill ${platformRole === item.value ? "admin-filter-pill-active" : ""}`}
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>
+        )}
+        {tab === "hospital" && (
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-[11px] font-extrabold uppercase tracking-[0.16em] text-[#8a9ab5]">Role</span>
+              {HOSPITAL_SUBFILTERS.map((item) => (
+                <button
+                  key={item.value || "all"}
+                  onClick={() => { setHospitalRole(item.value); setPage(1); }}
+                  className={`admin-filter-pill ${hospitalRole === item.value ? "admin-filter-pill-active" : ""}`}
+                >
+                  {item.label}
+                </button>
+              ))}
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-[11px] font-extrabold uppercase tracking-[0.16em] text-[#8a9ab5]">Hospital</span>
+              <select
+                value={hospitalFilter}
+                onChange={(event) => { setHospitalFilter(event.target.value); setPage(1); }}
+                className="admin-select-control min-w-[200px]"
+                aria-label="Filter by hospital"
+              >
+                <option value="">All hospitals</option>
+                {supportHospitals.map((hospital) => (
+                  <option key={hospital.id} value={hospital.id}>{hospital.name}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+        )}
+
+        {/* Search, access filter, sort */}
         <div className="admin-control-row">
           <div className="admin-search-control">
             <Search size={14} className="admin-search-icon" />
@@ -361,22 +466,6 @@ function UsersContent() {
               );
             })}
           </div>
-
-          <select
-            value={userType}
-            onChange={(event) => {
-              setUserType(event.target.value as UserTypeValue);
-              setPage(1);
-            }}
-            className="admin-select-control min-w-[178px]"
-            aria-label="Filter by user type"
-          >
-            {USER_TYPE_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label} ({roleCounts[option.countKey]})
-              </option>
-            ))}
-          </select>
 
           <select
             value={sort}

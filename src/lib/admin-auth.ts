@@ -1,7 +1,7 @@
 import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
-import type { HospitalRole, UserRole } from "@prisma/client";
+import type { HospitalRole, UserRole, Prisma } from "@prisma/client";
 import { hasPermission, type Permission } from "@/lib/admin-permissions";
 import { isPlatformAdmin, isPlatformStaff } from "@/lib/admin-roles";
 import { ensureClerkUserInDb } from "@/lib/clerk-user-sync";
@@ -224,24 +224,35 @@ export async function resolveAdminRedirect(): Promise<string> {
 
 // ─── Audit Log Writer ─────────────────────────────────────────────────────────
 
-export async function writeAuditLog({
-  actorUserId,
-  hospitalId,
-  action,
-  entity,
-  entityId,
-  before,
-  after,
-}: {
-  actorUserId: string;
-  hospitalId?: string;
-  action: string;
-  entity: string;
-  entityId: string;
-  before?: object;
-  after?: object;
-}) {
-  await db.auditLog.create({
+/**
+ * Write an audit-log entry.
+ *
+ * Pass a Prisma transaction client as the second argument to make the audit
+ * write atomic with the mutation it records — if the surrounding transaction
+ * rolls back, so does the log (no orphaned or missing audit entries). When
+ * omitted it writes on the default connection (best-effort, back-compatible).
+ */
+export async function writeAuditLog(
+  {
+    actorUserId,
+    hospitalId,
+    action,
+    entity,
+    entityId,
+    before,
+    after,
+  }: {
+    actorUserId: string;
+    hospitalId?: string;
+    action: string;
+    entity: string;
+    entityId: string;
+    before?: object;
+    after?: object;
+  },
+  client: Prisma.TransactionClient = db,
+) {
+  await client.auditLog.create({
     data: {
       actorUserId,
       hospitalId: hospitalId ?? null,

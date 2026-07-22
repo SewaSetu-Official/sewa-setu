@@ -11,20 +11,23 @@ import {
 } from "lucide-react";
 import type { UserRole } from "@prisma/client";
 import { PLATFORM_ROLE_LABELS, isPlatformAdmin } from "@/lib/admin-roles";
+import { hasPlatformPermission, type PlatformPermission } from "@/lib/admin-permissions";
 
-type NavItem = { label: string; href: string; icon: React.ReactNode; adminOnly?: boolean };
+type NavItem = { label: string; href: string; icon: React.ReactNode; permission: PlatformPermission };
 
+// Each section is gated by a permission from the single platform matrix —
+// no separate admin-only flags or path allow-lists to keep in sync.
 const NAV: NavItem[] = [
-  { label: "Dashboard",  href: "/admin/platform/dashboard",  icon: <LayoutDashboard size={17} /> },
-  { label: "Hospitals",  href: "/admin/platform/hospitals",  icon: <Building2 size={17} /> },
-  { label: "Users",      href: "/admin/platform/users",      icon: <Users size={17} />, adminOnly: true },
-  { label: "Support",    href: "/admin/platform/support",    icon: <UserCheck size={17} />, adminOnly: true },
-  { label: "Inquiries",  href: "/admin/platform/inquiries",  icon: <Inbox size={17} /> },
-  { label: "Setup",      href: "/admin/platform/onboarding", icon: <ClipboardList size={17} /> },
-  { label: "Bookings",   href: "/admin/platform/bookings",   icon: <CalendarDays size={17} /> },
-  { label: "Revenue",    href: "/admin/platform/revenue",    icon: <TrendingUp size={17} /> },
-  { label: "Audit Logs", href: "/admin/platform/audit-logs", icon: <ShieldCheck size={17} /> },
-  { label: "Settings",   href: "/admin/platform/settings",   icon: <Settings size={17} />, adminOnly: true },
+  { label: "Dashboard",  href: "/admin/platform/dashboard",  icon: <LayoutDashboard size={17} />, permission: "VIEW_DASHBOARD" },
+  { label: "Hospitals",  href: "/admin/platform/hospitals",  icon: <Building2 size={17} />,       permission: "VIEW_HOSPITALS" },
+  { label: "Users",      href: "/admin/platform/users",      icon: <Users size={17} />,           permission: "VIEW_USERS" },
+  { label: "Support",    href: "/admin/platform/support",    icon: <UserCheck size={17} />,       permission: "MANAGE_SUPPORT" },
+  { label: "Inquiries",  href: "/admin/platform/inquiries",  icon: <Inbox size={17} />,           permission: "VIEW_INQUIRIES" },
+  { label: "Setup",      href: "/admin/platform/onboarding", icon: <ClipboardList size={17} />,   permission: "VIEW_ONBOARDING" },
+  { label: "Bookings",   href: "/admin/platform/bookings",   icon: <CalendarDays size={17} />,    permission: "VIEW_BOOKINGS" },
+  { label: "Revenue",    href: "/admin/platform/revenue",    icon: <TrendingUp size={17} />,      permission: "VIEW_REVENUE" },
+  { label: "Audit Logs", href: "/admin/platform/audit-logs", icon: <ShieldCheck size={17} />,     permission: "VIEW_AUDIT_LOGS" },
+  { label: "Settings",   href: "/admin/platform/settings",   icon: <Settings size={17} />,         permission: "MANAGE_SETTINGS" },
 ];
 
 function Sidebar({ user, pathname, mobile = false, onClose }: {
@@ -34,7 +37,7 @@ function Sidebar({ user, pathname, mobile = false, onClose }: {
   onClose?: () => void;
 }) {
   const isAdmin = isPlatformAdmin(user.role);
-  const navItems = NAV.filter((item) => isAdmin || !item.adminOnly);
+  const navItems = NAV.filter((item) => hasPlatformPermission(user.role, item.permission));
 
   return (
     <div className={`flex flex-col h-full ${mobile ? "" : "hidden lg:flex"}`}
@@ -120,24 +123,22 @@ export default function PlatformShell({
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
-  const isAdmin = isPlatformAdmin(user.role);
   const currentPageLabel = pathname === "/admin/platform/onboarding"
     ? "Hospital Setup"
     : pathname.split("/").pop()?.replace(/-/g, " ") ?? "Dashboard";
-  const allowedSupportPath =
-    pathname === "/admin/platform/dashboard" ||
-    pathname === "/admin/platform/hospitals" ||
-    pathname === "/admin/platform/inquiries" ||
-    pathname === "/admin/platform/onboarding" ||
-    pathname === "/admin/platform/bookings" ||
-    pathname === "/admin/platform/revenue" ||
-    pathname === "/admin/platform/audit-logs";
+
+  // Access is derived from the same nav + matrix: if the current section maps to
+  // a nav item this role can't access, bounce to the dashboard.
+  const currentNav = NAV.find(
+    (item) => pathname === item.href || pathname.startsWith(item.href + "/"),
+  );
+  const sectionAllowed = !currentNav || hasPlatformPermission(user.role, currentNav.permission);
 
   useEffect(() => {
-    if (!isAdmin && !allowedSupportPath) {
+    if (!sectionAllowed) {
       router.replace("/admin/platform/dashboard");
     }
-  }, [allowedSupportPath, isAdmin, router]);
+  }, [sectionAllowed, router]);
 
   return (
     <div className="flex h-screen overflow-hidden" style={{ background: "#f7f4ef" }}>
