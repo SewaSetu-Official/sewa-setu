@@ -19,6 +19,31 @@ function normalizeSlotTime(value: string | null | undefined) {
 }
 
 /**
+ * Refund a payment whose slot was taken by someone else before the booking
+ * could be created. Idempotent (skips if the payment intent already has a
+ * refund) and best-effort — failures are logged, never thrown, so they can't
+ * mask the original "slot taken" outcome.
+ */
+async function refundLostSlot(session: Stripe.Checkout.Session) {
+  try {
+    const paymentIntentId =
+      typeof session.payment_intent === "string"
+        ? session.payment_intent
+        : session.payment_intent?.id ?? null;
+    if (!paymentIntentId || !process.env.STRIPE_SECRET_KEY) return;
+
+    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: "2026-02-25.clover" });
+    const existing = await stripe.refunds.list({ payment_intent: paymentIntentId, limit: 1 });
+    if (existing.data.length > 0) return; // already refunded — don't double-refund
+
+    await stripe.refunds.create({ payment_intent: paymentIntentId });
+    console.log(`↩️  Auto-refunded lost-slot payment: ${paymentIntentId}`);
+  } catch (e) {
+    console.error("Failed to auto-refund lost-slot payment:", e instanceof Error ? e.message : e);
+  }
+}
+
+/**
  * Idempotently creates a Booking record from a completed Stripe session.
  * Safe to call from both the webhook and the verify endpoint.
  * Returns the booking (existing or newly created).
@@ -154,6 +179,8 @@ export async function provisionBooking(
       typeof err === "object" && err !== null && "code" in err &&
       (err as { code: string }).code === "P2002"
     ) {
+      // Same Stripe session retried (webhook + verify, or a Stripe retry) — the
+      // booking already exists for this session, so return it.
       const conflicting = await db.booking.findUnique({
         where: { stripeSessionId: sessionId },
         include: {
@@ -164,6 +191,12 @@ export async function provisionBooking(
         },
       });
       if (conflicting) return conflicting;
+
+      // Otherwise the violation is the slot+date+time unique constraint: a
+      // DIFFERENT payment took this slot first. This buyer can't get the slot,
+      // so refund them rather than leave them charged with no booking.
+      await refundLostSlot(session);
+      throw new Error("That time slot was just booked by someone else. Your payment has been refunded.");
     }
     throw err;
   }

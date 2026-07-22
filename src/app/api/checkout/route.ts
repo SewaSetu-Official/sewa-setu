@@ -142,6 +142,15 @@ export async function POST(req: Request) {
       if (!pkg) return NextResponse.json({ error: "Package not found" }, { status: 404 });
       if (!pkg.isActive) return NextResponse.json({ error: "This package is no longer available" }, { status: 400 });
       if (!pkg.price || pkg.price <= 0) return NextResponse.json({ error: "Package has no valid price" }, { status: 400 });
+      // ── INTEGRITY: a chosen slot must belong to this package's hospital ──
+      if (slotId) {
+        const slot = await db.availabilitySlot.findFirst({
+          where: { id: String(slotId), hospitalId: pkg.hospitalId, isActive: true },
+          select: { id: true },
+        });
+        if (!slot) return NextResponse.json({ error: "That time slot isn't available for this package" }, { status: 400 });
+      }
+
       itemName = pkg.title;
       priceCents = pkg.price;
       metadata.type = "package";
@@ -154,6 +163,25 @@ export async function POST(req: Request) {
       const doctor = await db.doctor.findUnique({ where: { id: doctorId } });
       if (!doctor) return NextResponse.json({ error: "Doctor not found" }, { status: 404 });
       if (!doctor.feeMin || doctor.feeMin <= 0) return NextResponse.json({ error: "Doctor has no valid consultation fee" }, { status: 400 });
+
+      // ── INTEGRITY: doctor must practise at the chosen hospital ──────────
+      // (the webhook requires a hospitalId; validate it here, before charging)
+      if (!hospitalId) return NextResponse.json({ error: "A hospital must be selected for this booking" }, { status: 400 });
+      const practises = await db.doctorHospital.findUnique({
+        where: { doctorId_hospitalId: { doctorId: doctor.id, hospitalId: String(hospitalId) } },
+        select: { doctorId: true },
+      });
+      if (!practises) return NextResponse.json({ error: "This doctor is not available at the selected hospital" }, { status: 400 });
+
+      // ── INTEGRITY: the slot must belong to this doctor at this hospital ──
+      if (slotId) {
+        const slot = await db.availabilitySlot.findFirst({
+          where: { id: String(slotId), doctorId: doctor.id, hospitalId: String(hospitalId), isActive: true },
+          select: { id: true },
+        });
+        if (!slot) return NextResponse.json({ error: "That time slot isn't available for this doctor" }, { status: 400 });
+      }
+
       itemName = `Consultation — ${doctor.fullName}`;
       priceCents = doctor.feeMin;
       metadata.type = "doctor";
@@ -162,7 +190,7 @@ export async function POST(req: Request) {
       if (consultationMode) metadata.consultationMode = String(consultationMode);
       if (slotId) metadata.slotId = String(slotId);
       if (normalizedSlotTime) metadata.slotTime = normalizedSlotTime;
-      if (hospitalId) metadata.hospitalId = String(hospitalId);
+      metadata.hospitalId = String(hospitalId);
     }
 
     // ── CREATE STRIPE SESSION ────────────────────────────────────────
